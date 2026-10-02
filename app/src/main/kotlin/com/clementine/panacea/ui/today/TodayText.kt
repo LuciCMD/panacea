@@ -61,6 +61,18 @@ object TodayText {
         }
     }
 
+    /** A learned routine: "Usually around 23:30", or "… · not logged yet" once it has asked. */
+    fun usually(at: ZonedDateTime, missed: Boolean, now: ZonedDateTime, f: TimeFormats): String {
+        val time = at.format(f.time)
+        val text = when (daysBetween(now, at)) {
+            -1L -> "Usually around $time yesterday"
+            0L -> "Usually around $time"
+            1L -> "Usually around $time tomorrow"
+            else -> "Usually around $time on ${at.format(f.weekday)}"
+        }
+        return if (missed) "$text · not logged yet" else text
+    }
+
     fun overdue(at: ZonedDateTime, now: ZonedDateTime, f: TimeFormats): String {
         val time = at.format(f.time)
         val whenDue = if (daysBetween(at, now) == 0L) "Due at $time" else "Due yesterday at $time"

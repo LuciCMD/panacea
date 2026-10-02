@@ -9,6 +9,7 @@ import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.TakenDose
 import com.clementine.panacea.reminder.Reminders
+import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationSummary
@@ -55,18 +56,22 @@ class TodayViewModel(
             repository.observeDosesSince(day.minusDays(2).atStartOfDay(ZonedDateTime.now().zone).toInstant().toEpochMilli())
         }
 
+    // Routine learns from the last four weeks itself, so a start fixed when the screen opens is enough.
+    private val learningTimes = repository.observeLearningTimes(System.currentTimeMillis() - Routines.WINDOW.toMillis())
+        .map { times -> times.groupBy({ it.medicationId }, { it.takenAt }) }
+
     private val data = combine(
         repository.observeSummaries(),
         repository.observeIngredients(),
         repository.observeEnabledReminders(),
-        recentDoses,
+        combine(recentDoses, learningTimes, ::Pair),
         repository.observePresets(),
-    ) { summaries, ingredients, reminders, doses, presets -> Data(summaries, ingredients, reminders, doses, presets) }
+    ) { summaries, ingredients, reminders, (doses, learning), presets -> Data(summaries, ingredients, reminders, doses, learning, presets) }
 
     /** Null until the database has answered, so the screen can tell "loading" from "empty". */
     val ui: StateFlow<TodayUi?> = combine(data, clock) { d, _ ->
         // The clock only says when to redraw; a dose logged mid-minute must not land in the future.
-        TodayModel.build(d.summaries, d.ingredients, d.reminders, d.doses, d.presets, ZonedDateTime.now(), formats)
+        TodayModel.build(d.summaries, d.ingredients, d.reminders, d.doses, d.presets, ZonedDateTime.now(), formats, d.learning)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _logged = MutableStateFlow<LoggedDose?>(null)
@@ -111,6 +116,7 @@ class TodayViewModel(
         val ingredients: List<IngredientEntity>,
         val reminders: List<ReminderEntity>,
         val doses: List<DoseEntity>,
+        val learning: Map<Long, List<Long>>,
         val presets: List<Double>,
     )
 

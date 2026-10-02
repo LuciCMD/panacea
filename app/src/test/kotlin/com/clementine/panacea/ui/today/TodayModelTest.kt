@@ -13,6 +13,7 @@ import com.clementine.panacea.ui.today.Fixtures.now
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TodayModelTest {
@@ -73,6 +74,39 @@ class TodayModelTest {
         assertNull(due.next)
         assertNull(due.overdueAt)
         assertEquals(0f, due.progress)
+    }
+
+    @Test
+    fun aLearnedRoutineSaysWhenItUsuallyIs() {
+        val before = (22..30).map { ms(9, it, 8, 45) } + ms(10, 1, 8, 45)
+        val learned = TodayModel.learned(before, ms(10, 1, 8, 45), askedFor = 0, now)!!
+        assertEquals(at(10, 2, 8, 45), learned.expected)
+        assertTrue(learned.missed)
+        assertEquals("Usually around 8:45 · not logged yet", TodayText.usually(learned.expected, learned.missed, now, formats))
+
+        // Asked before learning was turned on: not counted as missed.
+        val quiet = TodayModel.learned(before, ms(10, 1, 8, 45), askedFor = ms(10, 2, 10, 0), now)!!
+        assertFalse(quiet.missed)
+        assertEquals(at(10, 3, 8, 45), quiet.expected)
+
+        val taken = TodayModel.learned(before + ms(10, 2, 8, 50), ms(10, 2, 8, 50), askedFor = 0, now)!!
+        assertFalse(taken.missed)
+        assertEquals("Usually around 8:45 tomorrow", TodayText.usually(taken.expected, taken.missed, now, formats))
+        assertEquals((now.toInstant().toEpochMilli() - ms(10, 2, 8, 50)).toFloat() / (ms(10, 3, 8, 45) - ms(10, 2, 8, 50)), taken.progress, 0.0001f)
+
+        assertNull(TodayModel.learned(listOf(ms(10, 1, 8, 45)), ms(10, 1, 8, 45), askedFor = 0, now))
+    }
+
+    @Test
+    fun fixedRemindersOutrankALearnedRoutine() {
+        val med = MedicationEntity(id = 1, name = "Melatonin", dose = 3.0, doseUnit = "mg", category = "OTC", type = "GUMMY", sortOrder = 0, learnRoutine = true)
+        val times = (22..30).map { ms(9, it, 23, 30) } + ms(10, 1, 23, 30)
+        fun card(reminders: List<ReminderEntity>) = TodayModel.build(
+            listOf(MedicationSummary(med, ms(10, 1, 23, 30))), emptyList(), reminders, emptyList(), emptyList(), now, formats,
+            learningTimes = mapOf(1L to times),
+        ).cards.single()
+        assertEquals("Usually around 23:30", card(emptyList()).dueLine)
+        assertEquals("Next at 21:00", card(listOf(daily(21 * 60))).dueLine)
     }
 
     @Test

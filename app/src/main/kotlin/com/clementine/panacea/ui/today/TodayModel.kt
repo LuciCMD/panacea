@@ -8,6 +8,7 @@ import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.model.Category
 import com.clementine.panacea.model.MedicationType
+import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.reminder.Schedule
 import java.time.Duration
 import java.time.Instant
@@ -29,7 +30,7 @@ data class CardState(
     val category: Category,
     val doseLine: String,
     val lastTakenLine: String,
-    /** "Next at 21:00", or the overdue warning; null without reminders. */
+    /** "Next at 21:00", "Usually around 23:30" (learned), or the overdue warning; null without either. */
     val dueLine: String?,
     val overdue: Boolean,
     /** How far along the wait for the next reminder is, 0 to 1. */
@@ -56,13 +57,15 @@ object TodayModel {
         presets: List<Double>,
         now: ZonedDateTime,
         f: TimeFormats,
+        /** The last four weeks of dose times of each medication learning its routine. */
+        learningTimes: Map<Long, List<Long>> = emptyMap(),
     ): TodayUi {
         val ingredientsByMed = ingredients.groupBy { it.medicationId }
         val remindersByMed = reminders.filter { it.enabled }.groupBy { it.medicationId }
         val dosesByMed = doses.groupBy { it.medicationId }
         val cards = summaries.map { s ->
             card(s, ingredientsByMed[s.medication.id].orEmpty(), remindersByMed[s.medication.id].orEmpty(),
-                dosesByMed[s.medication.id].orEmpty(), now, f)
+                dosesByMed[s.medication.id].orEmpty(), learningTimes[s.medication.id], now, f)
         }
         return TodayUi(
             header = TodayText.header(now, f),
@@ -78,6 +81,7 @@ object TodayModel {
         ingredients: List<IngredientEntity>,
         reminders: List<ReminderEntity>,
         doses: List<DoseEntity>,
+        learningTimes: List<Long>?,
         now: ZonedDateTime,
         f: TimeFormats,
     ): CardState {
@@ -89,6 +93,21 @@ object TodayModel {
         val recent = doses.filter { nowMs - it.takenAt in 0..ONE_DAY.toMillis() && it.unit == med.doseUnit }
         if (med.dose > 0 && recent.size >= 2) lastTaken += " · " + TodayText.inLast24h(recent.sumOf { it.amount }, med.doseUnit)
 
+        // Fixed reminders say when it's due; without any, a learned routine says when it usually is.
+        if (reminders.isEmpty() && med.learnRoutine && learningTimes != null) {
+            learned(learningTimes, s.lastTakenAt, med.routineAskedFor, now)?.let { l ->
+                return CardState(
+                    medication = med,
+                    type = MedicationType.fromKey(med.type),
+                    category = Category.fromKey(med.category),
+                    doseLine = TodayText.doseLine(med, ingredients),
+                    lastTakenLine = lastTaken,
+                    dueLine = TodayText.usually(l.expected, l.missed, now, f),
+                    overdue = l.missed,
+                    progress = l.progress,
+                )
+            }
+        }
         val due = due(reminders, doses.map { it.takenAt }, s.lastTakenAt, now)
         return CardState(
             medication = med,
@@ -132,6 +151,33 @@ object TodayModel {
             }
         }
         return Due(overdueAt, best?.first, best?.second ?: 0f)
+    }
+
+    data class Learned(val expected: ZonedDateTime, val missed: Boolean, val progress: Float)
+
+    /**
+     * Where a medication stands against its learned routine: the usual dose it asked about and nobody
+     * answered yet (only ones asked since learning was turned on, [askedFor]), or else the next usual
+     * dose not already taken. Null while there's no routine to go by.
+     */
+    fun learned(doseTimes: List<Long>, lastTakenAt: Long?, askedFor: Long, now: ZonedDateTime): Learned? {
+        val nowMs = now.toInstant().toEpochMilli()
+        val routine = Routines.learn(doseTimes, now)
+        fun at(ms: Long) = Instant.ofEpochMilli(ms).atZone(now.zone)
+
+        Routines.latestAsk(routine, now)
+            ?.takeIf { it.ask >= askedFor && Routines.stillWorthAsking(it, now) && !it.coveredBy(doseTimes, nowMs) }
+            ?.let { return Learned(at(it.expected), missed = true, progress = 1f) }
+
+        val next = generateSequence(Routines.nextAsk(routine, now)) { Routines.nextAsk(routine, at(it.ask)) }
+            .take(8)
+            .firstOrNull { !it.coveredBy(doseTimes, nowMs) } ?: return null
+        val progress = when {
+            lastTakenAt == null -> 0f
+            next.expected <= lastTakenAt -> 1f
+            else -> ((nowMs - lastTakenAt).toFloat() / (next.expected - lastTakenAt)).coerceIn(0f, 1f)
+        }
+        return Learned(at(next.expected), missed = false, progress = progress)
     }
 
     /** Elapsed share of the wait from the last dose (or the previous reminder) to [next]. */
