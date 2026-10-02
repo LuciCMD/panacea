@@ -3,6 +3,7 @@ package com.clementine.panacea.reminder
 import com.clementine.panacea.ui.today.Fixtures.at
 import com.clementine.panacea.ui.today.Fixtures.ms
 import com.clementine.panacea.ui.today.Fixtures.now
+import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -56,6 +57,32 @@ class RoutineTest {
         // The evening dose can't count for the morning: halfway back is 14:30, but three hours is the limit.
         val morning = Routines.latestAsk(routine, at(10, 2, 9, 0))!!
         assertEquals(ms(10, 2, 5, 30), morning.coverFrom)
+    }
+
+    @Test
+    fun everySixHoursWithASleepGivesThreeTimesAcrossMidnight() {
+        // 14:00, 20:00 and 02:00 from mid-September, today's 02:00 included; asleep from 2 till 14.
+        val jitter = listOf(-20, 10, 0, 25, -10, 5, -5)
+        val doses = (18..30).flatMap { d ->
+            listOf(ms(9, d, 14, 0), ms(9, d, 20, 0), at(9, d, 2, 0).plusDays(1).toInstant().toEpochMilli())
+                .mapIndexed { i, t -> t + jitter[(d + i) % jitter.size] * minute }
+        } + listOf(ms(10, 1, 14, 0), ms(10, 1, 20, 0), ms(10, 2, 2, 0))
+        val routine = Routines.learn(doses, now) as Routine.TimesOfDay
+        assertEquals(listOf(2 * 60, 14 * 60, 20 * 60), routine.slots.map { it.minute })
+
+        // Through the next day it asks after each of the three, the 2:00 one included.
+        val asks = generateSequence(Routines.nextAsk(routine, now)) { Routines.nextAsk(routine, Instant.ofEpochMilli(it.ask).atZone(now.zone)) }
+            .take(4).map { it.expected }.toList()
+        assertEquals(listOf(ms(10, 2, 14, 0), ms(10, 2, 20, 0), ms(10, 3, 2, 0), ms(10, 3, 14, 0)), asks)
+
+        // A 2:00 dose not logged is still asked about in the small hours.
+        val night = Routines.latestAsk(routine, at(10, 3, 3, 0))!!
+        assertEquals(ms(10, 3, 2, 0), night.expected)
+        assertTrue(Routines.stillWorthAsking(night, at(10, 3, 3, 0)))
+        // The 20:00 dose taken at 19:30 answers the 20:00 question, not the 14:00 one.
+        val evening = Routines.latestAsk(routine, at(10, 2, 21, 0))!!
+        assertTrue(evening.coveredBy(listOf(ms(10, 2, 19, 30)), ms(10, 2, 21, 0)))
+        assertFalse(Routines.latestAsk(routine, at(10, 2, 15, 0))!!.coveredBy(listOf(ms(10, 2, 19, 30)), ms(10, 2, 15, 0)))
     }
 
     @Test
