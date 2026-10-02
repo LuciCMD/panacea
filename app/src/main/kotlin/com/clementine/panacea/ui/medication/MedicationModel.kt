@@ -9,12 +9,17 @@ import com.clementine.panacea.model.Category
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.WeightUnit
 import com.clementine.panacea.model.formatAmount
+import com.clementine.panacea.reminder.Routine
+import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.history.HistoryDay
 import com.clementine.panacea.ui.history.HistoryModel
 import com.clementine.panacea.ui.reminders.ReminderCard
 import com.clementine.panacea.ui.reminders.ReminderText
+import com.clementine.panacea.ui.reminders.RoutineText
 import com.clementine.panacea.ui.reminders.reminderCard
+import com.clementine.panacea.ui.today.TodayModel
+import java.time.Instant
 import java.time.ZonedDateTime
 
 /** A label and its value, as in "Pill Weight  0.35 g per tablet". */
@@ -36,6 +41,21 @@ data class TotalRow(val label: String, val doses: String, val amount: String, va
     }
 }
 
+/** A stretch of the day, as fractions of it from midnight. */
+data class Band(val from: Float, val to: Float)
+
+/** The Learn My Routine card. */
+data class RoutineUi(
+    val on: Boolean,
+    val summary: String,
+    /** "Times of day · learned from 14 doses"; null until something is learned. */
+    val basis: String?,
+    /** The usual times give or take their spread, and the doses they were learned from; empty unless times of day. */
+    val bands: List<Band>,
+    val ticks: List<Float>,
+    val axis: List<String>,
+)
+
 /** Columns with nothing in them anywhere are left out. */
 data class Totals(val showAmount: Boolean, val showWeight: Boolean, val rows: List<TotalRow>)
 
@@ -53,6 +73,7 @@ data class MedicationUi(
     val reminders: List<ReminderCard>,
     /** "Muted until 14:00" while this medication's reminders are muted. */
     val muted: String?,
+    val routine: RoutineUi,
 )
 
 /** Builds a medication's own page from its rows, at a given moment. Pure, so it can be tested. */
@@ -83,6 +104,36 @@ object MedicationModel {
             history = HistoryModel.build(doses.map { DoseRow(it, med.name, med.type) }, now, f),
             reminders = reminders.map { reminderCard(it, med.name, now, f, med.mutedUntil) },
             muted = if (med.mutedUntil > now.toInstant().toEpochMilli()) ReminderText.mutedUntil(med.mutedUntil, now, f) else null,
+            routine = routine(med, doses, now, f),
+        )
+    }
+
+    fun routine(med: MedicationEntity, doses: List<DoseEntity>, now: ZonedDateTime, f: TimeFormats): RoutineUi {
+        val routine = Routines.learn(doses.map { it.takenAt }, now)
+        val nextAsk = Routines.nextAsk(routine, now)?.let { Instant.ofEpochMilli(it.ask).atZone(now.zone) }
+        val day = 24 * 60f
+        val bands = (routine as? Routine.TimesOfDay)?.slots.orEmpty().flatMap { s ->
+            val from = (s.minute - s.spread) / day
+            val to = (s.minute + s.spread) / day
+            // A band across midnight shows at both ends.
+            when {
+                from < 0 -> listOf(Band(from + 1, 1f), Band(0f, to))
+                to > 1 -> listOf(Band(from, 1f), Band(0f, to - 1))
+                else -> listOf(Band(from, to))
+            }
+        }
+        val since = now.toInstant().toEpochMilli() - Routines.WINDOW.toMillis()
+        val ticks = if (bands.isEmpty()) emptyList() else doses.filter { it.takenAt >= since }.map {
+            val at = Instant.ofEpochMilli(it.takenAt).atZone(now.zone)
+            (at.hour * 60 + at.minute) / day
+        }
+        return RoutineUi(
+            on = med.learnRoutine,
+            summary = RoutineText.summary(routine, med.learnRoutine, nextAsk, now, f),
+            basis = RoutineText.basis(routine),
+            bands = bands,
+            ticks = ticks,
+            axis = TodayModel.axis(f),
         )
     }
 

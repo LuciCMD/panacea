@@ -3,6 +3,7 @@ package com.clementine.panacea.data
 import androidx.room.withTransaction
 import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.DoseRow
+import com.clementine.panacea.data.db.DoseTime
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationCounts
 import com.clementine.panacea.data.db.MedicationEntity
@@ -61,6 +62,12 @@ class MedicationRepository(private val db: PanaceaDatabase) {
     fun observeNames(): Flow<List<MedicationName>> = medications.observeNames()
 
     suspend fun setReminderEnabled(id: Long, enabled: Boolean) = db.reminderDao().setEnabled(id, enabled)
+
+    suspend fun setLearnRoutine(id: Long, on: Boolean) = medications.setLearnRoutine(id, on, System.currentTimeMillis())
+
+    fun observeLearning(): Flow<List<MedicationEntity>> = medications.observeLearning()
+
+    fun observeLearningTimes(since: Long): Flow<List<DoseTime>> = doses.observeLearningTimes(since)
 
     /** Removes one dose from the history; the remembered amount stays as it is. */
     suspend fun removeDose(id: Long) = doses.delete(id)

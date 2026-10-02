@@ -23,6 +23,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.clementine.panacea.ui.theme.Colors
 import java.time.LocalTime
+import java.time.ZonedDateTime
+
+/** When a dose picked as [time] was taken: today, or yesterday if that time is still to come. */
+fun pastTime(time: LocalTime, now: ZonedDateTime): ZonedDateTime {
+    val today = now.with(time).withSecond(0).withNano(0)
+    return if (today.isAfter(now)) today.minusDays(1) else today
+}
 
 /** A clock to pick a time on, in the phone's 12- or 24-hour style. */
 @OptIn(ExperimentalMaterial3Api::class)

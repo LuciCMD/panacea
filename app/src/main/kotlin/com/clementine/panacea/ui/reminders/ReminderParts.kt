@@ -5,7 +5,9 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,8 +48,13 @@ import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateSwitch
+import com.clementine.panacea.ui.components.TimeDialog
+import com.clementine.panacea.ui.components.pastTime
+import com.clementine.panacea.ui.today.TodayViewModel
+import com.clementine.panacea.ui.today.rememberTake
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
+import java.time.LocalTime
 import java.time.ZonedDateTime
 
 /** How long a mute lasts; Until Tomorrow stands in for "not today". */
@@ -192,6 +199,63 @@ fun ReminderRow(card: ReminderCard, onToggle: (Boolean) -> Unit, onOpen: () -> U
             )
         }
     }
+}
+
+/** A learned reminder: tap for the medication's page, where it's explained; the switch stops learning. */
+@Composable
+fun LearnedRow(card: LearnedCard, onStop: () -> Unit, onOpen: () -> Unit) {
+    val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
+    SlateCard(Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clickable(onClickLabel = "Open ${card.medication}", onClick = onOpen)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(card.medication, style = MaterialTheme.typography.titleMedium, color = Colors.Ink)
+                    Text(
+                        "Learned",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Colors.Accent,
+                        modifier = Modifier
+                            .background(Colors.AccentWash, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                    )
+                }
+                Text(card.usually, style = body, color = Colors.Ink)
+                Text(card.next, style = body, color = if (card.muted) Colors.Warn else Colors.Muted)
+            }
+            SlateSwitch(
+                checked = true,
+                onCheckedChange = { if (!it) onStop() },
+                modifier = Modifier.semantics { contentDescription = "${card.medication} learned reminder" },
+            )
+        }
+    }
+}
+
+/** Took It Earlier on a learned reminder: asks when, then logs the usual amount at that time. */
+@Composable
+fun TookEarlierDialog(medicationId: Long, onClose: () -> Unit) {
+    val today: TodayViewModel = viewModel(factory = TodayViewModel.Factory)
+    val ui by today.ui.collectAsStateWithLifecycle()
+    val take = rememberTake(today)
+    val cards = ui?.cards ?: return
+    val med = cards.firstOrNull { it.medication.id == medicationId }?.medication ?: return LaunchedEffect(Unit) { onClose() }
+    TimeDialog(
+        title = "When Did You Take It?",
+        hint = "A time later than now counts as yesterday.",
+        initial = LocalTime.now(),
+        confirmLabel = "Log Dose",
+        onPick = { time ->
+            take(med.id, med.lastMultiplier, pastTime(time, ZonedDateTime.now()).toInstant().toEpochMilli())
+            onClose()
+        },
+        onDismiss = onClose,
+    )
 }
 
 /** The Mute… button on a notification: asks how long, then quiets that medication's reminders. */

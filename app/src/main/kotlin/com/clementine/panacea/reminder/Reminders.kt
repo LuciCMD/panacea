@@ -8,6 +8,7 @@ import com.clementine.panacea.data.db.MetaKeys
 import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.db.ReminderEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -15,7 +16,8 @@ import java.time.ZonedDateTime
 
 /**
  * Runs the reminders: keeps one alarm armed per reminder, decides at each alarm whether to notify,
- * and handles the notification's actions and mutes. Every change goes through one lock, so an
+ * and handles the notification's actions and mutes. Learned reminders work alongside: one alarm per
+ * medication learning its routine, at the next time a usual dose would be missing. Every change goes through one lock, so an
  * alarm and a dose logged at the same moment can't undo each other.
  */
 class Reminders(context: Context, private val db: PanaceaDatabase, private val medications: MedicationRepository) {
@@ -48,6 +50,28 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
         }
     }
 
+    /** Keeps learned reminders' alarms in step with their medications' doses for as long as the app runs. */
+    suspend fun watchLearned() {
+        var known = emptySet<Long>()
+        // The window slides on while the app runs; learning looks only at the part it needs.
+        val since = System.currentTimeMillis() - Routines.WINDOW.toMillis()
+        combine(medicationDao.observeLearning(), doseDao.observeLearningTimes(since)) { meds, times ->
+            meds to times.groupBy({ it.medicationId }, { it.takenAt })
+        }.collect { (meds, times) ->
+            lock.withLock {
+                val now = ZonedDateTime.now()
+                meds.forEach { armAsk(it.id, Routines.learn(times[it.id].orEmpty(), now), now) }
+                val ids = meds.mapTo(HashSet()) { it.id }
+                // Turned off, or removed.
+                (known - ids).forEach {
+                    alarms.cancelAsk(it)
+                    notifier.cancelAsk(it)
+                }
+                known = ids
+            }
+        }
+    }
+
     /**
      * After boot, an update, a clock change or the app starting: arms every alarm again, shows what
      * came due while none could fire, and ends mutes that ran out meanwhile.
@@ -62,6 +86,21 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
         if (all > nowMs) alarms.armMuteEnd(null, all)
         medicationDao.all().filter { it.mutedUntil > nowMs }.forEach { alarms.armMuteEnd(it.id, it.mutedUntil) }
         releaseLocked(null)
+    }
+
+    /** A learned reminder's alarm: ask whether the usual dose was taken, if it still isn't logged. */
+    suspend fun ask(medicationId: Long) = lock.withLock {
+        val med = medicationDao.get(medicationId)?.takeIf { it.learnRoutine } ?: return@withLock alarms.cancelAsk(medicationId)
+        askLocked(med)
+    }
+
+    /** Took It Now on a learned reminder: logs the medication's usual amount. */
+    suspend fun tookNow(medicationId: Long) = lock.withLock {
+        notifier.cancelAsk(medicationId)
+        val med = medicationDao.get(medicationId) ?: return@withLock
+        val now = System.currentTimeMillis()
+        medications.takeDose(med.id, med.lastMultiplier, now)
+        doseLoggedLocked(med.id, now)
     }
 
     /** [snoozed]: a snooze ran out, rather than the reminder's own time coming. */
@@ -104,6 +143,8 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
         }
         // Showing ones are held like any other and come back when the mute ends.
         targets.forEach { notifier.cancel(it.id) }
+        // A question already asked is let go.
+        if (medicationId == null) medicationDao.learning().forEach { notifier.cancelAsk(it.id) } else notifier.cancelAsk(medicationId)
         alarms.armMuteEnd(medicationId, until)
     }
 
@@ -146,7 +187,33 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
         if (!snoozed && r.enabled) Schedule.nextAfter(r, ZonedDateTime.now())?.let { alarms.arm(r.id, it.toInstant().toEpochMilli()) }
     }
 
+    private fun armAsk(medicationId: Long, routine: Routine, now: ZonedDateTime) {
+        val next = Routines.nextAsk(routine, now)
+        if (next != null) alarms.armAsk(medicationId, next.ask) else alarms.cancelAsk(medicationId)
+    }
+
+    /**
+     * Asks about the usual dose most recently due, unless it was asked about already, is logged, is
+     * too old to matter, or is muted (then the mute's end asks). Arms the next question either way.
+     */
+    private suspend fun askLocked(med: MedicationEntity) {
+        val now = ZonedDateTime.now()
+        val nowMs = now.toInstant().toEpochMilli()
+        val times = doseDao.timesSince(med.id, nowMs - Routines.WINDOW.toMillis())
+        val routine = Routines.learn(times, now)
+        armAsk(med.id, routine, now)
+        val ask = Routines.latestAsk(routine, now) ?: return
+        if (ask.ask <= med.routineAskedFor || !Routines.stillWorthAsking(ask, now) || ask.coveredBy(times, nowMs)) return
+        if (mutedUntil(med) > nowMs) return
+        medicationDao.setRoutineAskedFor(med.id, ask.ask)
+        // A fixed reminder already showing says the same thing.
+        if (reminderDao.ofMedication(med.id).any { it.enabled && it.pending }) return
+        notifier.ask(med, routine, times.maxOrNull(), now)
+    }
+
     private suspend fun doseLoggedLocked(medicationId: Long, takenAt: Long) {
+        // Whatever the time, a dose logged answers the question.
+        notifier.cancelAsk(medicationId)
         val now = System.currentTimeMillis()
         reminderDao.ofMedication(medicationId).filter { ReminderEngine.countsFor(it, takenAt) }.forEach {
             reminderDao.update(ReminderEngine.completed(it, now))
@@ -169,6 +236,9 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
                 notifier.show(r, med)
             }
         }
+        // Learned questions that came due meanwhile, and catching up after the phone was off.
+        val learning = if (medicationId == null) medicationDao.learning() else listOfNotNull(medicationDao.get(medicationId)?.takeIf { it.learnRoutine })
+        learning.forEach { askLocked(it) }
     }
 
     private suspend fun mutedUntil(med: MedicationEntity) = maxOf(med.mutedUntil, muteAllUntil())

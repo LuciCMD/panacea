@@ -55,6 +55,10 @@ class MedicationViewModel(
         viewModelScope.launch { repository.setReminderEnabled(id, enabled) }
     }
 
+    fun setLearnRoutine(medicationId: Long, on: Boolean) {
+        viewModelScope.launch { repository.setLearnRoutine(medicationId, on) }
+    }
+
     fun unmute(medicationId: Long) {
         viewModelScope.launch { reminders.unmute(medicationId) }
     }

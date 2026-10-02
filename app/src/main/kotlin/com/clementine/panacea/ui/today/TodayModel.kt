@@ -158,9 +158,14 @@ object TodayModel {
             val time = Instant.ofEpochMilli(it.takenAt).atZone(now.zone).format(f.time)
             StripDot((it.takenAt - startMs) / length, "${names[it.medicationId] ?: "Removed medication"} at $time")
         }
+        return DayStrip(today.size, dots, (nowMs - startMs) / length, axis(f))
+    }
+
+    /** Labels for a midnight-to-midnight line: 0, 6, 12, 18 and 24 h. */
+    fun axis(f: TimeFormats): List<String> {
         val axis = listOf(0, 6, 12, 18).map { LocalTime.of(it, 0).format(f.time) }
         // Midnight again closes the day; "24:00" reads better than a second "0:00".
         val end = if (axis.first().any { it.isLetter() }) axis.first() else "24:00"
-        return DayStrip(today.size, dots, (nowMs - startMs) / length, axis + end)
+        return axis + end
     }
 }

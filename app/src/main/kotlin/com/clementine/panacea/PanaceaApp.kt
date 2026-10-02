@@ -38,6 +38,10 @@ class PanaceaApp : Application() {
             container.started.await()
             container.reminders.watch()
         }
+        container.appScope.launch {
+            container.started.await()
+            container.reminders.watchLearned()
+        }
     }
 
     private companion object {

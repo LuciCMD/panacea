@@ -54,6 +54,7 @@ import com.clementine.panacea.ui.medication.MedicationScreen
 import com.clementine.panacea.ui.reminders.EditReminderScreen
 import com.clementine.panacea.ui.reminders.MuteMedicationDialog
 import com.clementine.panacea.ui.reminders.RemindersScreen
+import com.clementine.panacea.ui.reminders.TookEarlierDialog
 import com.clementine.panacea.ui.settings.SettingsScreen
 import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.today.TodayScreen
@@ -113,6 +114,9 @@ private fun fade(): ContentTransform = fadeIn(tween(120)) togetherWith fadeOut(t
 sealed interface AppRequest {
     data class OpenMedication(val medicationId: Long) : AppRequest
     data class Mute(val medicationId: Long) : AppRequest
+
+    /** Took It Earlier on a learned reminder: open the medication and ask when. */
+    data class TookEarlier(val medicationId: Long) : AppRequest
 }
 
 @Composable
@@ -121,13 +125,15 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
     val tab = (backStack.last() as? Route.Top)?.tab
     val pop = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
     var muting by rememberSaveable { mutableStateOf<Long?>(null) }
+    var tookEarlier by rememberSaveable { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(request) {
         when (request) {
-            is AppRequest.OpenMedication -> {
-                backStack.clear()
-                backStack.add(start)
-                backStack.add(Route.Medication(request.medicationId))
+            is AppRequest.OpenMedication -> openMedication(backStack, request.medicationId)
+            is AppRequest.TookEarlier -> {
+                // On its page, where the undo bar can take it back.
+                openMedication(backStack, request.medicationId)
+                tookEarlier = request.medicationId
             }
             is AppRequest.Mute -> muting = request.medicationId
             null -> return@LaunchedEffect
@@ -135,6 +141,7 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
         onHandled()
     }
     muting?.let { id -> MuteMedicationDialog(id) { muting = null } }
+    tookEarlier?.let { id -> TookEarlierDialog(id) { tookEarlier = null } }
 
     Column(
         Modifier
@@ -160,6 +167,7 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
                             Tab.REMINDERS -> RemindersScreen(
                                 onAdd = { backStack.add(Route.EditReminder(null)) },
                                 onOpen = { backStack.add(Route.EditReminder(it)) },
+                                onOpenMedication = { backStack.add(Route.Medication(it)) },
                             )
                             Tab.HISTORY -> HistoryScreen()
                             Tab.SETTINGS -> SettingsScreen()
@@ -195,6 +203,12 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
             }
         }
     }
+}
+
+private fun openMedication(backStack: MutableList<Route>, medicationId: Long) {
+    backStack.clear()
+    backStack.add(start)
+    backStack.add(Route.Medication(medicationId))
 }
 
 @Composable

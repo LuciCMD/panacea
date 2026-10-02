@@ -69,6 +69,19 @@ interface MedicationDao {
     @Query("SELECT id, name FROM medication ORDER BY sortOrder, name")
     fun observeNames(): Flow<List<MedicationName>>
 
+    @Query("SELECT * FROM medication WHERE learnRoutine = 1")
+    fun observeLearning(): Flow<List<MedicationEntity>>
+
+    @Query("SELECT * FROM medication WHERE learnRoutine = 1")
+    suspend fun learning(): List<MedicationEntity>
+
+    /** Turning learning on starts from now, so it doesn't ask a question already past. */
+    @Query("UPDATE medication SET learnRoutine = :on, routineAskedFor = CASE WHEN :on THEN :now ELSE routineAskedFor END WHERE id = :id")
+    suspend fun setLearnRoutine(id: Long, on: Boolean, now: Long)
+
+    @Query("UPDATE medication SET routineAskedFor = :at WHERE id = :id")
+    suspend fun setRoutineAskedFor(id: Long, at: Long)
+
     @Query("UPDATE medication SET lastMultiplier = :multiplier WHERE id = :id")
     suspend fun setLastMultiplier(id: Long, multiplier: Double)
 
@@ -105,6 +118,16 @@ interface DoseDao {
 
     @Query("SELECT takenAt FROM dose WHERE medicationId = :id AND takenAt >= :since")
     suspend fun timesSince(id: Long, since: Long): List<Long>
+
+    /** Dose times of every medication learning its routine, since [since]. */
+    @Query(
+        """
+        SELECT d.medicationId AS medicationId, d.takenAt AS takenAt FROM dose d
+        JOIN medication m ON m.id = d.medicationId
+        WHERE m.learnRoutine = 1 AND d.takenAt >= :since
+        """
+    )
+    fun observeLearningTimes(since: Long): Flow<List<DoseTime>>
 
     @Query("SELECT * FROM dose WHERE takenAt >= :since ORDER BY takenAt")
     fun observeSince(since: Long): Flow<List<DoseEntity>>

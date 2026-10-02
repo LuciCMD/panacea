@@ -66,6 +66,8 @@ import com.clementine.panacea.ui.history.HistoryItem
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.reminders.NotificationsOffCard
 import com.clementine.panacea.ui.reminders.ReminderRow
+import com.clementine.panacea.ui.reminders.rememberAskForNotifications
+import com.clementine.panacea.ui.reminders.rememberNotificationsAllowed
 import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.today.CardRing
 import com.clementine.panacea.ui.today.StatusLines
@@ -95,6 +97,9 @@ fun MedicationScreen(
     val todayUi by today.ui.collectAsStateWithLifecycle()
     val take = rememberTake(today)
     val sounds = LocalSoundPlayer.current
+    val notificationsAllowed = rememberNotificationsAllowed()
+    // Learning is turned on whatever the answer; the card below says if notifications are off.
+    val askThenLearn = rememberAskForNotifications(settingsIfRefused = false) { viewModel.setLearnRoutine(id, true) }
 
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     var viewing by rememberSaveable { mutableStateOf<PillSide?>(null) }
@@ -144,7 +149,12 @@ fun MedicationScreen(
 
             item(key = "reminders") { SectionLabel("Reminders") }
             ui.muted?.let { text -> item(key = "muted") { MutedCard(text) { viewModel.unmute(med.id) } } }
-            if (ui.reminders.any { it.enabled }) {
+            item(key = "routine") {
+                RoutineCard(ui.routine) { on ->
+                    if (on && !notificationsAllowed) askThenLearn() else viewModel.setLearnRoutine(med.id, on)
+                }
+            }
+            if (ui.reminders.any { it.enabled } || ui.routine.on) {
                 item(key = "notifications") { NotificationsOffCard() }
             }
             if (ui.reminders.isEmpty()) {

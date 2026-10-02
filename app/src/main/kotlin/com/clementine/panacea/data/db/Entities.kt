@@ -1,5 +1,6 @@
 package com.clementine.panacea.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -25,12 +26,16 @@ data class MedicationEntity(
     val sortOrder: Int,
     /** The amount multiplier used last, offered again next time. */
     val lastMultiplier: Double = 1.0,
+    /** Learned reminders: ask whether it was taken when a usual dose isn't logged. */
     val learnRoutine: Boolean = false,
     /** Reminders for this medication stay quiet until this time (epoch ms). */
     val mutedUntil: Long = 0,
     /** Photos of the pill's two sides, as file names in the app's photo folder. Added in version 2. */
     val photoFront: String? = null,
     val photoBack: String? = null,
+    /** When the latest question a learned reminder dealt with came due (epoch ms); none at or before it is asked. Added in version 3. */
+    @ColumnInfo(defaultValue = "0")
+    val routineAskedFor: Long = 0,
 )
 
 @Entity(
@@ -132,6 +137,8 @@ data class ReminderRow(
 )
 
 data class MedicationName(val id: Long, val name: String)
+
+data class DoseTime(val medicationId: Long, val takenAt: Long)
 
 /** What goes with a medication when it's removed. */
 data class MedicationCounts(val doses: Int, val reminders: Int)

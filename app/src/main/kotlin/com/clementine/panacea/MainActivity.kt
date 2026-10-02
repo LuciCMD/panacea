@@ -59,12 +59,13 @@ class MainActivity : ComponentActivity() {
         handle(intent)
     }
 
-    /** A notification opens a medication ("panacea://medication/12") or asks to mute it. */
+    /** A notification opens a medication ("panacea://medication/12"), asks to mute it, or to log it earlier. */
     private fun handle(intent: Intent) {
         val id = intent.data?.takeIf { it.scheme == "panacea" }?.lastPathSegment?.toLongOrNull() ?: return
         request = when (intent.action) {
             ACTION_OPEN_MEDICATION -> AppRequest.OpenMedication(id)
             ACTION_MUTE -> AppRequest.Mute(id)
+            ACTION_TOOK_EARLIER -> AppRequest.TookEarlier(id)
             else -> return
         }
     }
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val ACTION_OPEN_MEDICATION = "com.clementine.panacea.OPEN_MEDICATION"
         const val ACTION_MUTE = "com.clementine.panacea.MUTE"
+        const val ACTION_TOOK_EARLIER = "com.clementine.panacea.TOOK_EARLIER"
     }
 
     override fun onDestroy() {

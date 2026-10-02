@@ -11,7 +11,7 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val container = (context.applicationContext as PanaceaApp).container
         val reminders = container.reminders
-        // "panacea://reminder/12", "panacea://snooze/12", "panacea://mute/12" or "panacea://mute/all"
+        // "panacea://reminder/12", "panacea://snooze/12", "panacea://learned/3", "panacea://mute/3" or "panacea://mute/all"
         val id = intent.data?.lastPathSegment?.toLongOrNull()
         val at = intent.getLongExtra(EXTRA_AT, 0)
         val done = goAsync()
@@ -25,6 +25,8 @@ class ReminderReceiver : BroadcastReceiver() {
                     SNOOZE -> id?.let { reminders.snooze(it) }
                     REPOST -> id?.let { reminders.repost(it) }
                     MUTE_END -> reminders.muteEnded(id)
+                    ASK -> id?.let { reminders.ask(it) }
+                    TOOK_NOW -> id?.let { reminders.tookNow(it) }
                 }
             } finally {
                 done.finish()
@@ -39,6 +41,10 @@ class ReminderReceiver : BroadcastReceiver() {
         const val SNOOZE = "com.clementine.panacea.reminder.SNOOZE"
         const val REPOST = "com.clementine.panacea.reminder.REPOST"
         const val MUTE_END = "com.clementine.panacea.reminder.MUTE_END"
+
+        /** A learned reminder's time to ask; the id is the medication's. */
+        const val ASK = "com.clementine.panacea.reminder.ASK"
+        const val TOOK_NOW = "com.clementine.panacea.reminder.TOOK_NOW"
 
         /** When the reminder came due, epoch ms. */
         const val EXTRA_AT = "at"

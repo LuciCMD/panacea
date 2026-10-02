@@ -59,6 +59,7 @@ import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.TimeDialog
+import com.clementine.panacea.ui.components.pastTime
 import com.clementine.panacea.ui.edit.PhotoViewer
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.edit.PillSide
@@ -217,11 +218,7 @@ fun TakeSheet(
             hint = "A time later than now counts as yesterday.",
             initial = takenAt?.let { Instant.ofEpochMilli(it).atZone(now.zone).toLocalTime() } ?: LocalTime.now(),
             onPick = { time ->
-                val current = ZonedDateTime.now()
-                val today = current.with(time).withSecond(0).withNano(0)
-                // A time still to come today can only mean yesterday.
-                val picked = if (today.isAfter(current)) today.minusDays(1) else today
-                takenAt = picked.toInstant().toEpochMilli()
+                takenAt = pastTime(time, ZonedDateTime.now()).toInstant().toEpochMilli()
                 picking = false
             },
             onDismiss = { picking = false },

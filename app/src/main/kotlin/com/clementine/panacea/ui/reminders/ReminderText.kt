@@ -61,11 +61,11 @@ object ReminderText {
         }
     }
 
-    /** "a", "a and b", "a, b and c". */
-    fun natural(items: List<String>): String = when (items.size) {
+    /** "a", "a and b", "a, b and c"; or with [last] "or". */
+    fun natural(items: List<String>, last: String = "and"): String = when (items.size) {
         0 -> ""
         1 -> items[0]
-        else -> items.dropLast(1).joinToString(", ") + " and " + items.last()
+        else -> items.dropLast(1).joinToString(", ") + " $last " + items.last()
     }
 
     fun ordinal(n: Int): String = n.toString() + when {
