@@ -229,6 +229,7 @@ private fun BackupCard(viewModel: SettingsViewModel) {
     val status by viewModel.backupStatus.collectAsStateWithLifecycle()
     val working by viewModel.working.collectAsStateWithLifecycle()
     val pending by viewModel.pending.collectAsStateWithLifecycle()
+    val age by viewModel.backupAge.collectAsStateWithLifecycle()
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let(viewModel::backUp)
     }
@@ -267,12 +268,19 @@ private fun BackupCard(viewModel: SettingsViewModel) {
             Icon(Glyphs.File, contentDescription = null, modifier = Modifier.size(18.dp))
             Text("Export CSV", style = MaterialTheme.typography.labelLarge)
         }
-        val line = working ?: status?.text
+        // What's happening, or what just happened; otherwise how old the last backup is.
+        val line = working ?: status?.text ?: age?.text
         if (line != null) {
+            val color = when {
+                working != null -> Colors.Muted
+                status != null -> if (status?.failed == true) Colors.Bad else Colors.Muted
+                age?.warn == true -> Colors.Warn
+                else -> Colors.Muted
+            }
             Text(
                 line,
                 style = MaterialTheme.typography.bodyMedium.merge(Numbers),
-                color = if (working == null && status?.failed == true) Colors.Bad else Colors.Muted,
+                color = color,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
         }

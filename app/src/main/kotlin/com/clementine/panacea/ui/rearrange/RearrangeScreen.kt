@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import com.clementine.panacea.model.Category
 import com.clementine.panacea.ui.components.SlateIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -201,7 +202,8 @@ private fun ItemCard(item: RearrangeItem, lifted: Boolean, modifier: Modifier) {
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(item.name, style = MaterialTheme.typography.titleMedium, color = Colors.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${item.category.label} · ${item.type.label}", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted, maxLines = 1)
+                val kind = listOfNotNull(item.category.label.takeIf { item.category != Category.UNCATEGORIZED }, item.type.label).joinToString(" · ")
+                Text(kind, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted, maxLines = 1)
             }
         }
     }

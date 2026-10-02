@@ -201,7 +201,7 @@ private fun Filters(categories: List<Category>, shown: Category?, onPick: (Categ
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FilterChip("All", shown == null) { onPick(null) }
-        categories.forEach { c -> FilterChip(c.label, shown == c) { onPick(c) } }
+        categories.forEach { c -> FilterChip(c.groupLabel, shown == c) { onPick(c) } }
     }
 }
 

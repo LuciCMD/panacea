@@ -24,6 +24,15 @@ class Settings(context: Context) {
 
     private val sounds = SoundEvent.entries.associateWith { MutableStateFlow(readSound(it)) }
 
+    private val _lastBackup = MutableStateFlow(prefs.getLong(KEY_LAST_BACKUP, 0L).takeIf { it > 0 })
+    /** When a backup was last saved from this phone; null if never. */
+    val lastBackup: StateFlow<Long?> = _lastBackup.asStateFlow()
+
+    fun setLastBackup(at: Long) {
+        prefs.edit { putLong(KEY_LAST_BACKUP, at) }
+        _lastBackup.value = at
+    }
+
     fun setTheme(key: String) {
         prefs.edit { putString(KEY_THEME, key) }
         _theme.value = key
@@ -58,6 +67,7 @@ class Settings(context: Context) {
     companion object {
         private const val FILE = "settings"
         private const val KEY_THEME = "theme"
+        private const val KEY_LAST_BACKUP = "backup.last"
         const val THEME_SYSTEM = "system"
     }
 }

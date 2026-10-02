@@ -242,6 +242,11 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
                             is Route.EditMedication -> EditMedicationScreen(
                                 route.medicationId,
                                 onDone = { pop() },
+                                // The reminder takes the form's place, so saving it comes back to where the medication was added from.
+                                onAddReminder = { id ->
+                                    backStack.remove(route)
+                                    backStack.add(Route.EditReminder(null, id))
+                                },
                                 // Its own page goes too; there's nothing left to show.
                                 onRemoved = { id ->
                                     backStack.removeAll {

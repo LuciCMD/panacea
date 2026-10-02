@@ -92,6 +92,8 @@ fun EditMedicationScreen(
     id: Long?,
     onDone: () -> Unit,
     onRemoved: (Long) -> Unit = { onDone() },
+    /** After a new medication is added and a reminder for it is wanted. */
+    onAddReminder: (Long) -> Unit = { onDone() },
     viewModel: EditMedicationViewModel = viewModel(factory = EditMedicationViewModel.Factory),
 ) {
     val saver = EditMedicationViewModel.DraftSaver
@@ -116,6 +118,8 @@ fun EditMedicationScreen(
     var removing by remember { mutableStateOf<MedicationCounts?>(null) }
     // Asked when a changed dose or weight would leave past doses at the old one.
     var pastQuestion by remember { mutableStateOf<String?>(null) }
+    // The medication just added, while asking whether to remind about it.
+    var added by rememberSaveable { mutableStateOf<Long?>(null) }
     val scope = rememberCoroutineScope()
 
     val setPhoto = { side: PillSide, name: String? ->
@@ -185,7 +189,12 @@ fun EditMedicationScreen(
                             problems = viewModel.check(d)
                             if (problems.none) {
                                 pastQuestion = viewModel.pastDosesQuestion(d)
-                                if (pastQuestion == null) viewModel.save(d) { onDone() }
+                                if (pastQuestion == null) {
+                                    viewModel.save(d) { id ->
+                                        // Recreational use isn't something to be reminded of.
+                                        if (d.isNew && d.category != Category.RECREATIONAL) added = id else onDone()
+                                    }
+                                }
                             }
                         }
                     },
@@ -214,6 +223,16 @@ fun EditMedicationScreen(
                 onDone()
             },
             onDismiss = { discarding = false },
+        )
+    }
+    added?.let { id ->
+        ConfirmDialog(
+            title = "Add a Reminder?",
+            text = "Panacea can remind you to take ${d.name.trim()} at the times you choose. Skip this for something you take only as needed.",
+            confirmLabel = "Add Reminder",
+            dismissLabel = "Not Now",
+            onConfirm = { onAddReminder(id) },
+            onDismiss = { onDone() },
         )
     }
     pastQuestion?.let { question ->
@@ -270,14 +289,14 @@ private fun BasicsCard(d: MedicationDraft, problems: DraftProblems, update: (Med
         Column {
             FieldLabel("Dose", info = "The active amount in one $noun, as on the label. Leave it empty to count doses instead.")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SlateTextField(d.dose, { update(d.copy(dose = it)) }, Modifier.weight(1f), placeholder = "50", error = problems.dose, accessibleLabel = "Dose", keyboardOptions = decimal)
+                SlateTextField(d.dose, { update(d.copy(dose = it)) }, Modifier.weight(1f), error = problems.dose, accessibleLabel = "Dose", keyboardOptions = decimal)
                 SlateDropdown(d.doseUnit, (DoseUnits + d.doseUnit).distinct(), { it }, { update(d.copy(doseUnit = it)) }, "Dose Unit")
             }
         }
         Column {
             FieldLabel("Pill Weight", info = "What one $noun weighs on a scale, for totals by weight. Leave it empty if you don't know.")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SlateTextField(d.weight, { update(d.copy(weight = it)) }, Modifier.weight(1f), placeholder = "0.25", error = problems.weight, accessibleLabel = "Pill Weight", keyboardOptions = decimal)
+                SlateTextField(d.weight, { update(d.copy(weight = it)) }, Modifier.weight(1f), error = problems.weight, accessibleLabel = "Pill Weight", keyboardOptions = decimal)
                 SlateDropdown(
                     WeightUnit.fromKey(d.weightUnit), WeightUnit.entries, { it.key },
                     { update(d.copy(weightUnit = it.key)) }, "Weight Unit",

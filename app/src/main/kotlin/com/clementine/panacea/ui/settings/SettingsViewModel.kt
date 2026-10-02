@@ -13,6 +13,7 @@ import com.clementine.panacea.data.backup.BackupException
 import com.clementine.panacea.data.backup.Backups
 import com.clementine.panacea.data.backup.PendingRestore
 import com.clementine.panacea.ui.TimeFormats
+import com.clementine.panacea.ui.minuteTicks
 import com.clementine.panacea.ui.timeFormats
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -97,7 +99,16 @@ class SettingsViewModel(
     /** A backup read and waiting for the user to confirm the restore. */
     val pending: StateFlow<PendingRestore?> = _pending.asStateFlow()
 
-    fun backUp(uri: Uri) = run("Saving…", "The backup couldn't be saved there.") { BackupText.backedUp(backups.backUp(uri)) }
+    /** When the last backup was saved, or null while there's nothing worth backing up. */
+    val backupAge: StateFlow<BackupText.Age?> = combine(settings.lastBackup, medications.observeSummaries(), minuteTicks()) { last, meds, now ->
+        if (last == null && meds.isEmpty()) null else BackupText.age(last, now, formats)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun backUp(uri: Uri) = run("Saving…", "The backup couldn't be saved there.") {
+        val written = backups.backUp(uri)
+        settings.setLastBackup(System.currentTimeMillis())
+        BackupText.backedUp(written)
+    }
 
     fun exportCsv(uri: Uri) = run("Exporting…", "The CSV couldn't be saved there.") { BackupText.exported(backups.exportCsv(uri)) }
 

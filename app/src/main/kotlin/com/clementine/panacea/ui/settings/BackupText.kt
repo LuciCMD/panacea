@@ -2,14 +2,20 @@ package com.clementine.panacea.ui.settings
 
 import com.clementine.panacea.ui.counted
 import com.clementine.panacea.data.backup.Written
+import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.reminders.ReminderText.natural
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.time.format.DateTimeFormatter
 
 /** The words of the Backup card, kept apart from Compose so they can be tested. */
 object BackupText {
+    /** Days after which an old backup is called out. */
+    const val DUE_DAYS = 30
+
     data class Question(val title: String, val text: String, val confirm: String, val destructive: Boolean)
 
     fun backupName(today: LocalDate) = "Panacea Backup $today.zip"
@@ -21,6 +27,21 @@ object BackupText {
         if (w.photos > 0) parts += count(w.photos, "photo")
         if (w.sounds > 0) parts += count(w.sounds, "sound")
         return "Saved ${natural(parts)}."
+    }
+
+    /** "Last backed up today at 9:12", "… 28 Aug · 35 days ago"; [warn] once it's [DUE_DAYS] old or there's none. */
+    data class Age(val text: String, val warn: Boolean)
+
+    fun age(lastBackup: Long?, now: ZonedDateTime, f: TimeFormats): Age {
+        lastBackup ?: return Age("Not backed up yet", warn = true)
+        val at = Instant.ofEpochMilli(lastBackup).atZone(now.zone)
+        val days = ChronoUnit.DAYS.between(at.toLocalDate(), now.toLocalDate()).coerceAtLeast(0)
+        val text = when (days) {
+            0L -> "today at ${at.format(f.time)}"
+            1L -> "yesterday at ${at.format(f.time)}"
+            else -> "${at.format(f.shortDate)} · ${days} days ago"
+        }
+        return Age("Last backed up $text", warn = days >= DUE_DAYS)
     }
 
     fun exported(w: Written) = "Exported ${count(w.doses, "dose")}."

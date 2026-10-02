@@ -1,7 +1,9 @@
 package com.clementine.panacea.ui.settings
 
 import com.clementine.panacea.data.backup.Written
+import com.clementine.panacea.ui.today.Fixtures.formats
 import com.clementine.panacea.ui.today.Fixtures.ms
+import com.clementine.panacea.ui.today.Fixtures.now
 import com.clementine.panacea.ui.today.Fixtures.zone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,6 +14,15 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class BackupTextTest {
+    @Test
+    fun saysHowOldTheLastBackupIs() {
+        assertEquals(BackupText.Age("Not backed up yet", warn = true), BackupText.age(null, now, formats))
+        assertEquals(BackupText.Age("Last backed up today at 9:12", warn = false), BackupText.age(ms(10, 2, 9, 12), now, formats))
+        assertEquals(BackupText.Age("Last backed up yesterday at 21:05", warn = false), BackupText.age(ms(10, 1, 21, 5), now, formats))
+        assertEquals(BackupText.Age("Last backed up 3 Sep · 29 days ago", warn = false), BackupText.age(ms(9, 3, 9, 0), now, formats))
+        assertEquals(BackupText.Age("Last backed up 2 Sep · 30 days ago", warn = true), BackupText.age(ms(9, 2, 9, 0), now, formats))
+    }
+
     private val date = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH)
 
     @Test

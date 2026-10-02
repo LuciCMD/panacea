@@ -7,6 +7,9 @@ enum class Category(val key: String, val label: String) {
     RECREATIONAL("Recreational", "Recreational"),
     UNCATEGORIZED("Uncategorized", "None");
 
+    /** As a group of medications, where "None" alone would read as nothing. */
+    val groupLabel: String get() = if (this == UNCATEGORIZED) "Uncategorized" else label
+
     companion object {
         fun fromKey(key: String?): Category = entries.firstOrNull { it.key == key } ?: UNCATEGORIZED
     }
