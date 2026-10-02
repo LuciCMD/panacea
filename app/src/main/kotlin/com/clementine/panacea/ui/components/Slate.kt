@@ -195,8 +195,10 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     confirmKind: ButtonKind = ButtonKind.Primary,
+    /** Back or a tap outside, when that isn't the same as the dismiss button. */
+    onCancel: () -> Unit = onDismiss,
 ) {
-    BasicAlertDialog(onDismissRequest = onDismiss, modifier = Modifier.semantics { paneTitle = title }) {
+    BasicAlertDialog(onDismissRequest = onCancel, modifier = Modifier.semantics { paneTitle = title }) {
         SlateCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 16.dp)) {
                 Text(title, style = MaterialTheme.typography.titleLarge, color = Colors.Ink)

@@ -111,12 +111,17 @@ class MedicationRepository(private val db: PanaceaDatabase) {
 
     suspend fun photoFiles(): List<String> = medications.photoFiles()
 
+    /** How many of the medication's doses were logged at a value [change] changes. */
+    suspend fun dosesAffected(id: Long, change: DoseChange): Int = doses.of(id).count(change::affects)
+
     /**
      * Adds [medication] (id 0) at the end of the list, or replaces the one with its id, along with its
-     * ingredients. Returns the id and the row as it was before, if any.
+     * ingredients; with [fixPast], doses logged at its old dose or weight take the new one. Returns
+     * the id and the row as it was before, if any.
      */
     suspend fun save(
         medication: MedicationEntity,
+        fixPast: Boolean = false,
         ingredients: (Long) -> List<IngredientEntity>,
     ): Pair<Long, MedicationEntity?> = db.withTransaction {
         val previous = if (medication.id == 0L) null else medications.get(medication.id)
@@ -124,6 +129,10 @@ class MedicationRepository(private val db: PanaceaDatabase) {
             medications.insert(medication.copy(id = 0, sortOrder = medications.maxSortOrder() + 1))
         } else {
             medications.update(medication)
+            if (fixPast) {
+                val change = DoseChange(previous, medication)
+                doses.update(doses.of(medication.id).filter(change::affects).map(change::fixed))
+            }
             medication.id
         }
         medications.deleteIngredients(id)

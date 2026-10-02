@@ -17,8 +17,8 @@ import com.clementine.panacea.ui.timeFormats
 import java.time.ZonedDateTime
 
 /**
- * Reminder notifications: one per reminder, with Taken, Snooze 10 Min and Mute…; and one question per
- * medication learning its routine, with Took It Now, Took It Earlier and Mute….
+ * Reminder notifications: one per reminder, and one question per medication learning its routine.
+ * Both stay until they're dealt with, and both have Taken, Already Taken… and Later….
  */
 class Notifier(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
@@ -49,11 +49,11 @@ class Notifier(private val context: Context) {
             // Stays until it's dealt with, as in 3.4; swiping it away only brings it back.
             .setOngoing(true)
             .setAutoCancel(false)
-            .setContentIntent(activity(MainActivity.ACTION_OPEN_MEDICATION, med.id))
+            .setContentIntent(activity(MainActivity.ACTION_OPEN_MEDICATION, "medication/${med.id}"))
             .setDeleteIntent(broadcast(ReminderReceiver.REPOST, r.id))
             .addAction(0, "Taken", broadcast(ReminderReceiver.TAKEN, r.id))
-            .addAction(0, "Snooze 10 Min", broadcast(ReminderReceiver.SNOOZE, r.id))
-            .addAction(0, "Mute…", activity(MainActivity.ACTION_MUTE, med.id))
+            .addAction(0, "Already Taken…", activity(MainActivity.ACTION_ALREADY_TAKEN, "reminder/${r.id}"))
+            .addAction(0, "Later…", activity(MainActivity.ACTION_LATER, "reminder/${r.id}"))
             .build()
         try {
             manager.notify(notificationId(r.id), notification)
@@ -64,7 +64,7 @@ class Notifier(private val context: Context) {
 
     fun cancel(reminderId: Long) = manager.cancel(notificationId(reminderId))
 
-    /** "Did you take Sertraline?" A question rather than a reminder, so a swipe puts it away. */
+    /** "Did you take Sertraline?" Like a reminder, it stays until it's answered; a swipe only brings it back. */
     fun ask(med: MedicationEntity, routine: Routine, lastLogged: Long?, now: ZonedDateTime) {
         val text = RoutineText.notification(routine, lastLogged, now, timeFormats(context))
         val notification = NotificationCompat.Builder(context, LEARNED_CHANNEL_ID)
@@ -76,10 +76,13 @@ class Notifier(private val context: Context) {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setContentIntent(activity(MainActivity.ACTION_OPEN_MEDICATION, med.id))
-            .addAction(0, "Took It Now", learned(ReminderReceiver.TOOK_NOW, med.id))
-            .addAction(0, "Took It Earlier", activity(MainActivity.ACTION_TOOK_EARLIER, med.id))
-            .addAction(0, "Mute…", activity(MainActivity.ACTION_MUTE, med.id))
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setContentIntent(activity(MainActivity.ACTION_OPEN_MEDICATION, "medication/${med.id}"))
+            .setDeleteIntent(learned(ReminderReceiver.REPOST_ASK, med.id))
+            .addAction(0, "Taken", learned(ReminderReceiver.TOOK_NOW, med.id))
+            .addAction(0, "Already Taken…", activity(MainActivity.ACTION_ALREADY_TAKEN, "learned/${med.id}"))
+            .addAction(0, "Later…", activity(MainActivity.ACTION_LATER, "learned/${med.id}"))
             .build()
         try {
             manager.notify(LEARNED_TAG, notificationId(med.id), notification)
@@ -107,10 +110,11 @@ class Notifier(private val context: Context) {
         return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
-    private fun activity(action: String, medicationId: Long): PendingIntent {
+    /** [path]: "medication/3", or the notification a button is on: "reminder/12" or "learned/3". */
+    private fun activity(action: String, path: String): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .setAction(action)
-            .setData(Uri.parse("panacea://medication/$medicationId"))
+            .setData(Uri.parse("panacea://$path"))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }

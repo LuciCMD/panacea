@@ -17,7 +17,8 @@ class MedicationModelTest {
         category = "OTC", type = "ORAL_TABLET", sortOrder = 0,
     )
 
-    private fun dose(at: Long, multiplier: Double = 1.0, amount: Double = 200.0 * multiplier, unit: String = "mg", weight: Double? = null, weightUnit: String? = null) =
+    /** Logged as Ibuprofen is now, unless told otherwise. */
+    private fun dose(at: Long, multiplier: Double = 1.0, amount: Double = 200.0 * multiplier, unit: String = "mg", weight: Double? = 350.0 * multiplier, weightUnit: String? = "mg") =
         DoseEntity(medicationId = 1, takenAt = at, multiplier = multiplier, amount = amount, unit = unit, weight = weight, weightUnit = weightUnit)
 
     @Test
@@ -51,12 +52,12 @@ class MedicationModelTest {
     }
 
     @Test
-    fun weightIsAsLoggedInThePillsUnitOrElseFromThePillNow() {
+    fun weightIsAsLoggedInThePillsUnitAndDosesWithoutOneDontCount() {
         // One logged in grams before the unit changed, one from before any weight was set.
-        val doses = listOf(dose(ms(10, 2, 9, 0), weight = 0.4, weightUnit = "g"), dose(ms(10, 2, 8, 0), multiplier = 0.5))
-        assertEquals("575 mg", MedicationModel.totals(med, doses, now)!!.rows[0].weight)
-        // With no weight anywhere, the column goes.
-        assertFalse(MedicationModel.totals(med.copy(weight = null), listOf(dose(ms(10, 2, 9, 0))), now)!!.showWeight)
+        val doses = listOf(dose(ms(10, 2, 9, 0), weight = 0.4, weightUnit = "g"), dose(ms(10, 2, 8, 0), multiplier = 0.5, weight = null, weightUnit = null))
+        assertEquals("400 mg", MedicationModel.totals(med, doses, now)!!.rows[0].weight)
+        // With no weight logged, the column goes, whatever the pill weighs now.
+        assertFalse(MedicationModel.totals(med, listOf(dose(ms(10, 2, 9, 0), weight = null, weightUnit = null)), now)!!.showWeight)
     }
 
     @Test
@@ -69,7 +70,7 @@ class MedicationModelTest {
 
     @Test
     fun emptyPeriodsShowADash() {
-        val totals = MedicationModel.totals(med.copy(weight = null), listOf(dose(ms(8, 1, 8, 0))), now)!!
+        val totals = MedicationModel.totals(med.copy(weight = null), listOf(dose(ms(8, 1, 8, 0), weight = null, weightUnit = null)), now)!!
         assertEquals(TotalRow("Last 24 Hours", "0", TotalRow.NONE, TotalRow.NONE), totals.rows[0])
         assertEquals("Last 24 Hours: 0 doses", totals.rows[0].spoken(totals.showAmount, totals.showWeight))
     }

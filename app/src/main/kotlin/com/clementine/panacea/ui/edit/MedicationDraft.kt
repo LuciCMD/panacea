@@ -1,5 +1,6 @@
 package com.clementine.panacea.ui.edit
 
+import com.clementine.panacea.data.DoseChange
 import com.clementine.panacea.ui.counted
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationCounts
@@ -9,6 +10,7 @@ import com.clementine.panacea.model.Category
 import com.clementine.panacea.model.DEFAULT_DOSE_UNIT
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.WeightUnit
+import com.clementine.panacea.model.formatAmount
 import com.clementine.panacea.model.parseAmount
 import com.clementine.panacea.model.plainAmount
 
@@ -108,6 +110,24 @@ object Drafts {
             photoFront = d.photoFront,
             photoBack = d.photoBack,
         )
+    }
+
+    /** Asked before saving a changed dose or pill weight: "12 doses were logged at 50 mg. …" */
+    fun pastDosesQuestion(change: DoseChange, count: Int, old: MedicationEntity): String {
+        val doses = "${counted(count, "dose")} ${if (count == 1) "was" else "were"} logged"
+        val them = if (count == 1) "it" else "them"
+        val noun = MedicationType.fromKey(old.type).noun
+        val weight = old.weight?.let { "${formatAmount(it)} ${WeightUnit.fromKey(old.weightUnit).key} per $noun" }
+        return when {
+            change.dose && change.weight ->
+                "$doses at the old dose or pill weight. Fix $them too if it was entered wrong; keep $them if the prescription or pill changed."
+            change.dose ->
+                "$doses at ${formatAmount(old.dose)} ${old.doseUnit}. Fix $them too if it was entered wrong; keep $them if the prescription changed."
+            weight == null ->
+                "$doses before the pill had a weight. Fix $them too to count ${if (count == 1) "its" else "their"} weight, or count weight only from now on."
+            else ->
+                "$doses at $weight. Fix $them too if it was entered wrong; keep $them if the pill changed."
+        }
     }
 
     /** What removing a medication takes with it, for the confirm. */

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
+import com.clementine.panacea.data.DoseChange
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.PhotoStore
 import com.clementine.panacea.data.db.MedicationCounts
@@ -28,11 +29,21 @@ class EditMedicationViewModel(private val repository: MedicationRepository, val 
 
     suspend fun counts(id: Long): MedicationCounts = repository.counts(id)
 
-    /** Saves [draft] and tidies up photos it replaced. */
-    fun save(draft: MedicationDraft, onSaved: (Long) -> Unit) {
+    /** What to ask before saving [draft], if it changes the dose or weight that past doses were logged at. */
+    suspend fun pastDosesQuestion(draft: MedicationDraft): String? {
+        if (draft.isNew) return null
+        val existing = repository.medication(draft.id)?.first ?: return null
+        val change = DoseChange(existing, Drafts.toEntity(draft, existing, sortOrder = 0))
+        if (!change.dose && !change.weight) return null
+        val count = repository.dosesAffected(draft.id, change)
+        return if (count == 0) null else Drafts.pastDosesQuestion(change, count, existing)
+    }
+
+    /** Saves [draft] and tidies up photos it replaced; with [fixPast], past doses take its new dose and weight. */
+    fun save(draft: MedicationDraft, fixPast: Boolean = false, onSaved: (Long) -> Unit) {
         viewModelScope.launch {
             val existing = if (draft.isNew) null else repository.medication(draft.id)?.first
-            val (id, previous) = repository.save(Drafts.toEntity(draft, existing, sortOrder = 0)) { Drafts.toIngredients(draft, it) }
+            val (id, previous) = repository.save(Drafts.toEntity(draft, existing, sortOrder = 0), fixPast) { Drafts.toIngredients(draft, it) }
             listOfNotNull(previous?.photoFront, previous?.photoBack)
                 .filter { it != draft.photoFront && it != draft.photoBack }
                 .forEach(photos::delete)

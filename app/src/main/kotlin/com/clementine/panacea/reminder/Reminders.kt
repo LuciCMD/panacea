@@ -65,6 +65,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
                 // Turned off, or removed.
                 (known - ids).forEach {
                     alarms.cancelAsk(it)
+                    alarms.cancelAskAgain(it)
                     notifier.cancelAsk(it)
                 }
                 known = ids
@@ -98,6 +99,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
                 reminderDao.all().forEach { alarms.cancel(it.id) }
                 medicationDao.all().forEach {
                     alarms.cancelAsk(it.id)
+                    alarms.cancelAskAgain(it.id)
                     alarms.cancelMuteEnd(it.id)
                 }
                 notifier.cancelAll()
@@ -114,7 +116,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
         askLocked(med)
     }
 
-    /** Took It Now on a learned reminder: logs the medication's usual amount. */
+    /** Taken on a learned question: logs the medication's usual amount. */
     suspend fun tookNow(medicationId: Long) = lock.withLock {
         notifier.cancelAsk(medicationId)
         val med = medicationDao.get(medicationId) ?: return@withLock
@@ -139,10 +141,49 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
     /** A dose was logged in the app; it settles any reminder it counts for. */
     suspend fun doseLogged(medicationId: Long, takenAt: Long) = lock.withLock { doseLoggedLocked(medicationId, takenAt) }
 
-    suspend fun snooze(reminderId: Long) = lock.withLock {
+    /** Later… on the notification: shows it again at [until], unless a dose counts for it by then. */
+    suspend fun snooze(reminderId: Long, until: Long) = lock.withLock {
         notifier.cancel(reminderId)
         val r = reminderDao.get(reminderId) ?: return@withLock
-        alarms.snooze(reminderId, r.lastFiredAt, System.currentTimeMillis() + SNOOZE_MS)
+        alarms.snooze(reminderId, r.lastFiredAt, until)
+    }
+
+    /**
+     * Already Logged on the notification, or Took It Earlier at a time too early to count: the
+     * reminder is put away as taken.
+     */
+    suspend fun dealtWith(reminderId: Long) = lock.withLock {
+        notifier.cancel(reminderId)
+        val r = reminderDao.get(reminderId) ?: return@withLock
+        if (r.pending) reminderDao.update(ReminderEngine.completed(r, System.currentTimeMillis()))
+    }
+
+    /** Later… on a learned question: asks it again at [until], unless the dose is logged by then. */
+    suspend fun askLater(medicationId: Long, until: Long) = lock.withLock {
+        notifier.cancelAsk(medicationId)
+        alarms.armAskAgain(medicationId, until)
+    }
+
+    /** Already Logged on a learned question, or Took It Earlier at any time: the question is put away. */
+    suspend fun askDealtWith(medicationId: Long) = lock.withLock {
+        notifier.cancelAsk(medicationId)
+        alarms.cancelAskAgain(medicationId)
+    }
+
+    /**
+     * A learned question's Later… ran out, or it was swiped away while still open: shows it again if
+     * the dose it asks about still isn't logged, however long ago that was.
+     */
+    suspend fun askAgain(medicationId: Long) = lock.withLock {
+        val med = medicationDao.get(medicationId)?.takeIf { it.learnRoutine } ?: return@withLock
+        val now = ZonedDateTime.now()
+        val nowMs = now.toInstant().toEpochMilli()
+        // A mute takes over; it lets the question go.
+        if (mutedUntil(med) > nowMs) return@withLock
+        val times = doseDao.timesSince(med.id, nowMs - Routines.WINDOW.toMillis())
+        val routine = Routines.learn(times, now)
+        val ask = Routines.latestAsk(routine, now) ?: return@withLock
+        if (!ask.coveredBy(times, nowMs)) notifier.ask(med, routine, times.maxOrNull(), now)
     }
 
     /** The notification was swiped away while still due: put it back. */
@@ -234,6 +275,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
     private suspend fun doseLoggedLocked(medicationId: Long, takenAt: Long) {
         // Whatever the time, a dose logged answers the question.
         notifier.cancelAsk(medicationId)
+        alarms.cancelAskAgain(medicationId)
         val now = System.currentTimeMillis()
         reminderDao.ofMedication(medicationId).filter { ReminderEngine.countsFor(it, takenAt) }.forEach {
             reminderDao.update(ReminderEngine.completed(it, now))
@@ -266,7 +308,6 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
     private suspend fun muteAllUntil() = metaDao.get(MetaKeys.MUTE_ALL_UNTIL)?.toLongOrNull() ?: 0L
 
     private companion object {
-        const val SNOOZE_MS = 10 * 60_000L
         const val DAY_MS = 24 * 60 * 60_000L
     }
 }

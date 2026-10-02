@@ -150,7 +150,7 @@ object MedicationModel {
         val rows = periods.map { (label, since) ->
             val from = since?.toInstant()?.toEpochMilli() ?: Long.MIN_VALUE
             val inPeriod = doses.filter { it.takenAt >= from }
-            val weights = inPeriod.mapNotNull { weightOf(it, med, unit) }
+            val weights = inPeriod.mapNotNull { weightOf(it, unit) }
             TotalRow(
                 label = label,
                 doses = NumberFormat.getIntegerInstance().format(inPeriod.size),
@@ -160,19 +160,17 @@ object MedicationModel {
         }
         return Totals(
             showAmount = doses.any { it.amount > 0 },
-            showWeight = doses.any { weightOf(it, med, unit) != null },
+            showWeight = doses.any { weightOf(it, unit) != null },
             rows = rows,
         )
     }
 
     /**
-     * What one dose weighed, in [unit]: as logged, or else from the pill's weight now. Doses logged
-     * before a weight was set (every dose from 3.4) would otherwise never count.
+     * What one dose weighed, in [unit], as logged. Doses logged before the pill had a weight count
+     * only once given one, which setting the weight offers.
      */
-    private fun weightOf(dose: DoseEntity, med: MedicationEntity, unit: WeightUnit): Double? {
-        dose.weight?.let { return WeightUnit.fromKey(dose.weightUnit).convert(it, unit) }
-        return med.weight?.let { WeightUnit.fromKey(med.weightUnit).convert(it * dose.multiplier, unit) }
-    }
+    private fun weightOf(dose: DoseEntity, unit: WeightUnit): Double? =
+        dose.weight?.let { WeightUnit.fromKey(dose.weightUnit).convert(it, unit) }
 
     /** "300 mg", or "300 mg + 5 mL" if the unit was changed along the way; the current unit first. */
     private fun amounts(doses: List<DoseEntity>, current: String): String {

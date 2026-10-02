@@ -110,6 +110,8 @@ fun EditMedicationScreen(
     var camera by rememberSaveable { mutableStateOf<String?>(null) }   // sides, comma separated
     var discarding by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf<MedicationCounts?>(null) }
+    // Asked when a changed dose or weight would leave past doses at the old one.
+    var pastQuestion by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     val setPhoto = { side: PillSide, name: String? ->
@@ -177,7 +179,10 @@ fun EditMedicationScreen(
                         scope.launch {
                             tried = true
                             problems = viewModel.check(d)
-                            if (problems.none) viewModel.save(d) { onDone() }
+                            if (problems.none) {
+                                pastQuestion = viewModel.pastDosesQuestion(d)
+                                if (pastQuestion == null) viewModel.save(d) { onDone() }
+                            }
                         }
                     },
                     kind = ButtonKind.Primary,
@@ -205,6 +210,24 @@ fun EditMedicationScreen(
                 onDone()
             },
             onDismiss = { discarding = false },
+        )
+    }
+    pastQuestion?.let { question ->
+        ConfirmDialog(
+            title = "Change Past Doses Too?",
+            text = question,
+            confirmLabel = "Fix Past Doses Too",
+            dismissLabel = "Only From Now On",
+            onConfirm = {
+                pastQuestion = null
+                viewModel.save(d, fixPast = true) { onDone() }
+            },
+            onDismiss = {
+                pastQuestion = null
+                viewModel.save(d) { onDone() }
+            },
+            // Back or a tap outside goes back to editing.
+            onCancel = { pastQuestion = null },
         )
     }
     removing?.let { counts ->

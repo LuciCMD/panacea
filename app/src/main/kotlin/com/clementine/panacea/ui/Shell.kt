@@ -54,8 +54,9 @@ import com.clementine.panacea.ui.history.HistoryScreen
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.medication.MedicationScreen
 import com.clementine.panacea.ui.rearrange.RearrangeScreen
+import com.clementine.panacea.ui.reminders.AlreadyTakenDialog
 import com.clementine.panacea.ui.reminders.EditReminderScreen
-import com.clementine.panacea.ui.reminders.MuteMedicationDialog
+import com.clementine.panacea.ui.reminders.LaterDialog
 import com.clementine.panacea.ui.reminders.RemindersScreen
 import com.clementine.panacea.ui.reminders.TookEarlierDialog
 import com.clementine.panacea.ui.settings.SettingsScreen
@@ -119,13 +120,41 @@ private val BackStackSaver = listSaver<SnapshotStateList<Route>, String>(
 // Motion stays a short fade, as everywhere else.
 private fun fade(): ContentTransform = fadeIn(tween(120)) togetherWith fadeOut(tween(120))
 
-/** Something asked of the app from outside it, such as a notification's tap or its Mute… button. */
+/** Something asked of the app from outside it: a notification's tap, or a button on one. */
 sealed interface AppRequest {
     data class OpenMedication(val medicationId: Long) : AppRequest
-    data class Mute(val medicationId: Long) : AppRequest
 
-    /** Took It Earlier on a learned reminder: open the medication and ask when. */
-    data class TookEarlier(val medicationId: Long) : AppRequest
+    /** Already Taken…: log it at an earlier time, or put the notification away. */
+    data class AlreadyTaken(val from: Prompt) : AppRequest
+
+    /** Later…: show the notification again after a while, or not today. */
+    data class Later(val from: Prompt) : AppRequest
+}
+
+/** The notification a button was pressed on: a reminder's, or a learned reminder's question. */
+sealed interface Prompt {
+    /** Kept through rotation as this. */
+    val key: String
+
+    data class Reminder(val id: Long) : Prompt {
+        override val key get() = "reminder:$id"
+    }
+
+    /** [id] is the medication's. */
+    data class Learned(val id: Long) : Prompt {
+        override val key get() = "learned:$id"
+    }
+
+    companion object {
+        fun fromKey(key: String): Prompt? {
+            val id = key.substringAfter(':').toLongOrNull() ?: return null
+            return when (key.substringBefore(':')) {
+                "reminder" -> Reminder(id)
+                "learned" -> Learned(id)
+                else -> null
+            }
+        }
+    }
 }
 
 @Composable
@@ -133,24 +162,34 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
     val backStack = rememberSaveable(saver = BackStackSaver) { mutableListOf(start).toMutableStateList() }
     val tab = (backStack.last() as? Route.Top)?.tab
     val pop = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
-    var muting by rememberSaveable { mutableStateOf<Long?>(null) }
-    var tookEarlier by rememberSaveable { mutableStateOf<Long?>(null) }
+    // Each holds a Prompt's key while its dialog is open.
+    var alreadyTaken by rememberSaveable { mutableStateOf<String?>(null) }
+    var tookEarlier by rememberSaveable { mutableStateOf<String?>(null) }
+    var later by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(request) {
         when (request) {
             is AppRequest.OpenMedication -> openMedication(backStack, request.medicationId)
-            is AppRequest.TookEarlier -> {
-                // On its page, where the undo bar can take it back.
-                openMedication(backStack, request.medicationId)
-                tookEarlier = request.medicationId
-            }
-            is AppRequest.Mute -> muting = request.medicationId
+            is AppRequest.AlreadyTaken -> alreadyTaken = request.from.key
+            is AppRequest.Later -> later = request.from.key
             null -> return@LaunchedEffect
         }
         onHandled()
     }
-    muting?.let { id -> MuteMedicationDialog(id) { muting = null } }
-    tookEarlier?.let { id -> TookEarlierDialog(id) { tookEarlier = null } }
+    alreadyTaken?.let(Prompt::fromKey)?.let { prompt ->
+        AlreadyTakenDialog(
+            prompt,
+            onTookEarlier = { medicationId ->
+                // On its page, where the undo bar can take it back.
+                openMedication(backStack, medicationId)
+                tookEarlier = prompt.key
+                alreadyTaken = null
+            },
+            onClose = { alreadyTaken = null },
+        )
+    }
+    tookEarlier?.let(Prompt::fromKey)?.let { prompt -> TookEarlierDialog(prompt) { tookEarlier = null } }
+    later?.let(Prompt::fromKey)?.let { prompt -> LaterDialog(prompt) { later = null } }
 
     Column(
         Modifier

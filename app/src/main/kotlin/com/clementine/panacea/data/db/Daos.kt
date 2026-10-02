@@ -132,6 +132,12 @@ interface DoseDao {
     @Query("SELECT * FROM dose WHERE medicationId = :id ORDER BY takenAt DESC")
     fun observeOf(id: Long): Flow<List<DoseEntity>>
 
+    @Query("SELECT * FROM dose WHERE medicationId = :id")
+    suspend fun of(id: Long): List<DoseEntity>
+
+    @Update
+    suspend fun update(doses: List<DoseEntity>)
+
     @Query("SELECT takenAt FROM dose WHERE medicationId = :id AND takenAt >= :since")
     suspend fun timesSince(id: Long, since: Long): List<Long>
 

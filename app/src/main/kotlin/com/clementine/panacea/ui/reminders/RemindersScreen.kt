@@ -35,6 +35,7 @@ import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.reminder.Reminders
 import com.clementine.panacea.reminder.Schedule
+import com.clementine.panacea.ui.Prompt
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SlateButton
@@ -160,6 +161,33 @@ class RemindersViewModel(private val repository: MedicationRepository, private v
 
     fun unmute(medicationId: Long?) {
         viewModelScope.launch { reminders.unmute(medicationId) }
+    }
+
+    /** The medication a notification is about; null if it's gone. */
+    suspend fun medicationOf(prompt: Prompt): Long? = when (prompt) {
+        is Prompt.Reminder -> repository.reminder(prompt.id)?.medicationId
+        is Prompt.Learned -> prompt.id
+    }
+
+    /** Already Logged, or a dose logged with Took It Earlier: puts the notification away as taken. */
+    fun dealtWith(prompt: Prompt) {
+        viewModelScope.launch {
+            when (prompt) {
+                is Prompt.Reminder -> reminders.dealtWith(prompt.id)
+                is Prompt.Learned -> reminders.askDealtWith(prompt.id)
+            }
+        }
+    }
+
+    fun later(prompt: Prompt, medicationId: Long, choice: LaterChoice) {
+        viewModelScope.launch {
+            val until = choice.until(ZonedDateTime.now())
+            when {
+                choice == LaterChoice.NOT_TODAY -> reminders.mute(medicationId, until)
+                prompt is Prompt.Reminder -> reminders.snooze(prompt.id, until)
+                prompt is Prompt.Learned -> reminders.askLater(prompt.id, until)
+            }
+        }
     }
 
     companion object {

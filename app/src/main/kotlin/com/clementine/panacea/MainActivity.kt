@@ -19,6 +19,7 @@ import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundPlayer
 import com.clementine.panacea.ui.AppRequest
 import com.clementine.panacea.ui.PanaceaShell
+import com.clementine.panacea.ui.Prompt
 import com.clementine.panacea.ui.edit.LocalPhotoStore
 import com.clementine.panacea.ui.theme.PanaceaTheme
 import com.clementine.panacea.ui.theme.Themes
@@ -59,21 +60,30 @@ class MainActivity : ComponentActivity() {
         handle(intent)
     }
 
-    /** A notification opens a medication ("panacea://medication/12"), asks to mute it, or to log it earlier. */
+    /**
+     * A notification opens a medication ("panacea://medication/12"), or a button on one asks about
+     * the reminder ("panacea://reminder/12") or learned question ("panacea://learned/3") it's on.
+     */
     private fun handle(intent: Intent) {
-        val id = intent.data?.takeIf { it.scheme == "panacea" }?.lastPathSegment?.toLongOrNull() ?: return
+        val data = intent.data?.takeIf { it.scheme == "panacea" } ?: return
+        val id = data.lastPathSegment?.toLongOrNull() ?: return
+        val from = when (data.host) {
+            "reminder" -> Prompt.Reminder(id)
+            "learned" -> Prompt.Learned(id)
+            else -> null
+        }
         request = when (intent.action) {
             ACTION_OPEN_MEDICATION -> AppRequest.OpenMedication(id)
-            ACTION_MUTE -> AppRequest.Mute(id)
-            ACTION_TOOK_EARLIER -> AppRequest.TookEarlier(id)
-            else -> return
-        }
+            ACTION_ALREADY_TAKEN -> from?.let(AppRequest::AlreadyTaken)
+            ACTION_LATER -> from?.let(AppRequest::Later)
+            else -> null
+        } ?: return
     }
 
     companion object {
         const val ACTION_OPEN_MEDICATION = "com.clementine.panacea.OPEN_MEDICATION"
-        const val ACTION_MUTE = "com.clementine.panacea.MUTE"
-        const val ACTION_TOOK_EARLIER = "com.clementine.panacea.TOOK_EARLIER"
+        const val ACTION_ALREADY_TAKEN = "com.clementine.panacea.ALREADY_TAKEN"
+        const val ACTION_LATER = "com.clementine.panacea.LATER"
     }
 
     override fun onDestroy() {

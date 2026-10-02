@@ -2,6 +2,7 @@ package com.clementine.panacea.ui.reminders
 
 import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.model.RepeatType
+import com.clementine.panacea.ui.Prompt
 import com.clementine.panacea.ui.today.Fixtures.at
 import com.clementine.panacea.ui.today.Fixtures.formats
 import com.clementine.panacea.ui.today.Fixtures.ms
@@ -57,5 +58,18 @@ class ReminderDraftTest {
         assertEquals("Muted until tomorrow at 1:16", ReminderText.mutedUntil(ms(10, 3, 1, 16), now, formats))
         assertEquals(ms(10, 3, 0, 0), MuteChoice.TOMORROW.until(now))
         assertEquals(at(10, 2, 15, 16).toInstant().toEpochMilli(), MuteChoice.TWO_HOURS.until(now))
+    }
+
+    @Test
+    fun laterIsFromNowAndNotTodayEndsAtMidnight() {
+        assertEquals(ms(10, 2, 13, 26), LaterChoice.TEN_MINUTES.until(now))
+        assertEquals(ms(10, 2, 17, 16), LaterChoice.FOUR_HOURS.until(now))
+        assertEquals(ms(10, 3, 0, 0), LaterChoice.NOT_TODAY.until(now))
+    }
+
+    @Test
+    fun aNotificationsButtonIsKeptThroughRotation() {
+        listOf(Prompt.Reminder(-1268404526), Prompt.Learned(3)).forEach { assertEquals(it, Prompt.fromKey(it.key)) }
+        assertEquals(null, Prompt.fromKey("medication:3"))
     }
 }

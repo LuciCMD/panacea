@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -42,6 +43,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clementine.panacea.ui.Prompt
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SectionCard
@@ -237,14 +239,70 @@ fun LearnedRow(card: LearnedCard, onStop: () -> Unit, onOpen: () -> Unit) {
     }
 }
 
-/** Took It Earlier on a learned reminder: asks when, then logs the usual amount at that time. */
+/** When to remind again, from Later… on a notification; Not Today mutes the medication until midnight. */
+enum class LaterChoice(val label: String) {
+    TEN_MINUTES("In 10 Minutes"),
+    HOUR("In 1 Hour"),
+    TWO_HOURS("In 2 Hours"),
+    FOUR_HOURS("In 4 Hours"),
+    NOT_TODAY("Not Today");
+
+    fun until(now: ZonedDateTime): Long = when (this) {
+        TEN_MINUTES -> now.plusMinutes(10)
+        HOUR -> now.plusHours(1)
+        TWO_HOURS -> now.plusHours(2)
+        FOUR_HOURS -> now.plusHours(4)
+        NOT_TODAY -> now.toLocalDate().plusDays(1).atStartOfDay(now.zone)
+    }.toInstant().toEpochMilli()
+}
+
+/** The medication a notification's button is about, with its name, once known; [onGone] if it was removed. */
 @Composable
-fun TookEarlierDialog(medicationId: Long, onClose: () -> Unit) {
+private fun rememberPromptMedication(prompt: Prompt, viewModel: RemindersViewModel, onGone: () -> Unit): Pair<Long, String>? {
+    val names by viewModel.names.collectAsStateWithLifecycle()
+    val id by produceState<Long?>(null, prompt) { value = viewModel.medicationOf(prompt) ?: -1L }
+    val all = names ?: return null
+    val medicationId = id ?: return null
+    val name = all[medicationId]
+    if (name == null) {
+        LaunchedEffect(Unit) { onGone() }
+        return null
+    }
+    return medicationId to name
+}
+
+/** Already Taken… on a notification: log when it was taken, or put the reminder away if it's logged. */
+@Composable
+fun AlreadyTakenDialog(prompt: Prompt, onTookEarlier: (medicationId: Long) -> Unit, onClose: () -> Unit) {
+    val viewModel: RemindersViewModel = viewModel(factory = RemindersViewModel.Factory)
+    val (medicationId, name) = rememberPromptMedication(prompt, viewModel, onClose) ?: return
+    ChoiceDialog(
+        title = "Already Taken",
+        text = "Log when you took $name, or put this reminder away if the dose is already in History.",
+        onDismiss = onClose,
+    ) {
+        SlateButton(onClick = { onTookEarlier(medicationId) }, kind = ButtonKind.Primary, modifier = Modifier.fillMaxWidth()) {
+            Text("Took It Earlier")
+        }
+        SlateButton(
+            onClick = {
+                viewModel.dealtWith(prompt)
+                onClose()
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Already Logged") }
+    }
+}
+
+/** Took It Earlier: asks when, logs the usual amount at that time, and puts the notification away. */
+@Composable
+fun TookEarlierDialog(prompt: Prompt, onClose: () -> Unit) {
+    val reminders: RemindersViewModel = viewModel(factory = RemindersViewModel.Factory)
     val today: TodayViewModel = viewModel(factory = TodayViewModel.Factory)
     val ui by today.ui.collectAsStateWithLifecycle()
     val take = rememberTake(today)
-    val cards = ui?.cards ?: return
-    val med = cards.firstOrNull { it.medication.id == medicationId }?.medication ?: return LaunchedEffect(Unit) { onClose() }
+    val (medicationId, _) = rememberPromptMedication(prompt, reminders, onClose) ?: return
+    val med = ui?.cards?.firstOrNull { it.medication.id == medicationId }?.medication ?: return
     TimeDialog(
         title = "When Did You Take It?",
         hint = "A time later than now counts as yesterday.",
@@ -252,25 +310,55 @@ fun TookEarlierDialog(medicationId: Long, onClose: () -> Unit) {
         confirmLabel = "Log Dose",
         onPick = { time ->
             take(med.id, med.lastMultiplier, pastTime(time, ZonedDateTime.now()).toInstant().toEpochMilli())
+            // Even a time too early to count for the reminder answers it.
+            reminders.dealtWith(prompt)
             onClose()
         },
         onDismiss = onClose,
     )
 }
 
-/** The Mute… button on a notification: asks how long, then quiets that medication's reminders. */
+/** Later… on a notification: shows it again after a while, or not today. */
 @Composable
-fun MuteMedicationDialog(medicationId: Long, onClose: () -> Unit) {
+fun LaterDialog(prompt: Prompt, onClose: () -> Unit) {
     val viewModel: RemindersViewModel = viewModel(factory = RemindersViewModel.Factory)
-    val names by viewModel.names.collectAsStateWithLifecycle()
-    val all = names ?: return
-    val name = all[medicationId] ?: return LaunchedEffect(Unit) { onClose() }
-    MuteDialog(
-        title = "Mute $name",
-        onMute = { until ->
-            viewModel.mute(medicationId, until)
-            onClose()
-        },
+    val (medicationId, name) = rememberPromptMedication(prompt, viewModel, onClose) ?: return
+    ChoiceDialog(
+        title = "Remind Me Later",
+        text = "Not Today also holds $name's other reminders until midnight.",
         onDismiss = onClose,
-    )
+    ) {
+        LaterChoice.entries.forEach { choice ->
+            SlateButton(
+                onClick = {
+                    viewModel.later(prompt, medicationId, choice)
+                    onClose()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(choice.label) }
+        }
+    }
+}
+
+/** A short question answered by one of a column of buttons, with Cancel below them. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChoiceDialog(title: String, text: String, onDismiss: () -> Unit, choices: @Composable () -> Unit) {
+    BasicAlertDialog(onDismissRequest = onDismiss, modifier = Modifier.semantics { paneTitle = title }) {
+        SlateCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 16.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, color = Colors.Ink)
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Colors.Muted,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 16.dp),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    choices()
+                    SlateButton(onClick = onDismiss, kind = ButtonKind.Text, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+                }
+            }
+        }
+    }
 }
