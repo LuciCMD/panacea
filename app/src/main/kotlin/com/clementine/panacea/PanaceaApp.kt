@@ -6,6 +6,7 @@ import android.util.Log
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.PhotoStore
 import com.clementine.panacea.data.Settings
+import com.clementine.panacea.data.backup.Backups
 import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.legacy.ImportOutcome
 import com.clementine.panacea.data.legacy.Legacy34Importer
@@ -62,4 +63,5 @@ class AppContainer(context: Context) {
     val soundLibrary = SoundLibrary(context, settings)
     val photos = PhotoStore(context)
     val reminders = Reminders(context, database, medications)
+    val backups = Backups(context, database, photos, settings, soundLibrary, reminders)
 }

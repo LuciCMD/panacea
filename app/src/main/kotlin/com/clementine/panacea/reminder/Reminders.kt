@@ -88,6 +88,26 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
         releaseLocked(null)
     }
 
+    /**
+     * Replaces all the data in [apply], with nothing armed or showing for what was there before, then
+     * arms what's new as after a restart. If [apply] fails, what was there is armed again.
+     */
+    suspend fun replaceData(apply: suspend () -> Unit) {
+        try {
+            lock.withLock {
+                reminderDao.all().forEach { alarms.cancel(it.id) }
+                medicationDao.all().forEach {
+                    alarms.cancelAsk(it.id)
+                    alarms.cancelMuteEnd(it.id)
+                }
+                notifier.cancelAll()
+                apply()
+            }
+        } finally {
+            resync()
+        }
+    }
+
     /** A learned reminder's alarm: ask whether the usual dose was taken, if it still isn't logged. */
     suspend fun ask(medicationId: Long) = lock.withLock {
         val med = medicationDao.get(medicationId)?.takeIf { it.learnRoutine } ?: return@withLock alarms.cancelAsk(medicationId)

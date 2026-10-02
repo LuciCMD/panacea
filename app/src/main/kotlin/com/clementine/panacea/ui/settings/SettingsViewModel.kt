@@ -8,6 +8,14 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.Settings
+import com.clementine.panacea.data.backup.BackupException
+import com.clementine.panacea.data.backup.Backups
+import com.clementine.panacea.data.backup.PendingRestore
+import com.clementine.panacea.ui.TimeFormats
+import com.clementine.panacea.ui.timeFormats
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import com.clementine.panacea.sound.SoundEvent
 import com.clementine.panacea.sound.SoundLibrary
 import com.clementine.panacea.sound.SoundMode
@@ -18,7 +26,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class SettingsViewModel(private val settings: Settings, private val library: SoundLibrary) : ViewModel() {
+/** The line under the Backup card's buttons. */
+data class BackupStatus(val text: String, val failed: Boolean = false)
+
+class SettingsViewModel(
+    private val settings: Settings,
+    private val library: SoundLibrary,
+    private val backups: Backups,
+    private val formats: TimeFormats,
+) : ViewModel() {
     val theme: StateFlow<String> = settings.theme
 
     fun sound(event: SoundEvent): StateFlow<SoundSetting> = settings.sound(event)
@@ -52,11 +68,81 @@ class SettingsViewModel(private val settings: Settings, private val library: Sou
         }
     }
 
+    private val _backupStatus = MutableStateFlow<BackupStatus?>(null)
+    val backupStatus: StateFlow<BackupStatus?> = _backupStatus.asStateFlow()
+
+    /** "Saving…", "Reading…" while a backup task runs; the buttons wait meanwhile. */
+    private val _working = MutableStateFlow<String?>(null)
+    val working: StateFlow<String?> = _working.asStateFlow()
+
+    private val _pending = MutableStateFlow<PendingRestore?>(null)
+    /** A backup read and waiting for the user to confirm the restore. */
+    val pending: StateFlow<PendingRestore?> = _pending.asStateFlow()
+
+    fun backUp(uri: Uri) = run("Saving…", "The backup couldn't be saved there.") { BackupText.backedUp(backups.backUp(uri)) }
+
+    fun exportCsv(uri: Uri) = run("Exporting…", "The CSV couldn't be saved there.") { BackupText.exported(backups.exportCsv(uri)) }
+
+    fun open(uri: Uri) = run("Reading…", "That file couldn't be read as a Panacea backup.") {
+        _pending.value = backups.open(uri)
+        null
+    }
+
+    fun question(p: PendingRestore): BackupText.Question = BackupText.question(
+        medications = p.data.medications.size,
+        doses = p.data.doses.size,
+        reminders = p.data.reminders.size,
+        legacy = p.data.legacy,
+        exportedAt = p.data.exportedAt,
+        currentMedications = p.currentMedications,
+        currentDoses = p.currentDoses,
+        missingPhotos = p.missingPhotos,
+        problems = p.data.problems.size,
+        settings = p.data.settings != null,
+        zone = ZoneId.systemDefault(),
+        date = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(formats.locale),
+    )
+
+    fun restore() {
+        val p = _pending.value ?: return
+        _pending.value = null
+        run("Restoring…", "The restore didn't finish, so nothing was changed.") {
+            backups.restore(p)
+            BackupText.restored(p.data.medications.size, p.data.doses.size, p.data.problems.size)
+        }
+    }
+
+    fun cancelRestore() {
+        _pending.value?.let(backups::discard)
+        _pending.value = null
+    }
+
+    /** Runs one backup task at a time; [block] returns what to say when it's done, or null for nothing. */
+    private fun run(label: String, failure: String, block: suspend () -> String?) {
+        if (_working.value != null) return
+        _working.value = label
+        _backupStatus.value = null
+        viewModelScope.launch {
+            _backupStatus.value = try {
+                block()?.let { BackupStatus(it) }
+            } catch (e: BackupException) {
+                BackupStatus(e.message ?: failure, failed = true)
+            } catch (e: Exception) {
+                BackupStatus(failure, failed = true)
+            }
+            _working.value = null
+        }
+    }
+
+    override fun onCleared() {
+        _pending.value?.let(backups::discard)
+    }
+
     companion object {
         val Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as PanaceaApp).container
-                SettingsViewModel(container.settings, container.soundLibrary)
+                SettingsViewModel(container.settings, container.soundLibrary, container.backups, timeFormats(this[APPLICATION_KEY] as PanaceaApp))
             }
         }
     }

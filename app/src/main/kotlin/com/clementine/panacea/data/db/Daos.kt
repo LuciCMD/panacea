@@ -92,6 +92,19 @@ interface MedicationDao {
     @Insert
     suspend fun insertAll(medications: List<MedicationEntity>)
 
+    @Query("SELECT * FROM ingredient")
+    suspend fun allIngredients(): List<IngredientEntity>
+
+    @Query("SELECT COUNT(*) FROM medication")
+    suspend fun count(): Int
+
+    /** Empties the medication tables, for a restore. Each table by name, not trusting the cascade alone. */
+    @Query("DELETE FROM ingredient")
+    suspend fun deleteAllIngredients()
+
+    @Query("DELETE FROM medication")
+    suspend fun deleteAll()
+
     @Insert
     suspend fun insertIngredients(ingredients: List<IngredientEntity>)
 }
@@ -134,6 +147,15 @@ interface DoseDao {
 
     @Insert
     suspend fun insertAll(doses: List<DoseEntity>)
+
+    @Query("SELECT * FROM dose")
+    suspend fun all(): List<DoseEntity>
+
+    @Query("SELECT COUNT(*) FROM dose")
+    suspend fun count(): Int
+
+    @Query("DELETE FROM dose")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -179,6 +201,9 @@ interface ReminderDao {
 
     @Insert
     suspend fun insertAll(reminders: List<ReminderEntity>)
+
+    @Query("DELETE FROM reminder")
+    suspend fun deleteAll()
 }
 
 @Dao

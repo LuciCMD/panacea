@@ -90,6 +90,9 @@ class Notifier(private val context: Context) {
 
     fun cancelAsk(medicationId: Long) = manager.cancel(LEARNED_TAG, notificationId(medicationId))
 
+    /** Every notification the app is showing. */
+    fun cancelAll() = manager.cancelAll()
+
     private fun learned(action: String, medicationId: Long): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java)
             .setAction(action)

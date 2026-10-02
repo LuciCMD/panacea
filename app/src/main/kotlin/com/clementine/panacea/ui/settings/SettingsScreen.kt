@@ -36,7 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +51,9 @@ import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundEvent
 import com.clementine.panacea.sound.SoundLibrary
 import com.clementine.panacea.sound.SoundMode
+import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.ConfirmDialog
+import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
@@ -58,6 +63,7 @@ import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.theme.Palette
 import com.clementine.panacea.ui.theme.Themes
+import java.time.LocalDate
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
@@ -70,6 +76,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(factory = SettingsVi
         item(key = "header") { ScreenHeader("Settings") }
         item(key = "theme") { ThemeCard(theme, viewModel::setTheme) }
         item(key = "sounds") { SoundsCard(viewModel) }
+        item(key = "backup") { BackupCard(viewModel) }
         item(key = "about") { AboutCard() }
     }
 }
@@ -208,6 +215,76 @@ private fun SoundsCard(viewModel: SettingsViewModel) {
         }
     }
 }
+
+@Composable
+private fun BackupCard(viewModel: SettingsViewModel) {
+    val status by viewModel.backupStatus.collectAsStateWithLifecycle()
+    val working by viewModel.working.collectAsStateWithLifecycle()
+    val pending by viewModel.pending.collectAsStateWithLifecycle()
+    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        uri?.let(viewModel::backUp)
+    }
+    val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(viewModel::open)
+    }
+    val csv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        uri?.let(viewModel::exportCsv)
+    }
+    val idle = working == null
+
+    SectionCard(
+        "Backup",
+        hint = "A backup is one file with everything, photos and sounds included. Keep it somewhere off this phone. " +
+            "Export CSV saves your doses for a spreadsheet.",
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SlateButton(
+                onClick = { save.launch(BackupText.backupName(LocalDate.now())) },
+                kind = ButtonKind.Primary,
+                enabled = idle,
+                modifier = Modifier.weight(1f),
+            ) { Text("Back Up", style = MaterialTheme.typography.labelLarge) }
+            SlateButton(
+                onClick = { open.launch(RESTORE_TYPES) },
+                enabled = idle,
+                modifier = Modifier.weight(1f),
+            ) { Text("Restore", style = MaterialTheme.typography.labelLarge) }
+        }
+        SlateButton(
+            onClick = { csv.launch(BackupText.csvName(LocalDate.now())) },
+            enabled = idle,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Glyphs.File, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text("Export CSV", style = MaterialTheme.typography.labelLarge)
+        }
+        val line = working ?: status?.text
+        if (line != null) {
+            Text(
+                line,
+                style = MaterialTheme.typography.bodyMedium.merge(Numbers),
+                color = if (working == null && status?.failed == true) Colors.Bad else Colors.Muted,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
+    }
+
+    pending?.let { p ->
+        val q = viewModel.question(p)
+        ConfirmDialog(
+            title = q.title,
+            text = q.text,
+            confirmLabel = q.confirm,
+            dismissLabel = "Cancel",
+            onConfirm = viewModel::restore,
+            onDismiss = viewModel::cancelRestore,
+            confirmKind = if (q.destructive) ButtonKind.Delete else ButtonKind.Primary,
+        )
+    }
+}
+
+/** What the restore picker offers; a backup saved by another app may not say it's a zip. */
+private val RESTORE_TYPES = arrayOf("application/zip", "application/x-zip-compressed", "application/json", "application/octet-stream", "text/plain")
 
 @Composable
 private fun ChipText(text: String, modifier: Modifier = Modifier) {
