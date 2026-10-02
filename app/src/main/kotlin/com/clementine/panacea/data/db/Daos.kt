@@ -82,6 +82,9 @@ interface MedicationDao {
     @Query("UPDATE medication SET routineAskedFor = :at WHERE id = :id")
     suspend fun setRoutineAskedFor(id: Long, at: Long)
 
+    @Query("UPDATE medication SET sortOrder = :order WHERE id = :id")
+    suspend fun setSortOrder(id: Long, order: Int)
+
     @Query("UPDATE medication SET lastMultiplier = :multiplier WHERE id = :id")
     suspend fun setLastMultiplier(id: Long, multiplier: Double)
 

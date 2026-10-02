@@ -24,6 +24,9 @@ object Glyphs {
     val Camera = strokeIcon("Camera", "M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 16.5a3.5 3.5 0 1 0 0-7a3.5 3.5 0 1 0 0 7")
     val Image = strokeIcon("Image", "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4 16l5-5 4 4 2-2 5 5M15.5 8.5h.01")
     val Flash = strokeIcon("Flash", "M13 3L5 14h6l-1 7 8-11h-6z")
+    /** Drag handle. */
+    val Grip = strokeIcon("Grip", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01")
+    val Rearrange = strokeIcon("Rearrange", "M7 20V4M3.5 7.5L7 4l3.5 3.5M17 4v16M13.5 16.5L17 20l3.5-3.5")
     val More = strokeIcon("More", "M5 12h.01M12 12h.01M19 12h.01")
 
     // Bottom bar

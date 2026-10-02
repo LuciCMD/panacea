@@ -44,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.model.Category
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.ProgressRing
+import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
@@ -58,6 +59,7 @@ import com.clementine.panacea.ui.theme.Colors
 fun TodayScreen(
     onAdd: () -> Unit,
     onOpen: (Long) -> Unit,
+    onRearrange: () -> Unit,
     viewModel: TodayViewModel = viewModel(factory = TodayViewModel.Factory),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -77,6 +79,15 @@ fun TodayScreen(
             ) {
                 item(key = "header") {
                     ScreenHeader("Today", state.header) {
+                        if (state.cards.size >= 2) {
+                            SlateButton(
+                                onClick = onRearrange,
+                                kind = ButtonKind.Text,
+                                shape = CircleShape,
+                                contentPadding = PaddingValues(0.dp),
+                                modifier = Modifier.padding(end = 4.dp).size(48.dp).semantics { contentDescription = "Rearrange Medications" },
+                            ) { Icon(Glyphs.Rearrange, contentDescription = null, tint = Colors.Muted) }
+                        }
                         SlateButton(
                             onClick = onAdd,
                             shape = CircleShape,

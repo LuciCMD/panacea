@@ -51,6 +51,7 @@ import com.clementine.panacea.ui.edit.EditMedicationScreen
 import com.clementine.panacea.ui.history.HistoryScreen
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.medication.MedicationScreen
+import com.clementine.panacea.ui.rearrange.RearrangeScreen
 import com.clementine.panacea.ui.reminders.EditReminderScreen
 import com.clementine.panacea.ui.reminders.MuteMedicationDialog
 import com.clementine.panacea.ui.reminders.RemindersScreen
@@ -84,6 +85,11 @@ sealed interface Route {
         override val id get() = "reminder:${reminderId ?: "new"}:${medicationId ?: "any"}"
     }
 
+    /** Put the medications in the order Today shows them. */
+    data object Rearrange : Route {
+        override val id get() = "rearrange"
+    }
+
     /** Add a medication (null) or edit one. */
     data class EditMedication(val medicationId: Long?) : Route {
         override val id get() = "edit:${medicationId ?: "new"}"
@@ -95,6 +101,7 @@ sealed interface Route {
             id.startsWith("med:") -> id.removePrefix("med:").toLongOrNull()?.let(::Medication)
             id.startsWith("reminder:") -> id.split(':').let { EditReminder(it.getOrNull(1)?.toLongOrNull(), it.getOrNull(2)?.toLongOrNull()) }
             id.startsWith("edit:") -> EditMedication(id.removePrefix("edit:").toLongOrNull())
+            id == Rearrange.id -> Rearrange
             else -> null
         }
     }
@@ -163,6 +170,7 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
                             Tab.TODAY -> TodayScreen(
                                 onAdd = { backStack.add(Route.EditMedication(null)) },
                                 onOpen = { backStack.add(Route.Medication(it)) },
+                                onRearrange = { backStack.add(Route.Rearrange) },
                             )
                             Tab.REMINDERS -> RemindersScreen(
                                 onAdd = { backStack.add(Route.EditReminder(null)) },
@@ -179,6 +187,7 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
                             onAddReminder = { backStack.add(Route.EditReminder(null, route.medicationId)) },
                             onOpenReminder = { backStack.add(Route.EditReminder(it)) },
                         )
+                        Route.Rearrange -> RearrangeScreen(onBack = { backStack.remove(Route.Rearrange) })
                         is Route.EditReminder -> EditReminderScreen(route.reminderId, route.medicationId, onDone = { backStack.remove(route) })
                         is Route.EditMedication -> EditMedicationScreen(
                             route.medicationId,

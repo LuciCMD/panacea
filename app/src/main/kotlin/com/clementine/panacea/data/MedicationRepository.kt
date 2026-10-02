@@ -136,6 +136,12 @@ class MedicationRepository(private val db: PanaceaDatabase) {
         med
     }
 
+    /** Puts the medications in the order of [ids]; any not named keep their place after them. */
+    suspend fun reorder(ids: List<Long>) = db.withTransaction {
+        val rest = medications.all().sortedWith(compareBy({ it.sortOrder }, { it.name })).map { it.id }.filter { it !in ids }
+        (ids + rest).forEachIndexed { index, id -> medications.setSortOrder(id, index) }
+    }
+
     suspend fun addPreset(value: Double) = db.withTransaction {
         val meta = db.metaDao()
         val presets = Amounts.parsePresets(meta.get(MetaKeys.AMOUNT_PRESETS))
