@@ -61,6 +61,15 @@ object ReminderText {
         }
     }
 
+    /**
+     * How often the reminder's doses were logged: "taken 9 of 10". A dose logged any time before the
+     * next reminder counts, so this says taken, not on time. Null before anything was counted.
+     */
+    fun taken(completed: Int, missed: Int): String? {
+        val total = completed + missed
+        return if (total <= 0) null else "taken $completed of $total"
+    }
+
     /** "a", "a and b", "a, b and c"; or with [last] "or". */
     fun natural(items: List<String>, last: String = "and"): String = when (items.size) {
         0 -> ""

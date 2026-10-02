@@ -72,11 +72,14 @@ fun reminderCard(r: ReminderEntity, medication: String, now: ZonedDateTime, f: T
         schedule = ReminderText.schedule(r, f),
         note = r.note.trim().ifEmpty { null },
         enabled = r.enabled,
-        next = when {
-            !r.enabled -> "Off"
-            muted -> ReminderText.mutedUntil(mutedUntil, now, f)
-            else -> Schedule.nextAfter(r, now)?.let { TodayText.next(it, now, f) } ?: "Never comes"
-        },
+        next = listOfNotNull(
+            when {
+                !r.enabled -> "Off"
+                muted -> ReminderText.mutedUntil(mutedUntil, now, f)
+                else -> Schedule.nextAfter(r, now)?.let { TodayText.next(it, now, f) } ?: "Never comes"
+            },
+            ReminderText.taken(r.timesCompleted, r.timesMissed),
+        ).joinToString(" · "),
         muted = muted,
     )
 }

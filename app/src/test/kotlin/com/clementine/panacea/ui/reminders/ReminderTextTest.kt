@@ -3,7 +3,10 @@ package com.clementine.panacea.ui.reminders
 import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.model.RepeatType
 import com.clementine.panacea.ui.today.Fixtures.formats
+import com.clementine.panacea.ui.today.Fixtures.ms
+import com.clementine.panacea.ui.today.Fixtures.now
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ReminderTextTest {
@@ -49,5 +52,15 @@ class ReminderTextTest {
         assertEquals("Monthly on the 1st at 9:00", say(reminder(repeat = RepeatType.MONTHLY)))
         assertEquals("Monthly on the 31st (or the month's last day) at 9:00", say(reminder(repeat = RepeatType.MONTHLY, dayOfMonth = 31)))
         assertEquals(listOf("2nd", "3rd", "11th", "12th", "13th", "22nd", "23rd"), listOf(2, 3, 11, 12, 13, 22, 23).map(ReminderText::ordinal))
+    }
+
+    @Test
+    fun theCardSaysHowOftenItWasTaken() {
+        val r = reminder().copy(timesCompleted = 9, timesMissed = 1, lastFiredAt = ms(10, 2, 9, 0))
+        assertEquals("Next at 9:00 tomorrow · taken 9 of 10", reminderCard(r, "Sertraline", now, formats).next)
+        assertEquals("Off · taken 9 of 10", reminderCard(r.copy(enabled = false), "Sertraline", now, formats).next)
+        // Nothing counted yet: nothing to say.
+        assertEquals("Next at 9:00 tomorrow", reminderCard(reminder(), "Sertraline", now, formats).next)
+        assertNull(ReminderText.taken(0, 0))
     }
 }
