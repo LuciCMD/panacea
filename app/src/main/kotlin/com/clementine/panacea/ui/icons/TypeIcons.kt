@@ -1,12 +1,6 @@
 package com.clementine.panacea.ui.icons
 
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.addPathNodes
-import androidx.compose.ui.unit.dp
 import com.clementine.panacea.model.MedicationType
 
 /** Stroke icons on a 24-unit grid, one per dose form, drawn in whatever colour the caller tints. */
@@ -28,22 +22,7 @@ object TypeIcons {
         MedicationType.UNSPECIFIED to "M4 12a8 8 0 1 0 16 0a8 8 0 1 0 -16 0M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5M12 16.5h.01",
     )
 
-    private val icons = MedicationType.entries.associateWith { build(it.name, paths.getValue(it)) }
+    private val icons = MedicationType.entries.associateWith { strokeIcon(it.name, paths.getValue(it)) }
 
     fun of(type: MedicationType): ImageVector = icons.getValue(type)
-
-    private fun build(name: String, pathData: String): ImageVector =
-        ImageVector.Builder(
-            name = name,
-            defaultWidth = 24.dp,
-            defaultHeight = 24.dp,
-            viewportWidth = 24f,
-            viewportHeight = 24f,
-        ).addPath(
-            pathData = addPathNodes(pathData),
-            stroke = SolidColor(Color.Black),
-            strokeLineWidth = 1.75f,
-            strokeLineCap = StrokeCap.Round,
-            strokeLineJoin = StrokeJoin.Round,
-        ).build()
 }

@@ -1,35 +1,83 @@
 package com.clementine.panacea.ui.today
 
+import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
+import com.clementine.panacea.ui.today.Fixtures.at
+import com.clementine.panacea.ui.today.Fixtures.formats
+import com.clementine.panacea.ui.today.Fixtures.ms
+import com.clementine.panacea.ui.today.Fixtures.now
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 class TodayTextTest {
-    private val zone = ZoneId.of("Europe/Helsinki")
-    private val now = ZonedDateTime.of(2026, 10, 2, 13, 16, 0, 0, zone)
-    private val time = DateTimeFormatter.ofPattern("H:mm")
-    private val date = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
+    private val med = MedicationEntity(name = "A", dose = 50.0, doseUnit = "mg", category = "OTC", type = "ORAL_TABLET", sortOrder = 0)
 
-    private fun at(day: Int, hour: Int, minute: Int) =
-        ZonedDateTime.of(2026, 10, day, hour, minute, 0, 0, zone).toInstant().toEpochMilli()
+    private fun ingredient(name: String) = IngredientEntity(medicationId = 1, position = 0, name = name, amount = 1.0, unit = "mg")
 
     @Test
     fun lastTakenWordsDependOnTheDay() {
-        assertEquals("Not taken yet", TodayText.lastTaken(null, now, time, date))
-        assertEquals("Taken at 9:04", TodayText.lastTaken(at(2, 9, 4), now, time, date))
-        assertEquals("Last taken yesterday at 22:10", TodayText.lastTaken(at(1, 22, 10), now, time, date))
-        assertEquals("Last taken 28 Sep at 8:00", TodayText.lastTaken(at(1, 8, 0) - 3 * 86_400_000L, now, time, date))
+        assertEquals("Not taken yet", TodayText.lastTaken(null, now, formats))
+        assertEquals("Taken at 9:04", TodayText.lastTaken(ms(10, 2, 9, 4), now, formats))
+        assertEquals("Last taken yesterday at 22:10", TodayText.lastTaken(ms(10, 1, 22, 10), now, formats))
+        assertEquals("Last taken Monday at 8:00", TodayText.lastTaken(ms(9, 28, 8, 0), now, formats))
+        assertEquals("Last taken 21 Sep at 8:00", TodayText.lastTaken(ms(9, 21, 8, 0), now, formats))
     }
 
     @Test
-    fun doseLineShowsWeightOnlyWhenKnown() {
-        val med = MedicationEntity(name = "A", dose = 50.0, doseUnit = "mg", category = "OTC", type = "ORAL_TABLET", sortOrder = 0)
-        assertEquals("50 mg", TodayText.doseLine(med))
-        assertEquals("50 mg · weighs 0.2 g", TodayText.doseLine(med.copy(weight = 0.20)))
-        assertEquals("50 mg · weighs 0.01 oz", TodayText.doseLine(med.copy(weight = 0.01, weightUnit = "oz")))
+    fun nextWordsDependOnTheDay() {
+        assertEquals("Next at 21:00", TodayText.next(at(10, 2, 21, 0), now, formats))
+        assertEquals("Next at 9:00 tomorrow", TodayText.next(at(10, 3, 9, 0), now, formats))
+        assertEquals("Next on Monday at 9:00", TodayText.next(at(10, 5, 9, 0), now, formats))
+        assertEquals("Next on 14 Oct at 9:00", TodayText.next(at(10, 14, 9, 0), now, formats))
+    }
+
+    @Test
+    fun overdueSaysWhenAndHowLongAgo() {
+        assertEquals("Due at 12:30 · 46 min ago, not logged yet", TodayText.overdue(at(10, 2, 12, 30), now, formats))
+        assertEquals(
+            "Due yesterday at 22:00 · 3 h ago, not logged yet",
+            TodayText.overdue(at(10, 1, 22, 0), at(10, 2, 1, 0), formats),
+        )
+    }
+
+    @Test
+    fun agoRoundsDownToTheMinute() {
+        assertEquals("just now", TodayText.ago(ms(10, 2, 13, 16), now))
+        assertEquals("12 min ago", TodayText.ago(ms(10, 2, 13, 4), now))
+        assertEquals("4 h ago", TodayText.ago(ms(10, 2, 9, 16), now))
+        assertEquals("4 h 12 min ago", TodayText.ago(ms(10, 2, 9, 4), now))
+    }
+
+    @Test
+    fun doseLineLeavesOutWhatIsNotSet() {
+        assertEquals("50 mg", TodayText.doseLine(med, emptyList()))
+        assertEquals("50 mg · weighs 0.2 g", TodayText.doseLine(med.copy(weight = 0.20), emptyList()))
+        assertEquals("50 mg · weighs 0.01 oz", TodayText.doseLine(med.copy(weight = 0.01, weightUnit = "oz"), emptyList()))
+        assertEquals("50 mg · with Caffeine", TodayText.doseLine(med, listOf(ingredient("Caffeine"))))
+        assertEquals(
+            "Vitamin C and 2 more",
+            TodayText.doseLine(med.copy(dose = 0.0), listOf(ingredient("Vitamin C"), ingredient("Zinc"), ingredient("Iron"))),
+        )
+        assertEquals("No dose set", TodayText.doseLine(med.copy(dose = 0.0), emptyList()))
+    }
+
+    @Test
+    fun amountsScaleWithTheMultiplier() {
+        assertEquals("100 mg", TodayText.amount(med, 2.0))
+        assertEquals("× 2", TodayText.amount(med.copy(dose = 0.0), 2.0))
+        assertEquals("0.62 g", TodayText.weightOf(med.copy(weight = 0.31), 2.0))
+        assertEquals(null, TodayText.weightOf(med, 2.0))
+        assertEquals("× 0.25", TodayText.multiplier(0.25))
+    }
+
+    @Test
+    fun undoWordsNameTheDose() {
+        assertEquals("A 50 mg logged at 13:16", TodayText.logged("A", "50 mg", now, now, formats))
+        assertEquals("A 50 mg logged for 11:30", TodayText.logged("A", "50 mg", at(10, 2, 11, 30), now, formats))
+        assertEquals("A 50 mg logged for yesterday at 23:00", TodayText.logged("A", "50 mg", at(10, 1, 23, 0), now, formats))
+        assertEquals(
+            "A 50 mg taken at 13:16 will be removed from your history.",
+            TodayText.removeQuestion("A", "50 mg", now, now, formats),
+        )
     }
 }

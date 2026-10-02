@@ -1,9 +1,68 @@
 package com.clementine.panacea.data
 
+import androidx.room.withTransaction
+import com.clementine.panacea.data.db.DoseEntity
+import com.clementine.panacea.data.db.IngredientEntity
+import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.MedicationSummary
+import com.clementine.panacea.data.db.MetaEntity
+import com.clementine.panacea.data.db.MetaKeys
 import com.clementine.panacea.data.db.PanaceaDatabase
+import com.clementine.panacea.data.db.ReminderEntity
+import com.clementine.panacea.model.Amounts
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+/** A dose just logged, with what's needed to take it back. */
+data class TakenDose(
+    val dose: DoseEntity,
+    val medication: MedicationEntity,
+    /** The medication's remembered amount before this dose changed it. */
+    val previousMultiplier: Double,
+)
 
 class MedicationRepository(private val db: PanaceaDatabase) {
-    fun observeSummaries(): Flow<List<MedicationSummary>> = db.medicationDao().observeSummaries()
+    private val medications = db.medicationDao()
+    private val doses = db.doseDao()
+
+    fun observeSummaries(): Flow<List<MedicationSummary>> = medications.observeSummaries()
+
+    fun observeIngredients(): Flow<List<IngredientEntity>> = medications.observeIngredients()
+
+    fun observeDosesSince(since: Long): Flow<List<DoseEntity>> = doses.observeSince(since)
+
+    fun observeEnabledReminders(): Flow<List<ReminderEntity>> = db.reminderDao().observeEnabled()
+
+    fun observePresets(): Flow<List<Double>> =
+        db.metaDao().observe(MetaKeys.AMOUNT_PRESETS).map(Amounts::parsePresets)
+
+    /** Logs [multiplier] of the medication at [takenAt] and remembers the amount for next time. */
+    suspend fun takeDose(medicationId: Long, multiplier: Double, takenAt: Long): TakenDose? = db.withTransaction {
+        val med = medications.get(medicationId) ?: return@withTransaction null
+        val m = Amounts.round(multiplier)
+        val dose = DoseEntity(
+            medicationId = med.id,
+            takenAt = takenAt,
+            multiplier = m,
+            amount = med.dose * m,
+            unit = med.doseUnit,
+            weight = med.weight?.let { it * m },
+            weightUnit = med.weight?.let { med.weightUnit },
+        )
+        val id = doses.insert(dose)
+        medications.setLastMultiplier(med.id, m)
+        TakenDose(dose.copy(id = id), med, med.lastMultiplier)
+    }
+
+    suspend fun undoDose(taken: TakenDose) = db.withTransaction {
+        doses.delete(taken.dose.id)
+        medications.restoreLastMultiplier(taken.medication.id, taken.dose.multiplier, taken.previousMultiplier)
+    }
+
+    suspend fun addPreset(value: Double) = db.withTransaction {
+        val meta = db.metaDao()
+        val presets = Amounts.parsePresets(meta.get(MetaKeys.AMOUNT_PRESETS))
+        val updated = Amounts.withPreset(presets, value)
+        if (updated != presets) meta.put(MetaEntity(MetaKeys.AMOUNT_PRESETS, updated.joinToString(",")))
+    }
 }

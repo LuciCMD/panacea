@@ -13,21 +13,22 @@ enum class Category(val key: String, val label: String) {
 }
 
 /** Dose forms. Keys are stored (and match 3.4); never rename one, add new ones with a fresh key. */
-enum class MedicationType(val key: String, val label: String) {
-    ORAL_TABLET("ORAL_TABLET", "Tablet"),
-    ORAL_CAPSULE("ORAL_CAPSULE", "Capsule"),
-    LIQUID_SYRUP("LIQUID_SYRUP", "Liquid"),
-    IV_INJECTION("IV_INJECTION", "Injection"),
-    SUBLINGUAL("SUBLINGUAL", "Sublingual"),
-    TOPICAL("TOPICAL", "Cream"),
-    INHALER("INHALER", "Inhaler"),
-    DROPS("DROPS", "Drops"),
-    PATCH("PATCH", "Patch"),
-    SUPPOSITORY("SUPPOSITORY", "Suppository"),
-    POWDER("POWDER", "Powder"),
-    EDIBLE("EDIBLE", "Gummy"),
-    OTHER("OTHER", "Other"),
-    UNSPECIFIED("UNSPECIFIED", "Unspecified");
+/** [noun] is one pill or item of this form, as in "50 mg per tablet". */
+enum class MedicationType(val key: String, val label: String, val noun: String) {
+    ORAL_TABLET("ORAL_TABLET", "Tablet", "tablet"),
+    ORAL_CAPSULE("ORAL_CAPSULE", "Capsule", "capsule"),
+    LIQUID_SYRUP("LIQUID_SYRUP", "Liquid", "dose"),
+    IV_INJECTION("IV_INJECTION", "Injection", "injection"),
+    SUBLINGUAL("SUBLINGUAL", "Sublingual", "tablet"),
+    TOPICAL("TOPICAL", "Cream", "application"),
+    INHALER("INHALER", "Inhaler", "puff"),
+    DROPS("DROPS", "Drops", "drop"),
+    PATCH("PATCH", "Patch", "patch"),
+    SUPPOSITORY("SUPPOSITORY", "Suppository", "suppository"),
+    POWDER("POWDER", "Powder", "scoop"),
+    EDIBLE("EDIBLE", "Gummy", "gummy"),
+    OTHER("OTHER", "Other", "item"),
+    UNSPECIFIED("UNSPECIFIED", "Unspecified", "item");
 
     companion object {
         fun fromKey(key: String?): MedicationType = entries.firstOrNull { it.key == key } ?: UNSPECIFIED

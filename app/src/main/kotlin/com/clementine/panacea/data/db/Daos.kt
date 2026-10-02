@@ -17,6 +17,19 @@ interface MedicationDao {
     )
     fun observeSummaries(): Flow<List<MedicationSummary>>
 
+    @Query("SELECT * FROM medication WHERE id = :id")
+    suspend fun get(id: Long): MedicationEntity?
+
+    @Query("SELECT * FROM ingredient ORDER BY medicationId, position")
+    fun observeIngredients(): Flow<List<IngredientEntity>>
+
+    @Query("UPDATE medication SET lastMultiplier = :multiplier WHERE id = :id")
+    suspend fun setLastMultiplier(id: Long, multiplier: Double)
+
+    /** Puts back [previous] unless the amount was changed again since [current] was set. */
+    @Query("UPDATE medication SET lastMultiplier = :previous WHERE id = :id AND lastMultiplier = :current")
+    suspend fun restoreLastMultiplier(id: Long, current: Double, previous: Double)
+
     @Insert
     suspend fun insertAll(medications: List<MedicationEntity>)
 
@@ -27,11 +40,23 @@ interface MedicationDao {
 @Dao
 interface DoseDao {
     @Insert
+    suspend fun insert(dose: DoseEntity): Long
+
+    @Query("DELETE FROM dose WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM dose WHERE takenAt >= :since ORDER BY takenAt")
+    fun observeSince(since: Long): Flow<List<DoseEntity>>
+
+    @Insert
     suspend fun insertAll(doses: List<DoseEntity>)
 }
 
 @Dao
 interface ReminderDao {
+    @Query("SELECT * FROM reminder WHERE enabled = 1")
+    fun observeEnabled(): Flow<List<ReminderEntity>>
+
     @Insert
     suspend fun insertAll(reminders: List<ReminderEntity>)
 }
@@ -40,6 +65,9 @@ interface ReminderDao {
 interface MetaDao {
     @Query("SELECT value FROM meta WHERE `key` = :key")
     suspend fun get(key: String): String?
+
+    @Query("SELECT value FROM meta WHERE `key` = :key")
+    fun observe(key: String): Flow<String?>
 
     @Upsert
     suspend fun put(meta: MetaEntity)
