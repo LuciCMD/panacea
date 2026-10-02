@@ -1,0 +1,118 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ============================================================
+         Base themes. The shared dark-GREY background/surface live here,
+         so every dark theme inherits the fix automatically. Individual
+         themes below only override their accent colors.
+         ============================================================ -->
+    <style name="Base.Panacea.Dark" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:colorBackground">@color/grey_background</item>
+        <item name="colorSurface">@color/grey_surface</item>
+        <item name="colorSurfaceVariant">@color/grey_surface_variant</item>
+        <item name="colorSurfaceContainer">@color/grey_surface</item>
+        <item name="colorSurfaceContainerHigh">@color/grey_surface_variant</item>
+        <item name="colorOnBackground">@color/grey_on_surface</item>
+        <item name="colorOnSurface">@color/grey_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/grey_on_surface_variant</item>
+        <item name="android:windowBackground">@color/grey_background</item>
+        <item name="android:statusBarColor">@color/grey_background</item>
+    </style>
+
+    <style name="Base.Panacea.Amoled" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:colorBackground">@color/amoled_background</item>
+        <item name="colorSurface">@color/amoled_surface</item>
+        <item name="colorSurfaceVariant">@color/amoled_surface_variant</item>
+        <item name="colorSurfaceContainer">@color/amoled_surface</item>
+        <item name="colorSurfaceContainerHigh">@color/amoled_surface_variant</item>
+        <item name="colorOnBackground">@color/grey_on_surface</item>
+        <item name="colorOnSurface">@color/grey_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/grey_on_surface_variant</item>
+        <item name="android:windowBackground">@color/amoled_background</item>
+        <item name="android:statusBarColor">@color/amoled_background</item>
+    </style>
+
+    <style name="Base.Panacea.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:colorBackground">@color/light_background</item>
+        <item name="colorSurface">@color/light_surface</item>
+        <item name="colorSurfaceVariant">@color/light_surface_variant</item>
+        <item name="colorOnBackground">@color/light_on_surface</item>
+        <item name="colorOnSurface">@color/light_on_surface</item>
+        <item name="android:windowBackground">@color/light_background</item>
+        <item name="android:statusBarColor">@color/light_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- ============================================================
+         Selectable themes (wired up in ThemeManager.Theme)
+         ============================================================ -->
+
+    <!-- 0: Alchemist Dark (default / app entry theme) -->
+    <style name="AppTheme" parent="Base.Panacea.Dark">
+        <item name="colorPrimary">#C390C6</item>
+        <item name="colorOnPrimary">#2A1730</item>
+        <item name="colorSecondary">#7FB3AB</item>
+        <item name="colorOnSecondary">#0A201D</item>
+        <item name="colorPrimaryDark">#7F558B</item>
+    </style>
+
+    <!-- 1: Forest Green -->
+    <style name="Theme.ForestGreen" parent="Base.Panacea.Dark">
+        <item name="colorPrimary">#6FCF97</item>
+        <item name="colorOnPrimary">#06210F</item>
+        <item name="colorSecondary">#A8D5BA</item>
+        <item name="colorOnSecondary">#0A1F12</item>
+    </style>
+
+    <!-- 2: Royal Purple -->
+    <style name="Theme.RoyalPurple" parent="Base.Panacea.Dark">
+        <item name="colorPrimary">#B98AE8</item>
+        <item name="colorOnPrimary">#1E0F33</item>
+        <item name="colorSecondary">#D2B8F0</item>
+        <item name="colorOnSecondary">#190A2E</item>
+    </style>
+
+    <!-- 3: Ocean Blue -->
+    <style name="Theme.OceanBlue" parent="Base.Panacea.Dark">
+        <item name="colorPrimary">#5FA8E8</item>
+        <item name="colorOnPrimary">#06182E</item>
+        <item name="colorSecondary">#9CCBF0</item>
+        <item name="colorOnSecondary">#08233B</item>
+    </style>
+
+    <!-- 4: Sunset Orange -->
+    <style name="Theme.SunsetOrange" parent="Base.Panacea.Dark">
+        <item name="colorPrimary">#F0975A</item>
+        <item name="colorOnPrimary">#2E1606</item>
+        <item name="colorSecondary">#F6C49A</item>
+        <item name="colorOnSecondary">#2E1A08</item>
+    </style>
+
+    <!-- 5: Crimson Ember -->
+    <style name="Theme.CrimsonEmber" parent="Base.Panacea.Dark">
+        <item name="colorPrimary">#E26D6D</item>
+        <item name="colorOnPrimary">#2E0808</item>
+        <item name="colorSecondary">#F0A5A5</item>
+        <item name="colorOnSecondary">#2E0C0C</item>
+    </style>
+
+    <!-- 6: Midnight (AMOLED true black) -->
+    <style name="Theme.MidnightAmoled" parent="Base.Panacea.Amoled">
+        <item name="colorPrimary">#36D1C4</item>
+        <item name="colorOnPrimary">#00201E</item>
+        <item name="colorSecondary">#8E9BFF</item>
+        <item name="colorOnSecondary">#0A0F2E</item>
+    </style>
+
+    <!-- 7: Daylight (light) -->
+    <style name="Theme.Daylight" parent="Base.Panacea.Light">
+        <item name="colorPrimary">#6750A4</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#625B71</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+    </style>
+
+    <style name="PopupMenuStyle" parent="Widget.AppCompat.PopupMenu">
+        <item name="android:dropDownHorizontalOffset">0dp</item>
+        <item name="android:dropDownVerticalOffset">0dp</item>
+    </style>
+</resources>
