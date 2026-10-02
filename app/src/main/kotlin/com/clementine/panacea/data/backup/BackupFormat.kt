@@ -1,6 +1,7 @@
 package com.clementine.panacea.data.backup
 
 import com.clementine.panacea.data.db.DoseEntity
+import com.clementine.panacea.data.db.TakenIngredient
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.ReminderEntity
@@ -55,7 +56,10 @@ class BackupException(message: String) : Exception(message)
  * Photos and sound files travel beside it in the backup's zip, by the names given here.
  */
 object BackupFormat {
-    const val VERSION = 3
+    const val VERSION = 4
+
+    /** Version 3 was the first zip backup; earlier ones are Panacea 3's JSON. */
+    private const val FIRST_ZIP_VERSION = 3
     const val JSON_NAME = "backup.json"
     const val PHOTOS = "photos/"
     const val SOUNDS = "sounds/"
@@ -98,7 +102,7 @@ object BackupFormat {
         }
         val version = root.optInt("backupVersion", 1)
         if (version > VERSION) throw BackupException("This backup was made by a newer Panacea. Update the app, then restore it.")
-        return if (version >= VERSION) readCurrent(root) else readLegacy(json, root)
+        return if (version >= FIRST_ZIP_VERSION) readCurrent(root) else readLegacy(json, root)
     }
 
     private fun readLegacy(json: String, root: JSONObject): BackupData {
@@ -179,6 +183,15 @@ object BackupFormat {
                         unit = d.text("unit") ?: medications.last().doseUnit,
                         weight = d.number("weight"),
                         weightUnit = d.text("weightUnit"),
+                        // Version 3 didn't keep them; the medication's own are the best record.
+                        ingredients = if (d.has("ingredients")) {
+                            d.objects("ingredients").mapNotNull { g ->
+                                val gName = g.text("name") ?: return@mapNotNull null
+                                TakenIngredient(gName, g.number("amount") ?: return@mapNotNull null, g.text("unit") ?: "mg")
+                            }
+                        } else {
+                            TakenIngredient.of(ingredients.filter { it.medicationId == id }, multiplier)
+                        },
                     )
                 }
             }
@@ -277,6 +290,7 @@ object BackupFormat {
         .put("unit", d.unit)
         .put("weight", d.weight ?: JSONObject.NULL)
         .put("weightUnit", d.weightUnit ?: JSONObject.NULL)
+        .put("ingredients", JSONArray(d.ingredients.map { JSONObject().put("name", it.name).put("amount", it.amount).put("unit", it.unit) }))
 
     private fun reminder(r: ReminderEntity) = JSONObject()
         .put("id", r.id)

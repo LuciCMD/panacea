@@ -4,6 +4,7 @@ import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.ReminderEntity
+import com.clementine.panacea.data.db.TakenIngredient
 
 /** Rows ready to insert into an empty database. */
 data class LegacyImport(
@@ -94,6 +95,9 @@ object Legacy34Mapper {
             )
         }
 
-        return LegacyImport(medications, ingredients, doses, reminders, snapshot.amountPresets, problems)
+        // 3.4 kept only the multiplier, so each dose takes its medication's ingredients as they were then.
+        val ingredientsOf = ingredients.groupBy { it.medicationId }
+        val dosesWith = doses.map { it.copy(ingredients = TakenIngredient.of(ingredientsOf[it.medicationId].orEmpty(), it.multiplier)) }
+        return LegacyImport(medications, ingredients, dosesWith, reminders, snapshot.amountPresets, problems)
     }
 }

@@ -76,7 +76,7 @@ fun StatusLines(card: CardState) {
 }
 
 /** Lets a status line wrap only at its "·", so "3 h 52 min ago" never leaves "ago" on a line alone. */
-private fun keepPhrases(line: String): String =
+internal fun keepPhrases(line: String): String =
     line.split(" · ").joinToString(" · ") { it.replace(' ', NO_BREAK) }
 
 private val NO_BREAK = Char(0xA0)

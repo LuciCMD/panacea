@@ -1,7 +1,9 @@
 package com.clementine.panacea.data
 
 import com.clementine.panacea.data.db.DoseEntity
+import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
+import com.clementine.panacea.data.db.TakenIngredient
 import com.clementine.panacea.ui.edit.Drafts
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +11,31 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DoseChangeTest {
+    @Test
+    fun aChangedIngredientChangesOnlyDosesLoggedWithTheOldOne() {
+        val before = listOf(IngredientEntity(medicationId = 1, position = 0, name = "Acetaminophen", amount = 325.0, unit = "mg"))
+        val after = listOf(before[0].copy(amount = 500.0))
+        val change = DoseChange(med, med, before, after)
+        assertTrue(change.ingredients)
+        assertFalse(change.dose || change.weight)
+        val old = dose(2.0, 100.0).copy(ingredients = TakenIngredient.of(before, 2.0))
+        val earlier = dose(1.0, 50.0).copy(ingredients = listOf(TakenIngredient("Acetaminophen", 250.0, "mg")))
+        assertTrue(change.affects(old))
+        assertEquals(listOf(TakenIngredient("Acetaminophen", 1000.0, "mg")), change.fixed(old).ingredients)
+        // Logged with yet another strength: left alone.
+        assertFalse(change.affects(earlier))
+        assertEquals(
+            "3 doses were logged with the old ingredients. Fix them too if they were entered wrong; keep them if the pill changed.",
+            Drafts.pastDosesQuestion(change, 3, med),
+        )
+        assertEquals(
+            "2 doses were logged at the old dose or ingredients. Fix them too if it was entered wrong; keep them if the prescription or pill changed.",
+            Drafts.pastDosesQuestion(DoseChange(med, med.copy(dose = 55.0), before, after), 2, med),
+        )
+        // The same ingredients typed again aren't a change.
+        assertFalse(DoseChange(med, med, before, before.map { it.copy(id = 9) }).ingredients)
+    }
+
     private val med = MedicationEntity(
         id = 1, name = "Sertraline", dose = 50.0, doseUnit = "mg", weight = 0.35, weightUnit = "g",
         category = "Prescribed", type = "ORAL_TABLET", sortOrder = 0,

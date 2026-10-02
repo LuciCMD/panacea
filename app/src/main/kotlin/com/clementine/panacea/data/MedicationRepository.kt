@@ -14,6 +14,7 @@ import com.clementine.panacea.data.db.MetaKeys
 import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.data.db.ReminderRow
+import com.clementine.panacea.data.db.TakenIngredient
 import com.clementine.panacea.model.Amounts
 import com.clementine.panacea.data.legacy.importProblems
 import kotlinx.coroutines.flow.Flow
@@ -89,6 +90,7 @@ class MedicationRepository(private val db: PanaceaDatabase) {
             unit = med.doseUnit,
             weight = med.weight?.let { it * m },
             weightUnit = med.weight?.let { med.weightUnit },
+            ingredients = TakenIngredient.of(medications.ingredientsOf(med.id), m),
         )
         val id = doses.insert(dose)
         medications.setLastMultiplier(med.id, m)
@@ -111,7 +113,7 @@ class MedicationRepository(private val db: PanaceaDatabase) {
 
     suspend fun photoFiles(): List<String> = medications.photoFiles()
 
-    /** How many of the medication's doses were logged at a value [change] changes. */
+    /** How many of the medication's doses were logged at a value [change] changes (dose, weight or ingredients). */
     suspend fun dosesAffected(id: Long, change: DoseChange): Int = doses.of(id).count(change::affects)
 
     /**
@@ -130,7 +132,7 @@ class MedicationRepository(private val db: PanaceaDatabase) {
         } else {
             medications.update(medication)
             if (fixPast) {
-                val change = DoseChange(previous, medication)
+                val change = DoseChange(previous, medication, medications.ingredientsOf(medication.id), ingredients(medication.id))
                 doses.update(doses.of(medication.id).filter(change::affects).map(change::fixed))
             }
             medication.id

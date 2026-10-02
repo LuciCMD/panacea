@@ -52,6 +52,7 @@ import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateSwitch
 import com.clementine.panacea.ui.components.TimeDialog
 import com.clementine.panacea.ui.components.pastTime
+import com.clementine.panacea.ui.today.TodayText
 import com.clementine.panacea.ui.today.TodayViewModel
 import com.clementine.panacea.ui.today.rememberTake
 import com.clementine.panacea.ui.icons.Glyphs
@@ -307,7 +308,8 @@ fun TookEarlierDialog(prompt: Prompt, onClose: () -> Unit) {
         title = "When Did You Take It?",
         hint = "A time later than now counts as yesterday.",
         initial = LocalTime.now(),
-        confirmLabel = "Log Dose",
+        // It logs the usual amount, so it says which.
+        confirmLabel = "Log ${TodayText.amount(med, med.lastMultiplier)}",
         onPick = { time ->
             take(med.id, med.lastMultiplier, pastTime(time, ZonedDateTime.now()).toInstant().toEpochMilli())
             // Even a time too early to count for the reminder answers it.

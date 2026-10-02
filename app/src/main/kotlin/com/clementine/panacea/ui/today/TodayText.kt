@@ -101,6 +101,28 @@ object TodayText {
         }
     }
 
+    /**
+     * "15 mg in the last 24 h", "975 mg Acetaminophen in the last 24 h, from Oxycodone and Tylenol",
+     * "2 doses in the last 24 h", or "Nothing in the last 24 h".
+     */
+    fun had(h: Had): String {
+        val from = if (h.from.size > 1) ", from ${andList(h.from)}" else ""
+        val what = when {
+            h.unit == null -> counted(h.total.toInt(), "dose")
+            h.total <= 0 -> return if (h.name == null) "Nothing in the last 24 h" else "No ${h.name} in the last 24 h"
+            else -> "${formatAmount(h.total)} ${h.unit}" + (h.name?.let { " $it" } ?: "")
+        }
+        return "$what in the last 24 h$from"
+    }
+
+    /** What taking [multiplier] now would make it: "22.5 mg with this one", "3 with this one". */
+    fun withThisOne(h: Had, multiplier: Double): String =
+        if (h.unit == null) "${formatAmount(h.total + 1)} with this one"
+        else "${formatAmount(h.total + h.perOne * multiplier)} ${h.unit} with this one"
+
+    private fun andList(names: List<String>): String =
+        if (names.size == 1) names[0] else names.dropLast(1).joinToString(", ") + " and " + names.last()
+
     /** The due line of a medication learning its routine before it has one. */
     const val LEARNING = "Learning when you usually take it"
 

@@ -77,10 +77,8 @@ class Backups(
     }
 
     suspend fun exportCsv(uri: Uri): Written = withContext(Dispatchers.IO) {
-        val (meds, ingredients, doses) = db.withTransaction {
-            Triple(db.medicationDao().all(), db.medicationDao().allIngredients(), db.doseDao().all())
-        }
-        val csv = CsvExport.write(meds, ingredients, doses, ZoneId.systemDefault())
+        val (meds, doses) = db.withTransaction { db.medicationDao().all() to db.doseDao().all() }
+        val csv = CsvExport.write(meds, doses, ZoneId.systemDefault())
         val out = resolver.openOutputStream(uri, "wt") ?: throw BackupException("That place can't be written to.")
         out.use { it.write(csv.toByteArray()) }
         Written(meds.size, doses.size, 0, 0)

@@ -1,7 +1,6 @@
 package com.clementine.panacea.data.backup
 
 import com.clementine.panacea.data.db.DoseEntity
-import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.model.plainAmount
 import java.time.Instant
@@ -19,9 +18,8 @@ object CsvExport {
     private val DATE = DateTimeFormatter.ISO_LOCAL_DATE
     private val TIME = DateTimeFormatter.ofPattern("HH:mm")
 
-    fun write(medications: List<MedicationEntity>, ingredients: List<IngredientEntity>, doses: List<DoseEntity>, zone: ZoneId): String {
+    fun write(medications: List<MedicationEntity>, doses: List<DoseEntity>, zone: ZoneId): String {
         val byId = medications.associateBy { it.id }
-        val ingredientsOf = ingredients.groupBy { it.medicationId }.mapValues { (_, list) -> list.sortedBy { it.position } }
         // The running total of a medication on one day, in one unit.
         val totals = HashMap<Triple<Long, LocalDate, String>, Double>()
         val out = StringBuilder()
@@ -42,7 +40,7 @@ object CsvExport {
                 plainAmount(d.multiplier),
                 d.weight?.let(::plainAmount).orEmpty(),
                 if (d.weight != null) d.weightUnit.orEmpty() else "",
-                ingredientsOf[med.id].orEmpty().joinToString("; ") { "${it.name} ${plainAmount(it.amount * d.multiplier)} ${it.unit}" },
+                d.ingredients.joinToString("; ") { "${it.name} ${plainAmount(it.amount)} ${it.unit}" },
                 "${plainAmount(total)} ${d.unit}",
             )
             out.append(row.joinToString(",", transform = ::cell)).append("\r\n")

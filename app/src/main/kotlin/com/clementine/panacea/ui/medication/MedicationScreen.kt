@@ -71,11 +71,14 @@ import com.clementine.panacea.ui.reminders.rememberAskForNotifications
 import com.clementine.panacea.ui.reminders.rememberNotificationsAllowed
 import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.today.CardRing
+import com.clementine.panacea.ui.today.Had
 import com.clementine.panacea.ui.today.StatusLines
 import com.clementine.panacea.ui.today.TakeButtons
 import com.clementine.panacea.ui.today.TakeSheet
+import com.clementine.panacea.ui.today.TodayText
 import com.clementine.panacea.ui.today.TodayViewModel
 import com.clementine.panacea.ui.today.UndoBar
+import com.clementine.panacea.ui.today.keepPhrases
 import com.clementine.panacea.ui.today.rememberTake
 
 /** Days of history shown at first, and how many more each tap on Show Earlier Days adds. */
@@ -147,7 +150,7 @@ fun MedicationScreen(
                 }
             }
             item(key = "details") { DetailsCard(ui) }
-            ui.totals?.let { totals -> item(key = "totals") { TotalsCard(totals) } }
+            ui.totals?.let { totals -> item(key = "totals") { TotalsCard(totals, card?.had.orEmpty().filter { it.name != null }) } }
 
             item(key = "reminders") { SectionLabel("Reminders") }
             ui.muted?.let { text -> item(key = "muted") { MutedCard(text) { viewModel.unmute(med.id) } } }
@@ -322,7 +325,7 @@ private fun FactRow(fact: Fact) {
 }
 
 @Composable
-private fun TotalsCard(totals: Totals) {
+private fun TotalsCard(totals: Totals, ingredients: List<Had>) {
     val head = MaterialTheme.typography.labelMedium
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     SectionCard("Totals") {
@@ -344,6 +347,11 @@ private fun TotalsCard(totals: Totals) {
                     if (totals.showAmount) Cell(row.amount, body, Colors.Ink, 1f)
                     if (totals.showWeight) Cell(row.weight, body, Colors.Ink, 1f)
                 }
+            }
+            // Each ingredient over the last day, counting every medication with it.
+            if (ingredients.isNotEmpty()) {
+                HorizontalDivider(color = Colors.LineSoft)
+                ingredients.forEach { Text(keepPhrases(TodayText.had(it)), style = body, color = Colors.Ink) }
             }
         }
     }

@@ -4,6 +4,7 @@ import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.ReminderEntity
+import com.clementine.panacea.data.db.TakenIngredient
 import com.clementine.panacea.model.RepeatType
 import com.clementine.panacea.sound.CustomSound
 import com.clementine.panacea.sound.SoundMode
@@ -27,7 +28,11 @@ class BackupFormatTest {
         medications = listOf(melatonin, ibuprofen),
         ingredients = listOf(IngredientEntity(medicationId = 7, position = 0, name = "Vitamin B6", amount = 1.5, unit = "mg")),
         doses = listOf(
-            DoseEntity(medicationId = 7, takenAt = 1000, multiplier = 1.5, amount = 4.5, unit = "mg", weight = 0.375, weightUnit = "g"),
+            // Logged when the tablet had 1 mg of B6; it has 1.5 mg now, and the dose keeps what it was.
+            DoseEntity(
+                medicationId = 7, takenAt = 1000, multiplier = 1.5, amount = 4.5, unit = "mg", weight = 0.375, weightUnit = "g",
+                ingredients = listOf(TakenIngredient("Vitamin B6", 1.5, "mg")),
+            ),
             DoseEntity(medicationId = 3, takenAt = 2000, multiplier = 2.0, amount = 400.0, unit = "mg"),
         ),
         reminders = listOf(
@@ -61,10 +66,23 @@ class BackupFormatTest {
     }
 
     @Test
+    fun aVersion3BackupsDosesTakeTheMedicationsIngredients() {
+        val root = JSONObject(BackupFormat.write(data, "4.0", now = 5000)).put("backupVersion", 3)
+        val meds = root.getJSONArray("medications")
+        for (i in 0 until meds.length()) {
+            val doses = meds.getJSONObject(i).getJSONArray("doses")
+            for (j in 0 until doses.length()) doses.getJSONObject(j).remove("ingredients")
+        }
+        val back = BackupFormat.read(root.toString())
+        assertEquals(listOf(TakenIngredient("Vitamin B6", 2.25, "mg")), back.doses.single { it.medicationId == 2L }.ingredients)
+        assertEquals(emptyList<TakenIngredient>(), back.doses.single { it.medicationId == 1L }.ingredients)
+    }
+
+    @Test
     fun saysWhatItIs() {
         val root = JSONObject(BackupFormat.write(data, "4.0", now = 5000))
         assertEquals("Panacea", root.getString("app"))
-        assertEquals(3, root.getInt("backupVersion"))
+        assertEquals(4, root.getInt("backupVersion"))
         assertEquals("4.0", root.getString("appVersion"))
     }
 
@@ -93,7 +111,7 @@ class BackupFormatTest {
             }
         }
         try {
-            BackupFormat.read("""{"backupVersion":4,"medications":[]}""")
+            BackupFormat.read("""{"backupVersion":5,"medications":[]}""")
             throw AssertionError("read a newer backup")
         } catch (e: BackupException) {
             assertTrue(e.message!!.startsWith("This backup was made by a newer Panacea."))

@@ -80,7 +80,22 @@ data class DoseEntity(
     /** Physical mass taken (weight × multiplier) in [weightUnit]; null when the weight wasn't known. */
     val weight: Double? = null,
     val weightUnit: String? = null,
+    /**
+     * The other actives taken with it (each ingredient × multiplier), as the medication was at the
+     * time, so changing an ingredient later doesn't rewrite what was taken.
+     */
+    @ColumnInfo(defaultValue = "")
+    val ingredients: List<TakenIngredient> = emptyList(),
 )
+
+/** An ingredient as taken in one dose: [amount] is already scaled by the dose's multiplier. */
+data class TakenIngredient(val name: String, val amount: Double, val unit: String) {
+    companion object {
+        /** What [ingredients] come to at [multiplier]; ones without an amount aren't counted. */
+        fun of(ingredients: List<IngredientEntity>, multiplier: Double): List<TakenIngredient> =
+            ingredients.filter { it.amount > 0 }.sortedBy { it.position }.map { TakenIngredient(it.name.trim(), it.amount * multiplier, it.unit) }
+    }
+}
 
 @Entity(
     tableName = "reminder",

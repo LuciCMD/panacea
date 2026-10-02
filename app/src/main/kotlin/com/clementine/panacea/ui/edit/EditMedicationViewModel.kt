@@ -29,12 +29,12 @@ class EditMedicationViewModel(private val repository: MedicationRepository, val 
 
     suspend fun counts(id: Long): MedicationCounts = repository.counts(id)
 
-    /** What to ask before saving [draft], if it changes the dose or weight that past doses were logged at. */
+    /** What to ask before saving [draft], if it changes the dose, weight or ingredients that past doses were logged at. */
     suspend fun pastDosesQuestion(draft: MedicationDraft): String? {
         if (draft.isNew) return null
-        val existing = repository.medication(draft.id)?.first ?: return null
-        val change = DoseChange(existing, Drafts.toEntity(draft, existing, sortOrder = 0))
-        if (!change.dose && !change.weight) return null
+        val (existing, ingredients) = repository.medication(draft.id) ?: return null
+        val change = DoseChange(existing, Drafts.toEntity(draft, existing, sortOrder = 0), ingredients, Drafts.toIngredients(draft, draft.id))
+        if (!change.dose && !change.weight && !change.ingredients) return null
         val count = repository.dosesAffected(draft.id, change)
         return if (count == 0) null else Drafts.pastDosesQuestion(change, count, existing)
     }

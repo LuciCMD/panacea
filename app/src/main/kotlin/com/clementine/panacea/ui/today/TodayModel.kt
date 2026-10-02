@@ -38,6 +38,8 @@ data class CardState(
     val dueNow: Boolean,
     /** How far along the wait for the next reminder is, 0 to 1. */
     val progress: Float,
+    /** What was had in the last 24 h, of it and of each ingredient, for the take sheet and its page. */
+    val had: List<Had> = emptyList(),
 )
 
 /** Today's doses on a midnight-to-midnight line, with [axis] labels at 0, 6, 12, 18 and 24 h. */
@@ -67,9 +69,12 @@ object TodayModel {
         val ingredientsByMed = ingredients.groupBy { it.medicationId }
         val remindersByMed = reminders.filter { it.enabled }.groupBy { it.medicationId }
         val dosesByMed = doses.groupBy { it.medicationId }
+        val medications = summaries.map { it.medication }
+        val nowMs = now.toInstant().toEpochMilli()
         val cards = summaries.map { s ->
             card(s, ingredientsByMed[s.medication.id].orEmpty(), remindersByMed[s.medication.id].orEmpty(),
                 dosesByMed[s.medication.id].orEmpty(), learningTimes[s.medication.id], now, f)
+                .copy(had = Intake.last24h(s.medication, medications, ingredients, doses, nowMs))
         }
         return TodayUi(
             header = TodayText.header(now, f),

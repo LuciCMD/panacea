@@ -118,9 +118,14 @@ object Drafts {
         val them = if (count == 1) "it" else "them"
         val noun = MedicationType.fromKey(old.type).noun
         val weight = old.weight?.let { "${formatAmount(it)} ${WeightUnit.fromKey(old.weightUnit).key} per $noun" }
+        val changed = listOfNotNull("dose".takeIf { change.dose }, "pill weight".takeIf { change.weight }, "ingredients".takeIf { change.ingredients })
         return when {
-            change.dose && change.weight ->
-                "$doses at the old dose or pill weight. Fix $them too if it was entered wrong; keep $them if the prescription or pill changed."
+            changed.size > 1 -> {
+                val what = changed.dropLast(1).joinToString(", ") + " or " + changed.last()
+                "$doses at the old $what. Fix $them too if it was entered wrong; keep $them if the prescription or pill changed."
+            }
+            change.ingredients ->
+                "$doses with the old ingredients. Fix $them too if they were entered wrong; keep $them if the pill changed."
             change.dose ->
                 "$doses at ${formatAmount(old.dose)} ${old.doseUnit}. Fix $them too if it was entered wrong; keep $them if the prescription changed."
             weight == null ->

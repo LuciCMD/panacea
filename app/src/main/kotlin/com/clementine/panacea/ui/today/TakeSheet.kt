@@ -1,7 +1,12 @@
 package com.clementine.panacea.ui.today
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import com.clementine.panacea.ui.theme.SlateIndication
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.DISABLED_ALPHA
@@ -107,7 +112,9 @@ fun TakeSheet(
                 Modifier
                     .padding(top = 10.dp)
                     .size(width = 36.dp, height = 4.dp)
-                    .background(Colors.Line, RoundedCornerShape(2.dp)),
+                    .background(Colors.Line, RoundedCornerShape(2.dp))
+                    // Material's sheet gives the handle Collapse and Dismiss; the name is ours to give.
+                    .semantics { contentDescription = "Drag handle" },
             )
         },
     ) {
@@ -119,7 +126,8 @@ fun TakeSheet(
                 ?.isNavigationBarContrastEnforced = false
         }
         Column(
-            Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
+            // Large text can make it taller than the screen.
+            Modifier.verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -129,6 +137,22 @@ fun TakeSheet(
                     modifier = Modifier.semantics { heading() },
                 )
                 perItem(card)?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted) }
+            }
+
+            // What's been had, beside the choice of how much more: the moment it matters most.
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                val line = MaterialTheme.typography.bodyMedium.merge(Numbers)
+                Text(keepPhrases(card.lastTakenLine), style = line, color = Colors.Ink)
+                card.had.forEach { h ->
+                    Text(
+                        buildAnnotatedString {
+                            append(keepPhrases(TodayText.had(h)))
+                            withStyle(SpanStyle(color = Colors.Muted)) { append(" · " + keepPhrases(TodayText.withThisOne(h, multiplier))) }
+                        },
+                        style = line,
+                        color = Colors.Ink,
+                    )
+                }
             }
 
             if (med.photoFront != null || med.photoBack != null) {
