@@ -58,6 +58,7 @@ import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
+import com.clementine.panacea.ui.components.TimeDialog
 import com.clementine.panacea.ui.edit.PhotoViewer
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.edit.PillSide
@@ -211,7 +212,9 @@ fun TakeSheet(
     viewing?.let { PhotoViewer(med.name, med.photoFront, med.photoBack, it) { viewing = null } }
 
     if (picking) {
-        EarlierTimeDialog(
+        TimeDialog(
+            title = "When Did You Take It?",
+            hint = "A time later than now counts as yesterday.",
             initial = takenAt?.let { Instant.ofEpochMilli(it).atZone(now.zone).toLocalTime() } ?: LocalTime.now(),
             onPick = { time ->
                 val current = ZonedDateTime.now()
@@ -253,52 +256,5 @@ private fun RoundButton(icon: ImageVector, label: String, enabled: Boolean, onCl
         modifier = Modifier.size(56.dp),
     ) {
         Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = label) }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EarlierTimeDialog(initial: LocalTime, onPick: (LocalTime) -> Unit, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val state = rememberTimePickerState(initial.hour, initial.minute, DateFormat.is24HourFormat(context))
-    BasicAlertDialog(onDismissRequest = onDismiss, modifier = Modifier.semantics { paneTitle = "When Did You Take It?" }) {
-        SlateCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 16.dp)) {
-                Text("When Did You Take It?", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    "A time later than now counts as yesterday.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Colors.Muted,
-                    modifier = Modifier.padding(top = 6.dp, bottom = 18.dp),
-                )
-                TimePicker(
-                    state = state,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    colors = TimePickerDefaults.colors(
-                        clockDialColor = Colors.Field,
-                        clockDialSelectedContentColor = Colors.OnAccent,
-                        clockDialUnselectedContentColor = Colors.Ink,
-                        selectorColor = Colors.Accent,
-                        containerColor = Colors.Surface,
-                        periodSelectorBorderColor = Colors.Line,
-                        periodSelectorSelectedContainerColor = Colors.AccentWash,
-                        periodSelectorUnselectedContainerColor = Color.Transparent,
-                        periodSelectorSelectedContentColor = Colors.Accent,
-                        periodSelectorUnselectedContentColor = Colors.Muted,
-                        timeSelectorSelectedContainerColor = Colors.AccentWash,
-                        timeSelectorUnselectedContainerColor = Colors.Field,
-                        timeSelectorSelectedContentColor = Colors.Accent,
-                        timeSelectorUnselectedContentColor = Colors.Ink,
-                    ),
-                )
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                ) {
-                    SlateButton(onClick = onDismiss) { Text("Cancel") }
-                    SlateButton(onClick = { onPick(LocalTime.of(state.hour, state.minute)) }, kind = ButtonKind.Primary) { Text("Set Time") }
-                }
-            }
-        }
     }
 }

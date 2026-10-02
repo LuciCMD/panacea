@@ -35,7 +35,6 @@ import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import kotlinx.coroutines.delay
 
-private const val UNDO_SHOWN_MS = 10_000L
 private const val TAKE_LOCK_MS = 3_000L
 
 /** Logs a dose with its sound and a tap of feedback; takenAt null means now. */
@@ -116,10 +115,6 @@ fun UndoBar(viewModel: TodayViewModel, modifier: Modifier = Modifier) {
 
     val current = logged
     if (current != null && confirming == null) {
-        LaunchedEffect(current) {
-            delay(UNDO_SHOWN_MS)
-            viewModel.dismiss(current)
-        }
         SlateToast(message = current.message, actionLabel = "Undo", onAction = { confirming = current }, modifier = modifier)
     }
 

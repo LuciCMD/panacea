@@ -29,6 +29,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -47,6 +51,8 @@ import com.clementine.panacea.ui.edit.EditMedicationScreen
 import com.clementine.panacea.ui.history.HistoryScreen
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.medication.MedicationScreen
+import com.clementine.panacea.ui.reminders.EditReminderScreen
+import com.clementine.panacea.ui.reminders.MuteMedicationDialog
 import com.clementine.panacea.ui.reminders.RemindersScreen
 import com.clementine.panacea.ui.settings.SettingsScreen
 import com.clementine.panacea.ui.theme.Colors
@@ -72,6 +78,11 @@ sealed interface Route {
         override val id get() = "med:$medicationId"
     }
 
+    /** Add a reminder (null), for a medication if given, or edit one. */
+    data class EditReminder(val reminderId: Long?, val medicationId: Long? = null) : Route {
+        override val id get() = "reminder:${reminderId ?: "new"}:${medicationId ?: "any"}"
+    }
+
     /** Add a medication (null) or edit one. */
     data class EditMedication(val medicationId: Long?) : Route {
         override val id get() = "edit:${medicationId ?: "new"}"
@@ -81,6 +92,7 @@ sealed interface Route {
         fun fromId(id: String): Route? = when {
             id.startsWith("tab:") -> Tab.entries.firstOrNull { it.name == id.removePrefix("tab:") }?.let(::Top)
             id.startsWith("med:") -> id.removePrefix("med:").toLongOrNull()?.let(::Medication)
+            id.startsWith("reminder:") -> id.split(':').let { EditReminder(it.getOrNull(1)?.toLongOrNull(), it.getOrNull(2)?.toLongOrNull()) }
             id.startsWith("edit:") -> EditMedication(id.removePrefix("edit:").toLongOrNull())
             else -> null
         }
@@ -97,11 +109,32 @@ private val BackStackSaver = listSaver<SnapshotStateList<Route>, String>(
 // Motion stays a short fade, as everywhere else.
 private fun fade(): ContentTransform = fadeIn(tween(120)) togetherWith fadeOut(tween(120))
 
+/** Something asked of the app from outside it, such as a notification's tap or its Mute… button. */
+sealed interface AppRequest {
+    data class OpenMedication(val medicationId: Long) : AppRequest
+    data class Mute(val medicationId: Long) : AppRequest
+}
+
 @Composable
-fun PanaceaShell() {
+fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
     val backStack = rememberSaveable(saver = BackStackSaver) { mutableListOf(start).toMutableStateList() }
     val tab = (backStack.last() as? Route.Top)?.tab
     val pop = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
+    var muting by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(request) {
+        when (request) {
+            is AppRequest.OpenMedication -> {
+                backStack.clear()
+                backStack.add(start)
+                backStack.add(Route.Medication(request.medicationId))
+            }
+            is AppRequest.Mute -> muting = request.medicationId
+            null -> return@LaunchedEffect
+        }
+        onHandled()
+    }
+    muting?.let { id -> MuteMedicationDialog(id) { muting = null } }
 
     Column(
         Modifier
@@ -124,7 +157,10 @@ fun PanaceaShell() {
                                 onAdd = { backStack.add(Route.EditMedication(null)) },
                                 onOpen = { backStack.add(Route.Medication(it)) },
                             )
-                            Tab.REMINDERS -> RemindersScreen()
+                            Tab.REMINDERS -> RemindersScreen(
+                                onAdd = { backStack.add(Route.EditReminder(null)) },
+                                onOpen = { backStack.add(Route.EditReminder(it)) },
+                            )
                             Tab.HISTORY -> HistoryScreen()
                             Tab.SETTINGS -> SettingsScreen()
                         }
@@ -132,7 +168,10 @@ fun PanaceaShell() {
                             route.medicationId,
                             onBack = { backStack.remove(route) },
                             onEdit = { backStack.add(Route.EditMedication(route.medicationId)) },
+                            onAddReminder = { backStack.add(Route.EditReminder(null, route.medicationId)) },
+                            onOpenReminder = { backStack.add(Route.EditReminder(it)) },
                         )
+                        is Route.EditReminder -> EditReminderScreen(route.reminderId, route.medicationId, onDone = { backStack.remove(route) })
                         is Route.EditMedication -> EditMedicationScreen(
                             route.medicationId,
                             onDone = { pop() },

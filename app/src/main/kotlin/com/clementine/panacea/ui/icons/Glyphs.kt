@@ -29,6 +29,7 @@ object Glyphs {
     // Bottom bar
     val Today = strokeIcon("Today", "M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM3 10h18M8 3v4M16 3v4")
     val Bell = strokeIcon("Bell", "M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0")
+    val BellOff = strokeIcon("BellOff", "M6 16v-5a6 6 0 0 1 9.5-4.9M18 11v5l1.5 2H8M10 20.5a2 2 0 0 0 4 0M3 3l18 18")
     val History = strokeIcon("History", "M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4M12 7v5l3 2")
     val Sliders = strokeIcon("Sliders", "M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4")
 }

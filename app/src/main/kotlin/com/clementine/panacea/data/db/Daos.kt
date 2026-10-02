@@ -57,6 +57,18 @@ interface MedicationDao {
     @Query("SELECT * FROM ingredient ORDER BY medicationId, position")
     fun observeIngredients(): Flow<List<IngredientEntity>>
 
+    @Query("UPDATE medication SET mutedUntil = :until WHERE id = :id")
+    suspend fun setMutedUntil(id: Long, until: Long)
+
+    @Query("UPDATE medication SET mutedUntil = 0 WHERE mutedUntil > 0")
+    suspend fun clearMutes()
+
+    @Query("SELECT * FROM medication")
+    suspend fun all(): List<MedicationEntity>
+
+    @Query("SELECT id, name FROM medication ORDER BY sortOrder, name")
+    fun observeNames(): Flow<List<MedicationName>>
+
     @Query("UPDATE medication SET lastMultiplier = :multiplier WHERE id = :id")
     suspend fun setLastMultiplier(id: Long, multiplier: Double)
 
@@ -91,6 +103,9 @@ interface DoseDao {
     @Query("SELECT * FROM dose WHERE medicationId = :id ORDER BY takenAt DESC")
     fun observeOf(id: Long): Flow<List<DoseEntity>>
 
+    @Query("SELECT takenAt FROM dose WHERE medicationId = :id AND takenAt >= :since")
+    suspend fun timesSince(id: Long, since: Long): List<Long>
+
     @Query("SELECT * FROM dose WHERE takenAt >= :since ORDER BY takenAt")
     fun observeSince(since: Long): Flow<List<DoseEntity>>
 
@@ -102,7 +117,7 @@ interface DoseDao {
 interface ReminderDao {
     @Query(
         """
-        SELECT r.*, m.name AS medicationName FROM reminder r
+        SELECT r.*, m.name AS medicationName, m.mutedUntil AS medicationMutedUntil FROM reminder r
         JOIN medication m ON m.id = r.medicationId
         ORDER BY m.sortOrder, m.name, r.id
         """
@@ -117,6 +132,27 @@ interface ReminderDao {
 
     @Query("SELECT * FROM reminder WHERE enabled = 1")
     fun observeEnabled(): Flow<List<ReminderEntity>>
+
+    @Query("SELECT * FROM reminder")
+    fun observeAll(): Flow<List<ReminderEntity>>
+
+    @Query("SELECT * FROM reminder")
+    suspend fun all(): List<ReminderEntity>
+
+    @Query("SELECT * FROM reminder WHERE id = :id")
+    suspend fun get(id: Long): ReminderEntity?
+
+    @Query("SELECT * FROM reminder WHERE medicationId = :id")
+    suspend fun ofMedication(id: Long): List<ReminderEntity>
+
+    @Insert
+    suspend fun insert(reminder: ReminderEntity): Long
+
+    @Update
+    suspend fun update(reminder: ReminderEntity)
+
+    @Query("DELETE FROM reminder WHERE id = :id")
+    suspend fun delete(id: Long)
 
     @Insert
     suspend fun insertAll(reminders: List<ReminderEntity>)

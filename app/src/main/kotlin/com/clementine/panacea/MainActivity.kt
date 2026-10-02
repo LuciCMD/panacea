@@ -1,5 +1,6 @@
 package com.clementine.panacea
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,10 +11,13 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.clementine.panacea.data.Settings
 import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundPlayer
+import com.clementine.panacea.ui.AppRequest
 import com.clementine.panacea.ui.PanaceaShell
 import com.clementine.panacea.ui.edit.LocalPhotoStore
 import com.clementine.panacea.ui.theme.PanaceaTheme
@@ -21,6 +25,7 @@ import com.clementine.panacea.ui.theme.Themes
 
 class MainActivity : ComponentActivity() {
     private lateinit var sounds: SoundPlayer
+    private var request by mutableStateOf<AppRequest?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -30,6 +35,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as PanaceaApp).container
         sounds = SoundPlayer(this, container.settings, container.soundLibrary)
+        // After a rotation the request was already handled.
+        if (savedInstanceState == null) handle(intent)
         setContent {
             val key by container.settings.theme.collectAsStateWithLifecycle()
             val theme = resolveTheme(key, isSystemInDarkTheme())
@@ -41,10 +48,30 @@ class MainActivity : ComponentActivity() {
             }
             PanaceaTheme(theme.palette) {
                 CompositionLocalProvider(LocalSoundPlayer provides sounds, LocalPhotoStore provides container.photos) {
-                    PanaceaShell()
+                    PanaceaShell(request) { request = null }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handle(intent)
+    }
+
+    /** A notification opens a medication ("panacea://medication/12") or asks to mute it. */
+    private fun handle(intent: Intent) {
+        val id = intent.data?.takeIf { it.scheme == "panacea" }?.lastPathSegment?.toLongOrNull() ?: return
+        request = when (intent.action) {
+            ACTION_OPEN_MEDICATION -> AppRequest.OpenMedication(id)
+            ACTION_MUTE -> AppRequest.Mute(id)
+            else -> return
+        }
+    }
+
+    companion object {
+        const val ACTION_OPEN_MEDICATION = "com.clementine.panacea.OPEN_MEDICATION"
+        const val ACTION_MUTE = "com.clementine.panacea.MUTE"
     }
 
     override fun onDestroy() {

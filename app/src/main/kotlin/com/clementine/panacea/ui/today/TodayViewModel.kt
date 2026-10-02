@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.TakenDose
+import com.clementine.panacea.reminder.Reminders
 import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationSummary
@@ -16,6 +17,7 @@ import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.minuteTicks
 import com.clementine.panacea.ui.timeFormats
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,12 +32,15 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZonedDateTime
 
+private const val UNDO_SHOWN_MS = 10_000L
+
 /** A dose just logged, shown in the undo bar until it times out or is dealt with. */
 data class LoggedDose(val taken: TakenDose, val message: String, val removeQuestion: String)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModel(
     private val repository: MedicationRepository,
+    private val reminders: Reminders,
     val formats: TimeFormats,
 ) : ViewModel() {
 
@@ -72,13 +77,19 @@ class TodayViewModel(
         viewModelScope.launch {
             val now = ZonedDateTime.now()
             val taken = repository.takeDose(medicationId, multiplier, takenAt ?: now.toInstant().toEpochMilli()) ?: return@launch
+            // A dose settles a reminder that's showing, and keeps one coming soon quiet.
+            reminders.doseLogged(medicationId, taken.dose.takenAt)
             val at = Instant.ofEpochMilli(taken.dose.takenAt).atZone(now.zone)
             val amount = TodayText.amount(taken.medication, taken.dose.multiplier)
-            _logged.value = LoggedDose(
+            val logged = LoggedDose(
                 taken,
                 TodayText.logged(taken.medication.name, amount, at, now, formats),
                 TodayText.removeQuestion(taken.medication.name, amount, at, now, formats),
             )
+            _logged.value = logged
+            // Counted here rather than on screen, so leaving the screen doesn't stop the clock.
+            delay(UNDO_SHOWN_MS)
+            _logged.compareAndSet(logged, null)
         }
     }
 
@@ -107,7 +118,7 @@ class TodayViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as PanaceaApp
-                TodayViewModel(app.container.medications, timeFormats(app))
+                TodayViewModel(app.container.medications, app.container.reminders, timeFormats(app))
             }
         }
     }

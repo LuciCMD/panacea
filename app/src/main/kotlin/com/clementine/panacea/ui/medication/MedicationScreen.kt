@@ -64,6 +64,7 @@ import com.clementine.panacea.ui.edit.PillSide
 import com.clementine.panacea.ui.history.HistoryDay
 import com.clementine.panacea.ui.history.HistoryItem
 import com.clementine.panacea.ui.icons.Glyphs
+import com.clementine.panacea.ui.reminders.NotificationsOffCard
 import com.clementine.panacea.ui.reminders.ReminderRow
 import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.today.CardRing
@@ -84,6 +85,8 @@ fun MedicationScreen(
     id: Long,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    onAddReminder: () -> Unit,
+    onOpenReminder: (reminderId: Long) -> Unit,
     viewModel: MedicationViewModel = viewModel(factory = MedicationViewModel.Factory),
     today: TodayViewModel = viewModel(factory = TodayViewModel.Factory),
 ) {
@@ -140,11 +143,21 @@ fun MedicationScreen(
             ui.totals?.let { totals -> item(key = "totals") { TotalsCard(totals) } }
 
             item(key = "reminders") { SectionLabel("Reminders") }
+            ui.muted?.let { text -> item(key = "muted") { MutedCard(text) { viewModel.unmute(med.id) } } }
+            if (ui.reminders.any { it.enabled }) {
+                item(key = "notifications") { NotificationsOffCard() }
+            }
             if (ui.reminders.isEmpty()) {
                 item(key = "reminders-none") { Quiet("No reminders for this one yet.") }
             }
             items(ui.reminders, key = { "reminder-${it.id}" }) { r ->
-                ReminderRow(r, { viewModel.setReminderEnabled(r.id, it) }, showMedication = false)
+                ReminderRow(r, onToggle = { viewModel.setReminderEnabled(r.id, it) }, onOpen = { onOpenReminder(r.id) }, showMedication = false)
+            }
+            item(key = "add-reminder") {
+                SlateButton(onClick = onAddReminder, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Text("Add Reminder")
+                }
             }
 
             item(key = "history") { SectionLabel("History") }
@@ -326,6 +339,21 @@ private fun TotalsCard(totals: Totals) {
 @Composable
 private fun RowScope.Cell(text: String, style: TextStyle, color: Color, weight: Float) {
     Text(text, style = style, color = color, textAlign = TextAlign.End, modifier = Modifier.weight(weight))
+}
+
+@Composable
+private fun MutedCard(text: String, onUnmute: () -> Unit) {
+    SlateCard(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(Glyphs.BellOff, contentDescription = null, tint = Colors.Warn, modifier = Modifier.size(20.dp))
+            Text(text, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Ink, modifier = Modifier.weight(1f))
+            SlateButton(onClick = onUnmute, kind = ButtonKind.Text) { Text("Unmute") }
+        }
+    }
 }
 
 @Composable

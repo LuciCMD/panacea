@@ -13,6 +13,7 @@ import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.history.HistoryDay
 import com.clementine.panacea.ui.history.HistoryModel
 import com.clementine.panacea.ui.reminders.ReminderCard
+import com.clementine.panacea.ui.reminders.ReminderText
 import com.clementine.panacea.ui.reminders.reminderCard
 import java.time.ZonedDateTime
 
@@ -50,6 +51,8 @@ data class MedicationUi(
     val totals: Totals?,
     val history: List<HistoryDay>,
     val reminders: List<ReminderCard>,
+    /** "Muted until 14:00" while this medication's reminders are muted. */
+    val muted: String?,
 )
 
 /** Builds a medication's own page from its rows, at a given moment. Pure, so it can be tested. */
@@ -78,7 +81,8 @@ object MedicationModel {
             },
             totals = totals(med, doses, now),
             history = HistoryModel.build(doses.map { DoseRow(it, med.name, med.type) }, now, f),
-            reminders = reminders.map { reminderCard(it, med.name, now, f) },
+            reminders = reminders.map { reminderCard(it, med.name, now, f, med.mutedUntil) },
+            muted = if (med.mutedUntil > now.toInstant().toEpochMilli()) ReminderText.mutedUntil(med.mutedUntil, now, f) else null,
         )
     }
 

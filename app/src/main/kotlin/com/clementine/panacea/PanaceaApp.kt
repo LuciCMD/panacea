@@ -10,6 +10,8 @@ import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.legacy.ImportOutcome
 import com.clementine.panacea.data.legacy.Legacy34Importer
 import com.clementine.panacea.sound.SoundLibrary
+import com.clementine.panacea.reminder.Reminders
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -27,7 +29,14 @@ class PanaceaApp : Application() {
                 }
                 ImportOutcome.AlreadyDone -> Unit
             }
+            container.started.complete(Unit)
             container.photos.sweep(container.medications.photoFiles())
+            // Catches up on anything missed while the app was stopped.
+            container.reminders.resync()
+        }
+        container.appScope.launch {
+            container.started.await()
+            container.reminders.watch()
         }
     }
 
@@ -39,10 +48,14 @@ class PanaceaApp : Application() {
 /** The app's long-lived objects, built once. */
 class AppContainer(context: Context) {
     val appScope = CoroutineScope(SupervisorJob())
+
+    /** Done once the 3.4 import has run; nothing touches reminders before. */
+    val started = CompletableDeferred<Unit>()
     val database: PanaceaDatabase = PanaceaDatabase.build(context)
     val legacyImporter = Legacy34Importer(context, database)
     val medications = MedicationRepository(database)
     val settings = Settings(context)
     val soundLibrary = SoundLibrary(context, settings)
     val photos = PhotoStore(context)
+    val reminders = Reminders(context, database, medications)
 }

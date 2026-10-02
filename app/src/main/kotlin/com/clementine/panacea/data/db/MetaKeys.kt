@@ -6,4 +6,6 @@ object MetaKeys {
     const val LEGACY34_PROBLEMS = "legacy34.problems"
     /** Amount multipliers offered as presets, comma separated; absent until first saved. */
     const val AMOUNT_PRESETS = "amount.presets"
+    /** Every reminder stays quiet until this time (epoch ms); absent or 0 when not muted. */
+    const val MUTE_ALL_UNTIL = "mute.all.until"
 }

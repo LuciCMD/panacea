@@ -50,6 +50,16 @@ class MedicationRepository(private val db: PanaceaDatabase) {
 
     fun observeRemindersOf(id: Long): Flow<List<ReminderEntity>> = db.reminderDao().observeOf(id)
 
+    suspend fun reminder(id: Long): ReminderEntity? = db.reminderDao().get(id)
+
+    /** Adds [reminder] (id 0) or replaces the one with its id; returns the id. */
+    suspend fun saveReminder(reminder: ReminderEntity): Long =
+        if (reminder.id == 0L) db.reminderDao().insert(reminder) else reminder.id.also { db.reminderDao().update(reminder) }
+
+    suspend fun deleteReminder(id: Long) = db.reminderDao().delete(id)
+
+    fun observeNames(): Flow<List<MedicationName>> = medications.observeNames()
+
     suspend fun setReminderEnabled(id: Long, enabled: Boolean) = db.reminderDao().setEnabled(id, enabled)
 
     /** Removes one dose from the history; the remembered amount stays as it is. */

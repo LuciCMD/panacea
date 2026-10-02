@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.MedicationRepository
+import com.clementine.panacea.reminder.Reminders
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.minuteTicks
 import com.clementine.panacea.ui.timeFormats
@@ -26,7 +27,11 @@ sealed interface MedicationState {
     data class Ready(val ui: MedicationUi) : MedicationState
 }
 
-class MedicationViewModel(private val repository: MedicationRepository, private val formats: TimeFormats) : ViewModel() {
+class MedicationViewModel(
+    private val repository: MedicationRepository,
+    private val reminders: Reminders,
+    private val formats: TimeFormats,
+) : ViewModel() {
 
     fun observe(id: Long): Flow<MedicationState> = combine(
         repository.observeMedication(id),
@@ -50,11 +55,15 @@ class MedicationViewModel(private val repository: MedicationRepository, private 
         viewModelScope.launch { repository.setReminderEnabled(id, enabled) }
     }
 
+    fun unmute(medicationId: Long) {
+        viewModelScope.launch { reminders.unmute(medicationId) }
+    }
+
     companion object {
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as PanaceaApp
-                MedicationViewModel(app.container.medications, timeFormats(app))
+                MedicationViewModel(app.container.medications, app.container.reminders, timeFormats(app))
             }
         }
     }

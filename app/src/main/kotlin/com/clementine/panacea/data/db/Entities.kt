@@ -128,6 +128,7 @@ data class DoseRow(
 data class ReminderRow(
     @Embedded val reminder: ReminderEntity,
     val medicationName: String,
+    val medicationMutedUntil: Long,
 )
 
 data class MedicationName(val id: Long, val name: String)

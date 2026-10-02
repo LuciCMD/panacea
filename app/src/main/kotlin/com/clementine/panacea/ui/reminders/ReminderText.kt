@@ -4,7 +4,10 @@ import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.model.RepeatType
 import com.clementine.panacea.reminder.Schedule
 import com.clementine.panacea.ui.TimeFormats
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.time.format.TextStyle
 
 /** A reminder's schedule in words: "Every day at 9:00 and 21:00", "Weekdays at 8:30". */
@@ -44,6 +47,19 @@ object ReminderText {
     private fun times(r: ReminderEntity, f: TimeFormats) = natural(Schedule.slotsOfDay(r).map { time(it, f) })
 
     private fun time(minutes: Int, f: TimeFormats) = LocalTime.of(minutes / 60 % 24, minutes % 60).format(f.time)
+
+    /** "Muted until 14:00", "Muted until tomorrow", "Muted until Saturday at 9:00". */
+    fun mutedUntil(until: Long, now: ZonedDateTime, f: TimeFormats): String {
+        val at = Instant.ofEpochMilli(until).atZone(now.zone)
+        val days = ChronoUnit.DAYS.between(now.toLocalDate(), at.toLocalDate())
+        val midnight = at.toLocalTime() == LocalTime.MIDNIGHT
+        return "Muted until " + when {
+            days == 1L && midnight -> "tomorrow"
+            days == 0L -> at.format(f.time)
+            days == 1L -> "tomorrow at ${at.format(f.time)}"
+            else -> "${at.format(f.weekday)} at ${at.format(f.time)}"
+        }
+    }
 
     /** "a", "a and b", "a, b and c". */
     fun natural(items: List<String>): String = when (items.size) {
