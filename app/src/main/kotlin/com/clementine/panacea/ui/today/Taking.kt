@@ -3,6 +3,7 @@ package com.clementine.panacea.ui.today
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
@@ -51,20 +52,40 @@ fun rememberTake(viewModel: TodayViewModel): (medicationId: Long, multiplier: Do
     }
 }
 
-/** When it was last taken and when it's due; the overdue warning comes first. */
+/**
+ * What's been had, then what's due, always in that order. The two answers lead in ink; the next time
+ * is muted until it's missed, when it turns warn at the same size.
+ */
 @Composable
 fun StatusLines(card: CardState) {
+    val lead = MaterialTheme.typography.bodyLarge.merge(Numbers)
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        if (card.overdue) card.dueLine?.let { Text(it, style = body, color = Colors.Warn) }
-        Text(card.lastTakenLine, style = body, color = Colors.Muted)
-        if (!card.overdue) card.dueLine?.let { Text(it, style = body, color = Colors.Muted) }
+        Text(keepPhrases(card.lastTakenLine), style = lead, color = Colors.Ink)
+        Text(keepPhrases(card.last24hLine), style = lead, color = Colors.Ink)
+        card.dueLine?.let {
+            Text(
+                keepPhrases(it),
+                style = if (card.overdue) lead else body,
+                color = if (card.overdue) Colors.Warn else Colors.Muted,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
     }
 }
 
-/** The amount button and Take, as on every medication card. */
+/** Lets a status line wrap only at its "·", so "3 h 52 min ago" never leaves "ago" on a line alone. */
+private fun keepPhrases(line: String): String =
+    line.split(" · ").joinToString(" · ") { it.replace(' ', NO_BREAK) }
+
+private val NO_BREAK = Char(0xA0)
+
+/**
+ * The amount button and Take, as on every medication card. Take is full accent when a dose is
+ * [dueNow], and a quieter tint otherwise: still easy to tap, but not the loudest thing on the card.
+ */
 @Composable
-fun TakeButtons(med: MedicationEntity, onTake: () -> Unit, onAmount: () -> Unit) {
+fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAmount: () -> Unit) {
     // A second tap right after the first is almost always a slip, so the button rests briefly.
     var justTaken by remember { mutableStateOf(false) }
     LaunchedEffect(justTaken) {
@@ -90,7 +111,7 @@ fun TakeButtons(med: MedicationEntity, onTake: () -> Unit, onAmount: () -> Unit)
                 onTake()
             },
             enabled = !justTaken,
-            kind = ButtonKind.Primary,
+            kind = if (dueNow) ButtonKind.Primary else ButtonKind.Tonal,
             modifier = Modifier
                 .weight(1f)
                 .semantics { contentDescription = if (justTaken) "${med.name} logged" else "Take ${med.name}, $amount" },

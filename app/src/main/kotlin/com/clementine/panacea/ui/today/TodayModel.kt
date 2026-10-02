@@ -29,10 +29,15 @@ data class CardState(
     val type: MedicationType,
     val category: Category,
     val doseLine: String,
+    /** "Taken at 8:27 · 3 h 39 min ago": when it was last taken. */
     val lastTakenLine: String,
+    /** "15 mg in the last 24 h", or the count of doses when no dose is set; always shown. */
+    val last24hLine: String,
     /** "Next at 21:00", "Usually around 23:30" (learned), or the overdue warning; null without either. */
     val dueLine: String?,
     val overdue: Boolean,
+    /** Overdue, or close enough to its time that a dose now counts for it: Take speaks up. */
+    val dueNow: Boolean,
     /** How far along the wait for the next reminder is, 0 to 1. */
     val progress: Float,
 )
@@ -48,6 +53,9 @@ object TodayModel {
     private val OVERDUE_FOR = Duration.ofHours(12)
     private val ONE_DAY = Duration.ofHours(24)
     private val RECENT = Duration.ofHours(12)
+
+    /** A learned dose is due from this long before its usual time, as a fixed reminder's early window. */
+    private const val LEARNED_EARLY_MINUTES = 60L
 
     fun build(
         summaries: List<MedicationSummary>,
@@ -90,8 +98,12 @@ object TodayModel {
 
         var lastTaken = TodayText.lastTaken(s.lastTakenAt, now, f)
         s.lastTakenAt?.takeIf { nowMs - it in 0..RECENT.toMillis() }?.let { lastTaken += " · " + TodayText.ago(it, now) }
-        val recent = doses.filter { nowMs - it.takenAt in 0..ONE_DAY.toMillis() && it.unit == med.doseUnit }
-        if (med.dose > 0 && recent.size >= 2) lastTaken += " · " + TodayText.inLast24h(recent.sumOf { it.amount }, med.doseUnit)
+        val inDay = doses.filter { nowMs - it.takenAt in 0..ONE_DAY.toMillis() }
+        val last24h = if (med.dose > 0) {
+            TodayText.inLast24h(inDay.filter { it.unit == med.doseUnit }.sumOf { it.amount }, med.doseUnit)
+        } else {
+            TodayText.dosesInLast24h(inDay.size)
+        }
 
         // Fixed reminders say when it's due; without any, a learned routine says when it usually is.
         if (reminders.isEmpty() && med.learnRoutine && learningTimes != null) {
@@ -102,8 +114,10 @@ object TodayModel {
                     category = Category.fromKey(med.category),
                     doseLine = TodayText.doseLine(med, ingredients),
                     lastTakenLine = lastTaken,
+                    last24hLine = last24h,
                     dueLine = TodayText.usually(l.expected, l.missed, now, f),
                     overdue = l.missed,
+                    dueNow = l.missed || !now.isBefore(l.expected.minusMinutes(LEARNED_EARLY_MINUTES)),
                     progress = l.progress,
                 )
             }
@@ -115,13 +129,16 @@ object TodayModel {
             category = Category.fromKey(med.category),
             doseLine = TodayText.doseLine(med, ingredients),
             lastTakenLine = lastTaken,
+            last24hLine = last24h,
             dueLine = due.overdueAt?.let { TodayText.overdue(it, now, f) } ?: due.next?.let { TodayText.next(it, now, f) },
             overdue = due.overdueAt != null,
+            dueNow = due.overdueAt != null || due.soon,
             progress = if (due.overdueAt != null) 1f else due.progress,
         )
     }
 
-    data class Due(val overdueAt: ZonedDateTime?, val next: ZonedDateTime?, val progress: Float)
+    /** [soon]: [next] is close enough that a dose now would count for it. */
+    data class Due(val overdueAt: ZonedDateTime?, val next: ZonedDateTime?, val progress: Float, val soon: Boolean = false)
 
     /**
      * Where a medication stands against its reminders. A dose logged within a reminder's early window
@@ -131,6 +148,7 @@ object TodayModel {
         val nowMs = now.toInstant().toEpochMilli()
         var overdueAt: ZonedDateTime? = null
         var best: Pair<ZonedDateTime, Float>? = null
+        var soon = false
         for (r in reminders) {
             val early = Schedule.earlyWindowMinutes(r)
             val latest = Schedule.latestAtOrBefore(r, now)
@@ -148,9 +166,10 @@ object TodayModel {
             }
             if (next != null && (best == null || next.isBefore(best.first))) {
                 best = next to progress(previous, early, lastTakenAt, next, now)
+                soon = !now.isBefore(next.minusMinutes(early.toLong()))
             }
         }
-        return Due(overdueAt, best?.first, best?.second ?: 0f)
+        return Due(overdueAt, best?.first, best?.second ?: 0f, soon)
     }
 
     data class Learned(val expected: ZonedDateTime, val missed: Boolean, val progress: Float)

@@ -55,7 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.clementine.panacea.ui.theme.Colors
 
-enum class ButtonKind { Plain, Primary, Delete, Text }
+/** Tonal is the accent, quietly: a lavender tint with lavender text, for an action that isn't due. */
+enum class ButtonKind { Plain, Primary, Tonal, Delete, Text }
 
 /**
  * Slate button: flat, radius 8, no border. Pressed and hovered it takes the white wash, focused from
@@ -74,6 +75,7 @@ fun SlateButton(
     val (container, text) = when (kind) {
         ButtonKind.Plain -> Colors.Field to Colors.Ink
         ButtonKind.Primary -> Colors.Accent to Colors.OnAccent
+        ButtonKind.Tonal -> Colors.AccentWash to Colors.Accent
         ButtonKind.Delete -> Colors.Bad to Colors.OnAccent
         ButtonKind.Text -> Color.Transparent to Colors.Accent
     }

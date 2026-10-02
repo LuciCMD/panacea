@@ -244,7 +244,7 @@ private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> 
                 Icon(Glyphs.ChevronRight, contentDescription = null, tint = Colors.Faint)
             }
             StatusLines(card)
-            TakeButtons(med, onTake, onAmount)
+            TakeButtons(med, card.dueNow, onTake, onAmount)
         }
     }
 }

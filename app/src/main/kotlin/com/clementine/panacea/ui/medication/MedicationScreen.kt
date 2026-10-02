@@ -138,6 +138,7 @@ fun MedicationScreen(
                             }
                             TakeButtons(
                                 med,
+                                dueNow = card.dueNow,
                                 onTake = { take(med.id, med.lastMultiplier, null) },
                                 onAmount = { sheetOpen = true },
                             )
