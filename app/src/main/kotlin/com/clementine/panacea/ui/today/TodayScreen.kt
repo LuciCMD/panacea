@@ -46,6 +46,7 @@ import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.ProgressRing
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.ScreenHeader
+import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
@@ -63,6 +64,7 @@ fun TodayScreen(
     viewModel: TodayViewModel = viewModel(factory = TodayViewModel.Factory),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val importProblems by viewModel.importProblems.collectAsStateWithLifecycle()
     val take = rememberTake(viewModel)
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var sheetFor by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -95,6 +97,9 @@ fun TodayScreen(
                             modifier = Modifier.size(48.dp).semantics { contentDescription = "Add Medication" },
                         ) { Icon(Glyphs.Plus, contentDescription = null) }
                     }
+                }
+                if (importProblems.isNotEmpty()) {
+                    item(key = "import") { ImportProblemsCard(importProblems, viewModel::dismissImportProblems) }
                 }
                 item(key = "strip") { DayStripCard(state.strip) }
                 if (categories.size > 1) {
@@ -245,5 +250,24 @@ private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> 
             StatusLines(card)
             TakeButtons(med, onTake, onAmount)
         }
+    }
+}
+
+/** Shown once after updating from 3.4 if something couldn't be brought over, until put away. */
+@Composable
+private fun ImportProblemsCard(problems: List<String>, onDismiss: () -> Unit) {
+    SectionCard(
+        "Some 3.4 Data Wasn't Brought Over",
+        hint = "Everything else came across. Panacea 3.4's own files are still on this phone, unchanged.",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            problems.forEach { problem ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("•", style = MaterialTheme.typography.bodyMedium, color = Colors.Warn, modifier = Modifier.clearAndSetSemantics { })
+                    Text(problem, style = MaterialTheme.typography.bodyMedium, color = Colors.Ink)
+                }
+            }
+        }
+        SlateButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Got It") }
     }
 }

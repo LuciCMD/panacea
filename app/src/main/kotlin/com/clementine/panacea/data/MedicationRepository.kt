@@ -15,7 +15,9 @@ import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.data.db.ReminderRow
 import com.clementine.panacea.model.Amounts
+import com.clementine.panacea.data.legacy.importProblems
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /** A dose just logged, with what's needed to take it back. */
@@ -141,6 +143,12 @@ class MedicationRepository(private val db: PanaceaDatabase) {
         val rest = medications.all().sortedWith(compareBy({ it.sortOrder }, { it.name })).map { it.id }.filter { it !in ids }
         (ids + rest).forEachIndexed { index, id -> medications.setSortOrder(id, index) }
     }
+
+    /** What the 3.4 import couldn't bring over, until the user puts it away. */
+    fun observeImportProblems(): Flow<List<String>> =
+        combine(db.metaDao().observe(MetaKeys.LEGACY34_PROBLEMS), db.metaDao().observe(MetaKeys.LEGACY34_PROBLEMS_SEEN), ::importProblems)
+
+    suspend fun dismissImportProblems() = db.metaDao().put(MetaEntity(MetaKeys.LEGACY34_PROBLEMS_SEEN, System.currentTimeMillis().toString()))
 
     suspend fun addPreset(value: Double) = db.withTransaction {
         val meta = db.metaDao()

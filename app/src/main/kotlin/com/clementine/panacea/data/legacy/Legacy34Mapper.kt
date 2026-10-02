@@ -22,7 +22,8 @@ object Legacy34Mapper {
         val position = snapshot.order.withIndex().associate { (index, name) -> name to index }
         val unique = snapshot.medications.distinctBy { it.name }
         if (unique.size < snapshot.medications.size) {
-            problems += "${snapshot.medications.size - unique.size} medication(s) with a repeated name were skipped."
+            val skipped = snapshot.medications.size - unique.size
+            problems += if (skipped == 1) "1 medication with a repeated name was skipped." else "$skipped medications with a repeated name were skipped."
         }
         // Display order: 3.4's saved order, then anything it missed, by name
         val ordered = unique.sortedWith(compareBy({ position[it.name] ?: Int.MAX_VALUE }, { it.name }))

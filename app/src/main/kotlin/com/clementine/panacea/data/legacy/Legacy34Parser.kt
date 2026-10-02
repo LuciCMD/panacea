@@ -111,7 +111,7 @@ object Legacy34Parser {
         val root = try {
             JSONObject(json)
         } catch (e: JSONException) {
-            problems += "The medication list could not be read (${e.message})."
+            problems += "The medication list could not be read, so no medications were brought over."
             return emptyList()
         }
         return root.keys().asSequence().toList().mapNotNull { key ->
@@ -182,7 +182,7 @@ object Legacy34Parser {
                 null
             }
         }
-        if (unreadable > 0) problems += "$unreadable dose record(s) of \"$name\" could not be read."
+        if (unreadable > 0) problems += "${if (unreadable == 1) "1 dose" else "$unreadable doses"} of \"$name\" could not be read."
         return doses
     }
 

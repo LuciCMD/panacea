@@ -116,7 +116,7 @@ class BackupFormatTest {
         assertTrue(back.reminders.isEmpty())
         assertEquals(
             listOf(
-                "1 dose(s) of \"A\" could not be read.",
+                "1 dose of \"A\" could not be read.",
                 "A reminder for \"A\" could not be read.",
                 "A second medication named \"A\" was skipped.",
                 "Medication 3 in the backup could not be read.",

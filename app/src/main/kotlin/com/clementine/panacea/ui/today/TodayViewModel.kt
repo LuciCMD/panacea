@@ -74,6 +74,14 @@ class TodayViewModel(
         TodayModel.build(d.summaries, d.ingredients, d.reminders, d.doses, d.presets, ZonedDateTime.now(), formats, d.learning)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** What the 3.4 import couldn't bring over; empty when nothing, or once put away. */
+    val importProblems: StateFlow<List<String>> =
+        repository.observeImportProblems().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun dismissImportProblems() {
+        viewModelScope.launch { repository.dismissImportProblems() }
+    }
+
     private val _logged = MutableStateFlow<LoggedDose?>(null)
     val logged: StateFlow<LoggedDose?> = _logged.asStateFlow()
 

@@ -8,6 +8,10 @@ import com.clementine.panacea.data.db.PanaceaDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/** What the 3.4 import couldn't bring over, as stored with it; empty once the user has seen it. */
+fun importProblems(stored: String?, seen: String?): List<String> =
+    if (seen != null) emptyList() else stored.orEmpty().lines().map { it.trim() }.filter { it.isNotEmpty() }
+
 sealed interface ImportOutcome {
     data object AlreadyDone : ImportOutcome
     data class Imported(

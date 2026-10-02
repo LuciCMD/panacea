@@ -182,7 +182,7 @@ object BackupFormat {
                     )
                 }
             }
-            if (unreadable > 0) problems += "$unreadable dose(s) of \"$name\" could not be read."
+            if (unreadable > 0) problems += "${if (unreadable == 1) "1 dose" else "$unreadable doses"} of \"$name\" could not be read."
             m.objects("reminders").forEach { r ->
                 val repeat = r.text("repeat")?.let { key -> RepeatType.entries.firstOrNull { it.name == key } }
                 if (repeat == null) {
