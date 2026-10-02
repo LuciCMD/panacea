@@ -13,6 +13,9 @@ local.properties
 
 # Local notes
 /archive/
+/PRODUCT.md
+/DESIGN.md
+/.impeccable/
 
 # Old releases
 /Backup/
