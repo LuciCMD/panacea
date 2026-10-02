@@ -154,7 +154,7 @@ fun EditReminderScreen(
         }
         item(key = "repeat") { RepeatCard(d, problems, f, update) { picking = it } }
         item(key = "note") {
-            SectionCard("Note", "Shown on the notification, such as \"With lunch\".") {
+            SectionCard("Note", info = "Shown on this reminder's notification, after the amount.") {
                 SlateTextField(
                     d.note, { update(d.copy(note = it)) },
                     placeholder = "With lunch",
@@ -165,7 +165,11 @@ fun EditReminderScreen(
             }
         }
         item(key = "early") {
-            SectionCard("Early Doses", "A dose logged up to this long before the reminder counts for it, so the reminder stays quiet.") {
+            SectionCard(
+                "Early Doses",
+                info = "A dose logged up to this long before the reminder counts for it, so the reminder stays quiet. " +
+                    "Make it longer if you often take it early.",
+            ) {
                 SlateDropdown(
                     d.early,
                     ReminderDrafts.EARLY_CHOICES,

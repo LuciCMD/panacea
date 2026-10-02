@@ -180,8 +180,8 @@ private fun SoundsCard(viewModel: SettingsViewModel) {
 
     SectionCard(
         "Sounds",
-        hint = "Your own sound can be any file this phone plays, such as MP3, AAC, M4A, FLAC, Ogg, Opus, WAV, " +
-            "AIFF, AMR or MIDI, up to 20 MB. Short clips work best.",
+        info = "Your own sound can be any file this phone plays, such as MP3, AAC, FLAC, Ogg or WAV, up to 20 MB. " +
+            "Short clips work best.",
     ) {
         SoundEvent.entries.forEachIndexed { i, event ->
             if (i > 0) HorizontalDivider(color = Colors.LineSoft)
@@ -240,8 +240,9 @@ private fun BackupCard(viewModel: SettingsViewModel) {
 
     SectionCard(
         "Backup",
-        hint = "A backup is one file with everything, photos and sounds included. Keep it somewhere off this phone. " +
-            "Export CSV saves your doses for a spreadsheet.",
+        hint = "Keep a backup somewhere off this phone.",
+        info = "A backup is one file with everything, photos and sounds included. Restore replaces what's on this phone " +
+            "with it. Export CSV saves your doses for a spreadsheet.",
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SlateButton(

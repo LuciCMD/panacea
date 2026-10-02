@@ -222,7 +222,12 @@ fun RemindersScreen(
         val subtitle = state.muteAllText?.let { "All " + it.replaceFirstChar(Char::lowercase) }
             ?: if (total > 0) "$on of $total on" else null
         item(key = "header") {
-            ScreenHeader("Reminders", subtitle) {
+            ScreenHeader(
+                "Reminders",
+                subtitle,
+                info = "\u201CTaken 9 of 10\u201D counts how often a reminder went off and a dose was logged for it. " +
+                    "A learned reminder asks only when a usual dose isn't logged.",
+            ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (!state.isEmpty) {
                         val muted = state.muteAllText != null

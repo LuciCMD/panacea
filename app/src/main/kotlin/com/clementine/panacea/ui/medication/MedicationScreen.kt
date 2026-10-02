@@ -329,7 +329,7 @@ private fun FactRow(fact: Fact) {
 private fun TotalsCard(totals: Totals, ingredients: List<Had>) {
     val head = MaterialTheme.typography.labelMedium
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
-    SectionCard("Totals") {
+    SectionCard("Totals", info = "Amounts as each dose was logged. Weight counts only doses logged while the pill had a weight.") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth().clearAndSetSemantics { }) {
                 Spacer(Modifier.weight(1.3f))

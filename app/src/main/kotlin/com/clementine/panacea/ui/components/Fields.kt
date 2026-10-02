@@ -45,8 +45,11 @@ import com.clementine.panacea.ui.theme.Colors
 
 /** A field label: Title Case, above the field. */
 @Composable
-fun FieldLabel(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = Colors.Ink, modifier = modifier)
+fun FieldLabel(text: String, modifier: Modifier = Modifier, info: String? = null) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = Colors.Ink)
+        info?.let { InfoTip(about = text, text = it) }
+    }
 }
 
 /**

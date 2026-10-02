@@ -67,8 +67,8 @@ fun ScreenHeader(
 }
 
 /**
- * A card with a heading and, if needed, a [hint] saying what it's for (faint: it can be done without).
- * A [warning] card says something that matters: its text is muted rather than faint, and its edge is warn.
+ * A card with a heading. What it's for goes behind an [info] ⓘ after the title; a visible [hint] is
+ * for the few things that must be seen, such as a [warning], whose card also has a warn edge.
  */
 @Composable
 fun SectionCard(
@@ -76,17 +76,25 @@ fun SectionCard(
     hint: String? = null,
     modifier: Modifier = Modifier,
     warning: Boolean = false,
+    info: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     SlateCard(modifier.fillMaxWidth(), border = if (warning) Colors.Warn else null) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // The ⓘ's 48dp row is taller than the title, so the card's top padding gives way to keep the title in place.
+        Column(
+            Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = if (info != null) 4.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Colors.Ink,
-                    modifier = Modifier.semantics { heading() },
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Colors.Ink,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    info?.let { InfoTip(about = title, text = it) }
+                }
                 hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted) }
             }
             content()

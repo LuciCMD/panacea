@@ -263,16 +263,16 @@ private fun BasicsCard(d: MedicationDraft, problems: DraftProblems, update: (Med
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            FieldLabel("Dose")
+        // The label's ⓘ row brings its own space above the field.
+        Column {
+            FieldLabel("Dose", info = "The active amount in one $noun, as on the label. Leave it empty to count doses instead.")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SlateTextField(d.dose, { update(d.copy(dose = it)) }, Modifier.weight(1f), placeholder = "50", error = problems.dose, accessibleLabel = "Dose", keyboardOptions = decimal)
                 SlateDropdown(d.doseUnit, (DoseUnits + d.doseUnit).distinct(), { it }, { update(d.copy(doseUnit = it)) }, "Dose Unit")
             }
-            Hint("The active amount in one $noun, as on the label.")
         }
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            FieldLabel("Pill Weight")
+        Column {
+            FieldLabel("Pill Weight", info = "What one $noun weighs on a scale, for totals by weight. Leave it empty if you don't know.")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SlateTextField(d.weight, { update(d.copy(weight = it)) }, Modifier.weight(1f), placeholder = "0.25", error = problems.weight, accessibleLabel = "Pill Weight", keyboardOptions = decimal)
                 SlateDropdown(
@@ -280,14 +280,8 @@ private fun BasicsCard(d: MedicationDraft, problems: DraftProblems, update: (Med
                     { update(d.copy(weightUnit = it.key)) }, "Weight Unit",
                 )
             }
-            Hint("What one $noun weighs on a scale. Leave it empty if you don't know.")
         }
     }
-}
-
-@Composable
-private fun Hint(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
 }
 
 @Composable
@@ -363,7 +357,7 @@ private fun PhotosCard(d: MedicationDraft, onCamera: (List<PillSide>) -> Unit, o
         pickingFor = null
         if (uri != null && side != null) scope.launch { store.import(uri)?.let { onSet(side, it) } }
     }
-    SectionCard("Pill Photos", hint = "Both sides of the pill, so you can check one at a glance instead of looking it up. They stay on this phone.") {
+    SectionCard("Pill Photos", info = "A photo of each side, so you can check a pill at a glance instead of looking it up. They stay on this phone.") {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PillSide.entries.forEach { side ->
                 val photo = if (side == PillSide.FRONT) d.photoFront else d.photoBack
@@ -457,7 +451,11 @@ private fun PhotoSlot(
 
 @Composable
 private fun IngredientsCard(d: MedicationDraft, problems: DraftProblems, update: (MedicationDraft) -> Unit) {
-    SectionCard("Ingredients", hint = "Optional. Other actives in the same ${d.type.noun}; each one scales with the amount you take.") {
+    SectionCard(
+        "Ingredients",
+        info = "Other actives in the same ${d.type.noun}, such as acetaminophen. Each dose records them, and the take sheet " +
+            "adds them up across every medication that has them.",
+    ) {
         d.ingredients.forEachIndexed { i, ing ->
             val set = { changed: IngredientDraft -> update(d.copy(ingredients = d.ingredients.toMutableList().also { it[i] = changed })) }
             Column(
