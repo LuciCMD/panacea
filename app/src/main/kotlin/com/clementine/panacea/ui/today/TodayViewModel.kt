@@ -13,9 +13,9 @@ import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationSummary
 import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.ui.TimeFormats
+import com.clementine.panacea.ui.minuteTicks
 import com.clementine.panacea.ui.timeFormats
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -41,13 +40,7 @@ class TodayViewModel(
 ) : ViewModel() {
 
     /** Ticks at each new minute, only while the screen is watched. */
-    private val clock = flow {
-        while (true) {
-            val now = ZonedDateTime.now()
-            emit(now)
-            delay(60_000L - now.second * 1000L - now.nano / 1_000_000 + 50)
-        }
-    }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    private val clock = minuteTicks().shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
 
     // Two days back covers the last 24 hours and any reminder still counted as due.
     private val recentDoses = clock

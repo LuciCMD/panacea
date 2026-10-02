@@ -41,6 +41,15 @@ class MedicationRepository(private val db: PanaceaDatabase) {
 
     fun observeReminderRows(): Flow<List<ReminderRow>> = db.reminderDao().observeRows()
 
+    fun observeMedication(id: Long): Flow<MedicationEntity?> = medications.observe(id)
+
+    fun observeIngredientsOf(id: Long): Flow<List<IngredientEntity>> = medications.observeIngredientsOf(id)
+
+    /** The medication's doses, newest first. */
+    fun observeDosesOf(id: Long): Flow<List<DoseEntity>> = doses.observeOf(id)
+
+    fun observeRemindersOf(id: Long): Flow<List<ReminderEntity>> = db.reminderDao().observeOf(id)
+
     suspend fun setReminderEnabled(id: Long, enabled: Boolean) = db.reminderDao().setEnabled(id, enabled)
 
     /** Removes one dose from the history; the remembered amount stays as it is. */

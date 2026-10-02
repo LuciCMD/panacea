@@ -26,6 +26,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.MedicationRepository
+import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.reminder.Schedule
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.components.Numbers
@@ -53,22 +54,21 @@ data class ReminderCard(
     val next: String,
 )
 
+fun reminderCard(r: ReminderEntity, medication: String, now: ZonedDateTime, f: TimeFormats) = ReminderCard(
+    id = r.id,
+    medication = medication,
+    schedule = ReminderText.schedule(r, f),
+    note = r.note.trim().ifEmpty { null },
+    enabled = r.enabled,
+    next = if (!r.enabled) "Off" else Schedule.nextAfter(r, now)?.let { TodayText.next(it, now, f) } ?: "Never fires",
+)
+
 class RemindersViewModel(private val repository: MedicationRepository, formats: TimeFormats) : ViewModel() {
 
     val cards: StateFlow<List<ReminderCard>?> = repository.observeReminderRows()
         .map { rows ->
             val now = ZonedDateTime.now()
-            rows.map { row ->
-                val r = row.reminder
-                ReminderCard(
-                    id = r.id,
-                    medication = row.medicationName,
-                    schedule = ReminderText.schedule(r, formats),
-                    note = r.note.trim().ifEmpty { null },
-                    enabled = r.enabled,
-                    next = if (!r.enabled) "Off" else Schedule.nextAfter(r, now)?.let { TodayText.next(it, now, formats) } ?: "Never fires",
-                )
-            }
+            rows.map { reminderCard(it.reminder, it.medicationName, now, formats) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -105,13 +105,13 @@ fun RemindersScreen(viewModel: RemindersViewModel = viewModel(factory = Reminder
             }
         }
         items(list.orEmpty(), key = { it.id }) { card ->
-            ReminderRow(card) { viewModel.setEnabled(card.id, it) }
+            ReminderRow(card, { viewModel.setEnabled(card.id, it) })
         }
     }
 }
 
 @Composable
-private fun ReminderRow(card: ReminderCard, onToggle: (Boolean) -> Unit) {
+fun ReminderRow(card: ReminderCard, onToggle: (Boolean) -> Unit, showMedication: Boolean = true) {
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     SlateCard(Modifier.fillMaxWidth()) {
         Row(
@@ -122,8 +122,13 @@ private fun ReminderRow(card: ReminderCard, onToggle: (Boolean) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(card.medication, style = MaterialTheme.typography.titleMedium, color = Colors.Ink)
-                Text(card.schedule, style = body, color = if (card.enabled) Colors.Ink else Colors.Muted)
+                if (showMedication) {
+                    Text(card.medication, style = MaterialTheme.typography.titleMedium, color = Colors.Ink)
+                    Text(card.schedule, style = body, color = if (card.enabled) Colors.Ink else Colors.Muted)
+                } else {
+                    // On a medication's own page the schedule is what tells reminders apart.
+                    Text(card.schedule, style = MaterialTheme.typography.titleMedium.merge(Numbers), color = if (card.enabled) Colors.Ink else Colors.Muted)
+                }
                 card.note?.let { Text(it, style = body, color = Colors.Muted) }
                 Text(card.next, style = body, color = Colors.Muted)
             }

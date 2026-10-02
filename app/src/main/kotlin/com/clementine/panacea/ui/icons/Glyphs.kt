@@ -19,6 +19,8 @@ object Glyphs {
     val ChevronDown = strokeIcon("ChevronDown", "M7 10l5 5 5-5")
     val ChevronRight = strokeIcon("ChevronRight", "M9 6l6 6-6 6")
     val Close = strokeIcon("Close", "M6 6l12 12M18 6L6 18")
+    val Back = strokeIcon("Back", "M19 12H5M11 6l-6 6 6 6")
+    val Pencil = strokeIcon("Pencil", "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4")
     val Camera = strokeIcon("Camera", "M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 16.5a3.5 3.5 0 1 0 0-7a3.5 3.5 0 1 0 0 7")
     val Image = strokeIcon("Image", "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4 16l5-5 4 4 2-2 5 5M15.5 8.5h.01")
     val Flash = strokeIcon("Flash", "M13 3L5 14h6l-1 7 8-11h-6z")

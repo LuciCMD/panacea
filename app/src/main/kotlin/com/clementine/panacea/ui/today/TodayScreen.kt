@@ -3,71 +3,56 @@ package com.clementine.panacea.ui.today
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.model.Category
-import com.clementine.panacea.ui.components.ButtonKind
-import com.clementine.panacea.ui.components.ConfirmDialog
+import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.ProgressRing
+import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
-import com.clementine.panacea.ui.components.SlateToast
+import com.clementine.panacea.ui.components.screenPadding
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.icons.TypeIcons
-import com.clementine.panacea.sound.LocalSoundPlayer
-import com.clementine.panacea.sound.SoundEvent
-import com.clementine.panacea.ui.components.Numbers
-import com.clementine.panacea.ui.components.ScreenHeader
-import com.clementine.panacea.ui.components.screenPadding
 import com.clementine.panacea.ui.theme.Colors
-import kotlinx.coroutines.delay
-
-private const val UNDO_SHOWN_MS = 10_000L
-private const val TAKE_LOCK_MS = 3_000L
 
 @Composable
 fun TodayScreen(
@@ -76,18 +61,9 @@ fun TodayScreen(
     viewModel: TodayViewModel = viewModel(factory = TodayViewModel.Factory),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
-    val logged by viewModel.logged.collectAsStateWithLifecycle()
-    val sounds = LocalSoundPlayer.current
-    val haptics = LocalHapticFeedback.current
+    val take = rememberTake(viewModel)
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var sheetFor by rememberSaveable { mutableStateOf<Long?>(null) }
-    var confirming by remember { mutableStateOf<LoggedDose?>(null) }
-
-    val take = { medicationId: Long, multiplier: Double, takenAt: Long? ->
-        viewModel.take(medicationId, multiplier, takenAt)
-        sounds.play(SoundEvent.TAKE)
-        haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-    }
 
     Box(Modifier.fillMaxSize().background(Colors.Ground)) {
         ui?.let { state ->
@@ -141,40 +117,12 @@ fun TodayScreen(
             }
         }
 
-        val current = logged
-        if (current != null && confirming == null) {
-            LaunchedEffect(current) {
-                delay(UNDO_SHOWN_MS)
-                viewModel.dismiss(current)
-            }
-            SlateToast(
-                message = current.message,
-                actionLabel = "Undo",
-                onAction = { confirming = current },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
-                    .fillMaxWidth(),
-            )
-        }
-    }
-
-    confirming?.let { dose ->
-        ConfirmDialog(
-            title = "Remove This Dose?",
-            text = dose.removeQuestion,
-            confirmLabel = "Remove",
-            dismissLabel = "Keep It",
-            confirmKind = ButtonKind.Delete,
-            onConfirm = {
-                viewModel.undo(dose)
-                sounds.play(SoundEvent.UNDO)
-                confirming = null
-            },
-            onDismiss = {
-                viewModel.dismiss(dose)
-                confirming = null
-            },
+        UndoBar(
+            viewModel,
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+                .fillMaxWidth(),
         )
     }
 }
@@ -244,35 +192,34 @@ private fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+
+/** The wait for the next reminder around the pill's photo, or its form's icon. */
+@Composable
+fun CardRing(card: CardState) {
+    val med = card.medication
+    ProgressRing(card.progress, if (card.overdue) Colors.Warn else Colors.Accent) {
+        // The pill's own photo says more than the form's icon.
+        if (med.photoFront != null) {
+            PillPhoto(med.photoFront, null, Modifier.size(40.dp).clip(CircleShape), px = 160)
+        } else {
+            Icon(TypeIcons.of(card.type), contentDescription = null, tint = Colors.Ink)
+        }
+    }
+}
+
 @Composable
 private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> Unit, onOpen: () -> Unit) {
     val med = card.medication
-    // A second tap right after the first is almost always a slip, so the button rests briefly.
-    var justTaken by remember { mutableStateOf(false) }
-    LaunchedEffect(justTaken) {
-        if (justTaken) {
-            delay(TAKE_LOCK_MS)
-            justTaken = false
-        }
-    }
-    val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     SlateCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
                 Modifier
                     .clip(MaterialTheme.shapes.small)
-                    .clickable(onClickLabel = "Edit ${med.name}", onClick = onOpen),
+                    .clickable(onClickLabel = "Open ${med.name}", onClick = onOpen),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                ProgressRing(card.progress, if (card.overdue) Colors.Warn else Colors.Accent) {
-                    // The pill's own photo says more than the form's icon.
-                    if (med.photoFront != null) {
-                        PillPhoto(med.photoFront, null, Modifier.size(40.dp).clip(CircleShape), px = 160)
-                    } else {
-                        Icon(TypeIcons.of(card.type), contentDescription = null, tint = Colors.Ink)
-                    }
-                }
+                CardRing(card)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
                         med.name,
@@ -280,46 +227,12 @@ private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> 
                         color = Colors.Ink,
                         modifier = Modifier.semantics { heading() },
                     )
-                    Text(card.doseLine, style = body, color = Colors.Muted)
+                    Text(card.doseLine, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted)
                 }
                 Icon(Glyphs.ChevronRight, contentDescription = null, tint = Colors.Faint)
             }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (card.overdue) card.dueLine?.let { Text(it, style = body, color = Colors.Warn) }
-                Text(card.lastTakenLine, style = body, color = Colors.Muted)
-                if (!card.overdue) card.dueLine?.let { Text(it, style = body, color = Colors.Muted) }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val multiplier = TodayText.multiplier(med.lastMultiplier)
-                SlateButton(
-                    onClick = onAmount,
-                    modifier = Modifier
-                        .widthIn(min = 64.dp)
-                        .semantics { contentDescription = "Change amount for ${med.name}, now $multiplier" },
-                ) {
-                    Text(multiplier, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp).merge(Numbers))
-                }
-                val amount = TodayText.amount(med, med.lastMultiplier)
-                SlateButton(
-                    onClick = {
-                        justTaken = true
-                        onTake()
-                    },
-                    enabled = !justTaken,
-                    kind = ButtonKind.Primary,
-                    modifier = Modifier
-                        .weight(1f)
-                        .semantics { contentDescription = if (justTaken) "${med.name} logged" else "Take ${med.name}, $amount" },
-                ) {
-                    Icon(Glyphs.Check, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text(
-                        if (justTaken) "Logged" else "Take ${med.name}",
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            StatusLines(card)
+            TakeButtons(med, onTake, onAmount)
         }
     }
 }

@@ -46,6 +46,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.clementine.panacea.ui.edit.EditMedicationScreen
 import com.clementine.panacea.ui.history.HistoryScreen
 import com.clementine.panacea.ui.icons.Glyphs
+import com.clementine.panacea.ui.medication.MedicationScreen
 import com.clementine.panacea.ui.reminders.RemindersScreen
 import com.clementine.panacea.ui.settings.SettingsScreen
 import com.clementine.panacea.ui.theme.Colors
@@ -66,6 +67,11 @@ sealed interface Route {
         override val id get() = "tab:${tab.name}"
     }
 
+    /** One medication's own page. */
+    data class Medication(val medicationId: Long) : Route {
+        override val id get() = "med:$medicationId"
+    }
+
     /** Add a medication (null) or edit one. */
     data class EditMedication(val medicationId: Long?) : Route {
         override val id get() = "edit:${medicationId ?: "new"}"
@@ -74,6 +80,7 @@ sealed interface Route {
     companion object {
         fun fromId(id: String): Route? = when {
             id.startsWith("tab:") -> Tab.entries.firstOrNull { it.name == id.removePrefix("tab:") }?.let(::Top)
+            id.startsWith("med:") -> id.removePrefix("med:").toLongOrNull()?.let(::Medication)
             id.startsWith("edit:") -> EditMedication(id.removePrefix("edit:").toLongOrNull())
             else -> null
         }
@@ -115,13 +122,27 @@ fun PanaceaShell() {
                         is Route.Top -> when (route.tab) {
                             Tab.TODAY -> TodayScreen(
                                 onAdd = { backStack.add(Route.EditMedication(null)) },
-                                onOpen = { backStack.add(Route.EditMedication(it)) },
+                                onOpen = { backStack.add(Route.Medication(it)) },
                             )
                             Tab.REMINDERS -> RemindersScreen()
                             Tab.HISTORY -> HistoryScreen()
                             Tab.SETTINGS -> SettingsScreen()
                         }
-                        is Route.EditMedication -> EditMedicationScreen(route.medicationId, onDone = { pop() })
+                        is Route.Medication -> MedicationScreen(
+                            route.medicationId,
+                            onBack = { backStack.remove(route) },
+                            onEdit = { backStack.add(Route.EditMedication(route.medicationId)) },
+                        )
+                        is Route.EditMedication -> EditMedicationScreen(
+                            route.medicationId,
+                            onDone = { pop() },
+                            // Its own page goes too; there's nothing left to show.
+                            onRemoved = { id ->
+                                backStack.removeAll {
+                                    (it is Route.Medication && it.medicationId == id) || (it is Route.EditMedication && it.medicationId == id)
+                                }
+                            },
+                        )
                     }
                 }
             },

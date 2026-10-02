@@ -85,6 +85,7 @@ private val CommonTypes = listOf(
 fun EditMedicationScreen(
     id: Long?,
     onDone: () -> Unit,
+    onRemoved: (Long) -> Unit = { onDone() },
     viewModel: EditMedicationViewModel = viewModel(factory = EditMedicationViewModel.Factory),
 ) {
     val saver = EditMedicationViewModel.DraftSaver
@@ -215,7 +216,7 @@ fun EditMedicationScreen(
             onConfirm = {
                 removing = null
                 viewModel.discardPhotos(d, original)
-                viewModel.delete(d.id, onDone)
+                viewModel.delete(d.id) { onRemoved(d.id) }
             },
             onDismiss = { removing = null },
         )

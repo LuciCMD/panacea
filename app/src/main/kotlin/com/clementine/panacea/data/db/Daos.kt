@@ -21,8 +21,14 @@ interface MedicationDao {
     @Query("SELECT * FROM medication WHERE id = :id")
     suspend fun get(id: Long): MedicationEntity?
 
+    @Query("SELECT * FROM medication WHERE id = :id")
+    fun observe(id: Long): Flow<MedicationEntity?>
+
     @Query("SELECT * FROM ingredient WHERE medicationId = :id ORDER BY position")
     suspend fun ingredientsOf(id: Long): List<IngredientEntity>
+
+    @Query("SELECT * FROM ingredient WHERE medicationId = :id ORDER BY position")
+    fun observeIngredientsOf(id: Long): Flow<List<IngredientEntity>>
 
     @Query("SELECT id, name FROM medication")
     suspend fun names(): List<MedicationName>
@@ -82,6 +88,9 @@ interface DoseDao {
     )
     fun observeHistory(): Flow<List<DoseRow>>
 
+    @Query("SELECT * FROM dose WHERE medicationId = :id ORDER BY takenAt DESC")
+    fun observeOf(id: Long): Flow<List<DoseEntity>>
+
     @Query("SELECT * FROM dose WHERE takenAt >= :since ORDER BY takenAt")
     fun observeSince(since: Long): Flow<List<DoseEntity>>
 
@@ -102,6 +111,9 @@ interface ReminderDao {
 
     @Query("UPDATE reminder SET enabled = :enabled WHERE id = :id")
     suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    @Query("SELECT * FROM reminder WHERE medicationId = :id ORDER BY id")
+    fun observeOf(id: Long): Flow<List<ReminderEntity>>
 
     @Query("SELECT * FROM reminder WHERE enabled = 1")
     fun observeEnabled(): Flow<List<ReminderEntity>>
