@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import com.clementine.panacea.ui.edit.EditMedicationScreen
 import com.clementine.panacea.ui.history.HistoryScreen
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.reminders.RemindersScreen
@@ -65,9 +66,15 @@ sealed interface Route {
         override val id get() = "tab:${tab.name}"
     }
 
+    /** Add a medication (null) or edit one. */
+    data class EditMedication(val medicationId: Long?) : Route {
+        override val id get() = "edit:${medicationId ?: "new"}"
+    }
+
     companion object {
         fun fromId(id: String): Route? = when {
             id.startsWith("tab:") -> Tab.entries.firstOrNull { it.name == id.removePrefix("tab:") }?.let(::Top)
+            id.startsWith("edit:") -> EditMedication(id.removePrefix("edit:").toLongOrNull())
             else -> null
         }
     }
@@ -87,6 +94,7 @@ private fun fade(): ContentTransform = fadeIn(tween(120)) togetherWith fadeOut(t
 fun PanaceaShell() {
     val backStack = rememberSaveable(saver = BackStackSaver) { mutableListOf(start).toMutableStateList() }
     val tab = (backStack.last() as? Route.Top)?.tab
+    val pop = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
 
     Column(
         Modifier
@@ -97,7 +105,7 @@ fun PanaceaShell() {
         NavDisplay(
             backStack = backStack,
             modifier = Modifier.weight(1f),
-            onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
+            onBack = { pop() },
             transitionSpec = { fade() },
             popTransitionSpec = { fade() },
             predictivePopTransitionSpec = { fade() },
@@ -105,11 +113,15 @@ fun PanaceaShell() {
                 NavEntry(route, contentKey = route.id) {
                     when (route) {
                         is Route.Top -> when (route.tab) {
-                            Tab.TODAY -> TodayScreen()
+                            Tab.TODAY -> TodayScreen(
+                                onAdd = { backStack.add(Route.EditMedication(null)) },
+                                onOpen = { backStack.add(Route.EditMedication(it)) },
+                            )
                             Tab.REMINDERS -> RemindersScreen()
                             Tab.HISTORY -> HistoryScreen()
                             Tab.SETTINGS -> SettingsScreen()
                         }
+                        is Route.EditMedication -> EditMedicationScreen(route.medicationId, onDone = { pop() })
                     }
                 }
             },

@@ -3,6 +3,7 @@ package com.clementine.panacea.ui.today
 import android.text.format.DateFormat
 import android.view.ViewParent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +58,9 @@ import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
+import com.clementine.panacea.ui.edit.PhotoViewer
+import com.clementine.panacea.ui.edit.PillPhoto
+import com.clementine.panacea.ui.edit.PillSide
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import kotlinx.coroutines.launch
@@ -78,6 +83,7 @@ fun TakeSheet(
     var multiplier by rememberSaveable(med.id) { mutableDoubleStateOf(med.lastMultiplier) }
     var takenAt by rememberSaveable(med.id) { mutableStateOf<Long?>(null) }
     var picking by remember { mutableStateOf(false) }
+    var viewing by remember { mutableStateOf<PillSide?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val now = remember { ZonedDateTime.now() }
@@ -111,6 +117,29 @@ fun TakeSheet(
                     modifier = Modifier.semantics { heading() },
                 )
                 perItem(card)?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted) }
+            }
+
+            if (med.photoFront != null || med.photoBack != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PillSide.entries.forEach { side ->
+                        val photo = if (side == PillSide.FRONT) med.photoFront else med.photoBack
+                        if (photo != null) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                PillPhoto(
+                                    photo, null,
+                                    Modifier
+                                        .size(72.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable(onClickLabel = "Look closer") { viewing = side }
+                                        .semantics { contentDescription = "${side.label} of ${med.name}" },
+                                    px = 216,
+                                )
+                                Text(side.label, style = MaterialTheme.typography.bodySmall, color = Colors.Muted)
+                            }
+                        }
+                    }
+                    Text("Tap a photo to check it up close.", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted, modifier = Modifier.weight(1f))
+                }
             }
 
             Row(
@@ -178,6 +207,8 @@ fun TakeSheet(
             }
         }
     }
+
+    viewing?.let { PhotoViewer(med.name, med.photoFront, med.photoBack, it) { viewing = null } }
 
     if (picking) {
         EarlierTimeDialog(

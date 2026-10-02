@@ -3,6 +3,7 @@ package com.clementine.panacea.data.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -19,6 +20,33 @@ interface MedicationDao {
 
     @Query("SELECT * FROM medication WHERE id = :id")
     suspend fun get(id: Long): MedicationEntity?
+
+    @Query("SELECT * FROM ingredient WHERE medicationId = :id ORDER BY position")
+    suspend fun ingredientsOf(id: Long): List<IngredientEntity>
+
+    @Query("SELECT id, name FROM medication")
+    suspend fun names(): List<MedicationName>
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM medication")
+    suspend fun maxSortOrder(): Int
+
+    @Query("SELECT photoFront FROM medication WHERE photoFront IS NOT NULL UNION SELECT photoBack FROM medication WHERE photoBack IS NOT NULL")
+    suspend fun photoFiles(): List<String>
+
+    @Insert
+    suspend fun insert(medication: MedicationEntity): Long
+
+    @Update
+    suspend fun update(medication: MedicationEntity)
+
+    @Query("DELETE FROM medication WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("DELETE FROM ingredient WHERE medicationId = :id")
+    suspend fun deleteIngredients(id: Long)
+
+    @Query("SELECT (SELECT COUNT(*) FROM dose WHERE medicationId = :id) AS doses, (SELECT COUNT(*) FROM reminder WHERE medicationId = :id) AS reminders")
+    suspend fun counts(id: Long): MedicationCounts
 
     @Query("SELECT * FROM ingredient ORDER BY medicationId, position")
     fun observeIngredients(): Flow<List<IngredientEntity>>

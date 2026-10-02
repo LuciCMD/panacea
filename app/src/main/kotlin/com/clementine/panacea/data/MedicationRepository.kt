@@ -4,7 +4,9 @@ import androidx.room.withTransaction
 import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.DoseRow
 import com.clementine.panacea.data.db.IngredientEntity
+import com.clementine.panacea.data.db.MedicationCounts
 import com.clementine.panacea.data.db.MedicationEntity
+import com.clementine.panacea.data.db.MedicationName
 import com.clementine.panacea.data.db.MedicationSummary
 import com.clementine.panacea.data.db.MetaEntity
 import com.clementine.panacea.data.db.MetaKeys
@@ -68,6 +70,44 @@ class MedicationRepository(private val db: PanaceaDatabase) {
     suspend fun undoDose(taken: TakenDose) = db.withTransaction {
         doses.delete(taken.dose.id)
         medications.restoreLastMultiplier(taken.medication.id, taken.dose.multiplier, taken.previousMultiplier)
+    }
+
+    suspend fun medication(id: Long): Pair<MedicationEntity, List<IngredientEntity>>? {
+        val med = medications.get(id) ?: return null
+        return med to medications.ingredientsOf(id)
+    }
+
+    suspend fun names(): List<MedicationName> = medications.names()
+
+    suspend fun counts(id: Long): MedicationCounts = medications.counts(id)
+
+    suspend fun photoFiles(): List<String> = medications.photoFiles()
+
+    /**
+     * Adds [medication] (id 0) at the end of the list, or replaces the one with its id, along with its
+     * ingredients. Returns the id and the row as it was before, if any.
+     */
+    suspend fun save(
+        medication: MedicationEntity,
+        ingredients: (Long) -> List<IngredientEntity>,
+    ): Pair<Long, MedicationEntity?> = db.withTransaction {
+        val previous = if (medication.id == 0L) null else medications.get(medication.id)
+        val id = if (previous == null) {
+            medications.insert(medication.copy(id = 0, sortOrder = medications.maxSortOrder() + 1))
+        } else {
+            medications.update(medication)
+            medication.id
+        }
+        medications.deleteIngredients(id)
+        medications.insertIngredients(ingredients(id))
+        id to previous
+    }
+
+    /** Deletes the medication with its ingredients, doses and reminders. Returns the row it was. */
+    suspend fun delete(id: Long): MedicationEntity? = db.withTransaction {
+        val med = medications.get(id)
+        medications.delete(id)
+        med
     }
 
     suspend fun addPreset(value: Double) = db.withTransaction {

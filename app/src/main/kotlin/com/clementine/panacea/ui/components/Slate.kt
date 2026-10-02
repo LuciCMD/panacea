@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -54,6 +55,7 @@ fun SlateButton(
     kind: ButtonKind = ButtonKind.Plain,
     enabled: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
+    shape: Shape? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     val (container, text) = when (kind) {
@@ -66,7 +68,7 @@ fun SlateButton(
         onClick = onClick,
         modifier = modifier.heightIn(min = 48.dp),
         enabled = enabled,
-        shape = MaterialTheme.shapes.small,
+        shape = shape ?: MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
             containerColor = container,
             contentColor = text,

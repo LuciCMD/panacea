@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import com.clementine.panacea.data.MedicationRepository
+import com.clementine.panacea.data.PhotoStore
 import com.clementine.panacea.data.Settings
 import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.legacy.ImportOutcome
@@ -26,6 +27,7 @@ class PanaceaApp : Application() {
                 }
                 ImportOutcome.AlreadyDone -> Unit
             }
+            container.photos.sweep(container.medications.photoFiles())
         }
     }
 
@@ -42,4 +44,5 @@ class AppContainer(context: Context) {
     val medications = MedicationRepository(database)
     val settings = Settings(context)
     val soundLibrary = SoundLibrary(context, settings)
+    val photos = PhotoStore(context)
 }

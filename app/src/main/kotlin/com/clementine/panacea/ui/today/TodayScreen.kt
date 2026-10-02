@@ -2,6 +2,10 @@ package com.clementine.panacea.ui.today
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +55,7 @@ import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.SlateToast
+import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.icons.TypeIcons
 import com.clementine.panacea.sound.LocalSoundPlayer
@@ -65,7 +70,11 @@ private const val UNDO_SHOWN_MS = 10_000L
 private const val TAKE_LOCK_MS = 3_000L
 
 @Composable
-fun TodayScreen(viewModel: TodayViewModel = viewModel(factory = TodayViewModel.Factory)) {
+fun TodayScreen(
+    onAdd: () -> Unit,
+    onOpen: (Long) -> Unit,
+    viewModel: TodayViewModel = viewModel(factory = TodayViewModel.Factory),
+) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val logged by viewModel.logged.collectAsStateWithLifecycle()
     val sounds = LocalSoundPlayer.current
@@ -90,7 +99,16 @@ fun TodayScreen(viewModel: TodayViewModel = viewModel(factory = TodayViewModel.F
                 contentPadding = screenPadding(bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item(key = "header") { ScreenHeader("Today", state.header) }
+                item(key = "header") {
+                    ScreenHeader("Today", state.header) {
+                        SlateButton(
+                            onClick = onAdd,
+                            shape = CircleShape,
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier.size(48.dp).semantics { contentDescription = "Add Medication" },
+                        ) { Icon(Glyphs.Plus, contentDescription = null) }
+                    }
+                }
                 item(key = "strip") { DayStripCard(state.strip) }
                 if (categories.size > 1) {
                     item(key = "filters") { Filters(categories, shown) { filter = it?.key } }
@@ -106,6 +124,7 @@ fun TodayScreen(viewModel: TodayViewModel = viewModel(factory = TodayViewModel.F
                         card,
                         onTake = { take(card.medication.id, card.medication.lastMultiplier, null) },
                         onAmount = { sheetFor = card.medication.id },
+                        onOpen = { onOpen(card.medication.id) },
                     )
                 }
             }
@@ -226,7 +245,7 @@ private fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> Unit) {
+private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> Unit, onOpen: () -> Unit) {
     val med = card.medication
     // A second tap right after the first is almost always a slip, so the button rests briefly.
     var justTaken by remember { mutableStateOf(false) }
@@ -239,9 +258,20 @@ private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> 
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     SlateCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(onClickLabel = "Edit ${med.name}", onClick = onOpen),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
                 ProgressRing(card.progress, if (card.overdue) Colors.Warn else Colors.Accent) {
-                    Icon(TypeIcons.of(card.type), contentDescription = null, tint = Colors.Ink)
+                    // The pill's own photo says more than the form's icon.
+                    if (med.photoFront != null) {
+                        PillPhoto(med.photoFront, null, Modifier.size(40.dp).clip(CircleShape), px = 160)
+                    } else {
+                        Icon(TypeIcons.of(card.type), contentDescription = null, tint = Colors.Ink)
+                    }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
@@ -252,6 +282,7 @@ private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> 
                     )
                     Text(card.doseLine, style = body, color = Colors.Muted)
                 }
+                Icon(Glyphs.ChevronRight, contentDescription = null, tint = Colors.Faint)
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (card.overdue) card.dueLine?.let { Text(it, style = body, color = Colors.Warn) }

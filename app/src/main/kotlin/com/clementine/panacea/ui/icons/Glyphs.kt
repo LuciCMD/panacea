@@ -16,6 +16,13 @@ object Glyphs {
     val Clock = strokeIcon("Clock", "M12 7v5l3 2M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0")
     val Play = strokeIcon("Play", "M8 5.5v13l10.5-6.5z")
     val File = strokeIcon("File", "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5")
+    val ChevronDown = strokeIcon("ChevronDown", "M7 10l5 5 5-5")
+    val ChevronRight = strokeIcon("ChevronRight", "M9 6l6 6-6 6")
+    val Close = strokeIcon("Close", "M6 6l12 12M18 6L6 18")
+    val Camera = strokeIcon("Camera", "M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 16.5a3.5 3.5 0 1 0 0-7a3.5 3.5 0 1 0 0 7")
+    val Image = strokeIcon("Image", "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4 16l5-5 4 4 2-2 5 5M15.5 8.5h.01")
+    val Flash = strokeIcon("Flash", "M13 3L5 14h6l-1 7 8-11h-6z")
+    val More = strokeIcon("More", "M5 12h.01M12 12h.01M19 12h.01")
 
     // Bottom bar
     val Today = strokeIcon("Today", "M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM3 10h18M8 3v4M16 3v4")

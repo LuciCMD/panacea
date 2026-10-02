@@ -15,6 +15,7 @@ import com.clementine.panacea.data.Settings
 import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundPlayer
 import com.clementine.panacea.ui.PanaceaShell
+import com.clementine.panacea.ui.edit.LocalPhotoStore
 import com.clementine.panacea.ui.theme.PanaceaTheme
 import com.clementine.panacea.ui.theme.Themes
 
@@ -39,7 +40,7 @@ class MainActivity : ComponentActivity() {
                 enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
             }
             PanaceaTheme(theme.palette) {
-                CompositionLocalProvider(LocalSoundPlayer provides sounds) {
+                CompositionLocalProvider(LocalSoundPlayer provides sounds, LocalPhotoStore provides container.photos) {
                     PanaceaShell()
                 }
             }

@@ -28,6 +28,9 @@ data class MedicationEntity(
     val learnRoutine: Boolean = false,
     /** Reminders for this medication stay quiet until this time (epoch ms). */
     val mutedUntil: Long = 0,
+    /** Photos of the pill's two sides, as file names in the app's photo folder. Added in version 2. */
+    val photoFront: String? = null,
+    val photoBack: String? = null,
 )
 
 @Entity(
@@ -126,6 +129,11 @@ data class ReminderRow(
     @Embedded val reminder: ReminderEntity,
     val medicationName: String,
 )
+
+data class MedicationName(val id: Long, val name: String)
+
+/** What goes with a medication when it's removed. */
+data class MedicationCounts(val doses: Int, val reminders: Int)
 
 data class MedicationSummary(
     @Embedded val medication: MedicationEntity,
