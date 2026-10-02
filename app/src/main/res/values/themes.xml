@@ -1,15 +1,12 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.MedTracker" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/pastelBlue</item>
-        <item name="colorSecondaryVariant">@color/pastelBlue</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window theme only: everything inside the window is drawn by Compose (ui/theme). -->
+    <style name="Theme.Panacea" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ground</item>
+        <item name="android:colorBackground">@color/ground</item>
+        <item name="android:colorAccent">@color/accent</item>
     </style>
+
+    <color name="ground">#1F2027</color>
+    <color name="accent">#B39DF0</color>
 </resources>

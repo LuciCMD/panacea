@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <string name="presets">[0.25,0.5,1,2]</string>
+    <string name="last_amounts">{&quot;Ibuprofen&quot;:2,&quot;Melatonin&quot;:0.5}</string>
+</map>
