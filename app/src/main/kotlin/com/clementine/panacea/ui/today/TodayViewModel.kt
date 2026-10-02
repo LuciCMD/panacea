@@ -1,7 +1,5 @@
 package com.clementine.panacea.ui.today
 
-import android.content.Context
-import android.text.format.DateFormat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
@@ -14,6 +12,8 @@ import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationSummary
 import com.clementine.panacea.data.db.ReminderEntity
+import com.clementine.panacea.ui.TimeFormats
+import com.clementine.panacea.ui.timeFormats
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,8 +30,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /** A dose just logged, shown in the undo bar until it times out or is dealt with. */
 data class LoggedDose(val taken: TakenDose, val message: String, val removeQuestion: String)
@@ -118,17 +116,6 @@ class TodayViewModel(
                 val app = this[APPLICATION_KEY] as PanaceaApp
                 TodayViewModel(app.container.medications, timeFormats(app))
             }
-        }
-
-        fun timeFormats(context: Context): TimeFormats {
-            val locale = Locale.getDefault()
-            fun pattern(skeleton: String) = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
-            return TimeFormats(
-                time = pattern(if (DateFormat.is24HourFormat(context)) "Hmm" else "hmma"),
-                shortDate = pattern("dMMM"),
-                weekday = pattern("EEEE"),
-                longDate = pattern("EEEEdMMMM"),
-            )
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.clementine.panacea.ui.today
 
+import com.clementine.panacea.ui.TimeFormats
+import java.time.DayOfWeek
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -17,6 +19,8 @@ internal object Fixtures {
         shortDate = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH),
         weekday = DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH),
         longDate = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.ENGLISH),
+        locale = Locale.ENGLISH,
+        firstDayOfWeek = DayOfWeek.MONDAY,
     )
 
     fun at(month: Int, day: Int, hour: Int, minute: Int): ZonedDateTime =

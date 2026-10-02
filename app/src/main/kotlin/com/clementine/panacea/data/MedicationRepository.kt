@@ -2,6 +2,7 @@ package com.clementine.panacea.data
 
 import androidx.room.withTransaction
 import com.clementine.panacea.data.db.DoseEntity
+import com.clementine.panacea.data.db.DoseRow
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.MedicationSummary
@@ -9,6 +10,7 @@ import com.clementine.panacea.data.db.MetaEntity
 import com.clementine.panacea.data.db.MetaKeys
 import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.db.ReminderEntity
+import com.clementine.panacea.data.db.ReminderRow
 import com.clementine.panacea.model.Amounts
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -32,6 +34,15 @@ class MedicationRepository(private val db: PanaceaDatabase) {
     fun observeDosesSince(since: Long): Flow<List<DoseEntity>> = doses.observeSince(since)
 
     fun observeEnabledReminders(): Flow<List<ReminderEntity>> = db.reminderDao().observeEnabled()
+
+    fun observeHistory(): Flow<List<DoseRow>> = doses.observeHistory()
+
+    fun observeReminderRows(): Flow<List<ReminderRow>> = db.reminderDao().observeRows()
+
+    suspend fun setReminderEnabled(id: Long, enabled: Boolean) = db.reminderDao().setEnabled(id, enabled)
+
+    /** Removes one dose from the history; the remembered amount stays as it is. */
+    suspend fun removeDose(id: Long) = doses.delete(id)
 
     fun observePresets(): Flow<List<Double>> =
         db.metaDao().observe(MetaKeys.AMOUNT_PRESETS).map(Amounts::parsePresets)

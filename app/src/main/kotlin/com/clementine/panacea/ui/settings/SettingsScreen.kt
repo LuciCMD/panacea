@@ -1,0 +1,231 @@
+package com.clementine.panacea.ui.settings
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clementine.panacea.data.Settings
+import com.clementine.panacea.sound.LocalSoundPlayer
+import com.clementine.panacea.sound.SoundEvent
+import com.clementine.panacea.sound.SoundLibrary
+import com.clementine.panacea.sound.SoundMode
+import com.clementine.panacea.ui.components.ScreenHeader
+import com.clementine.panacea.ui.components.SectionCard
+import com.clementine.panacea.ui.components.SlateButton
+import com.clementine.panacea.ui.components.SlateChip
+import com.clementine.panacea.ui.components.screenPadding
+import com.clementine.panacea.ui.icons.Glyphs
+import com.clementine.panacea.ui.theme.Colors
+import com.clementine.panacea.ui.theme.Palette
+import com.clementine.panacea.ui.theme.Themes
+
+@Composable
+fun SettingsScreen(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
+    val theme by viewModel.theme.collectAsStateWithLifecycle()
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = screenPadding(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item(key = "header") { ScreenHeader("Settings") }
+        item(key = "theme") { ThemeCard(theme, viewModel::setTheme) }
+        item(key = "sounds") { SoundsCard(viewModel) }
+        item(key = "about") { AboutCard() }
+    }
+}
+
+@Composable
+private fun ThemeCard(current: String, onPick: (String) -> Unit) {
+    SectionCard("Theme") {
+        val choices = listOf(Settings.THEME_SYSTEM) + Themes.entries.map { it.key }
+        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            choices.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEach { key -> ThemeTile(key, key == current, Modifier.weight(1f)) { onPick(key) } }
+                    if (pair.size == 1) Box(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+/** A tile drawn in the theme it stands for, so it previews itself. */
+@Composable
+private fun ThemeTile(key: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val system = key == Settings.THEME_SYSTEM
+    val label = if (system) "Match System" else Themes.fromKey(key)?.label ?: key
+    Column(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .semantics { contentDescription = label },
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .border(
+                    if (selected) BorderStroke(2.dp, Colors.Accent) else BorderStroke(1.dp, Colors.LineSoft),
+                    RoundedCornerShape(12.dp),
+                ),
+        ) {
+            if (system) {
+                Swatch(Themes.SLATE.palette, Modifier.weight(1f))
+                Swatch(Themes.DAYLIGHT.palette, Modifier.weight(1f))
+            } else {
+                Swatch(Themes.fromKey(key)?.palette ?: Themes.DEFAULT.palette, Modifier.weight(1f))
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (selected) Icon(Glyphs.Check, contentDescription = null, tint = Colors.Accent, modifier = Modifier.size(16.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (selected) Colors.Ink else Colors.Muted,
+                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+            )
+        }
+    }
+}
+
+/** A miniature card in [p]'s colours: a title line, a text line and the accent. */
+@Composable
+private fun Swatch(p: Palette, modifier: Modifier) {
+    Box(modifier.fillMaxHeight().background(p.ground).padding(8.dp)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .background(p.surface, RoundedCornerShape(6.dp))
+                .border(1.dp, p.lineSoft, RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 7.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Box(Modifier.size(width = 34.dp, height = 5.dp).background(p.ink, CircleShape))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(width = 22.dp, height = 4.dp).background(p.muted, CircleShape))
+                Box(Modifier.size(width = 18.dp, height = 8.dp).background(p.accent, CircleShape))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SoundsCard(viewModel: SettingsViewModel) {
+    val player = LocalSoundPlayer.current
+    val problems by viewModel.problems.collectAsStateWithLifecycle()
+    val adding by viewModel.adding.collectAsStateWithLifecycle()
+    var pickingFor by rememberSaveable { mutableStateOf<SoundEvent?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val event = pickingFor
+        pickingFor = null
+        if (uri != null && event != null) viewModel.addSound(event, uri) { player.play(event, it) }
+    }
+    val pick = { event: SoundEvent ->
+        pickingFor = event
+        picker.launch(SoundLibrary.PICKER_TYPES)
+    }
+
+    SectionCard(
+        "Sounds",
+        hint = "Your own sound can be any file this phone plays, such as MP3, AAC, M4A, FLAC, Ogg, Opus, WAV, " +
+            "AIFF, AMR or MIDI, up to 20 MB. Short clips work best.",
+    ) {
+        SoundEvent.entries.forEachIndexed { i, event ->
+            if (i > 0) HorizontalDivider(color = Colors.LineSoft)
+            val setting by viewModel.sound(event).collectAsStateWithLifecycle()
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(event.label, style = MaterialTheme.typography.bodyLarge, color = Colors.Ink, modifier = Modifier.weight(1f))
+                    SlateButton(
+                        onClick = { player.play(event, setting) },
+                        enabled = setting.effective != SoundMode.NONE,
+                        modifier = Modifier.semantics { contentDescription = "Play the sound for ${event.label.lowercase()}" },
+                    ) {
+                        Icon(Glyphs.Play, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text("Play", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val mode = setting.effective
+                    SlateChip(mode == SoundMode.BUILT_IN, { viewModel.setMode(event, SoundMode.BUILT_IN) }) { ChipText("Built-In") }
+                    SlateChip(mode == SoundMode.NONE, { viewModel.setMode(event, SoundMode.NONE) }) { ChipText("None") }
+                    val custom = setting.custom
+                    if (custom != null) {
+                        SlateChip(mode == SoundMode.CUSTOM, { viewModel.setMode(event, SoundMode.CUSTOM) }) {
+                            Icon(Glyphs.File, contentDescription = null, modifier = Modifier.size(16.dp))
+                            ChipText(custom.name, Modifier.widthIn(max = 180.dp))
+                        }
+                    }
+                    SlateChip(false, { pick(event) }) {
+                        Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(16.dp))
+                        ChipText(if (adding == event) "Adding…" else if (custom == null) "Choose a File" else "Another File")
+                    }
+                }
+                problems[event]?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Colors.Bad) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChipText(text: String, modifier: Modifier = Modifier) {
+    Text(text, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
+}
+
+@Composable
+private fun AboutCard() {
+    val context = LocalContext.current
+    val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
+    SectionCard("About") {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Panacea ${version.orEmpty()}".trim(), style = MaterialTheme.typography.bodyLarge, color = Colors.Ink)
+            Text(
+                "Everything stays on this phone: no account, no internet, no tracking.",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                color = Colors.Muted,
+            )
+        }
+    }
+}

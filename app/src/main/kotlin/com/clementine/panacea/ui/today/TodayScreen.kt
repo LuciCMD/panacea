@@ -6,15 +6,11 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,7 +37,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,12 +53,13 @@ import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.SlateToast
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.icons.TypeIcons
-import com.clementine.panacea.ui.rememberSounds
-import com.clementine.panacea.ui.theme.Slate
+import com.clementine.panacea.sound.LocalSoundPlayer
+import com.clementine.panacea.sound.SoundEvent
+import com.clementine.panacea.ui.components.Numbers
+import com.clementine.panacea.ui.components.ScreenHeader
+import com.clementine.panacea.ui.components.screenPadding
+import com.clementine.panacea.ui.theme.Colors
 import kotlinx.coroutines.delay
-
-/** Tabular figures, so times and amounts don't shift as they change. */
-internal val Numbers = TextStyle(fontFeatureSettings = "tnum")
 
 private const val UNDO_SHOWN_MS = 10_000L
 private const val TAKE_LOCK_MS = 3_000L
@@ -72,35 +68,29 @@ private const val TAKE_LOCK_MS = 3_000L
 fun TodayScreen(viewModel: TodayViewModel = viewModel(factory = TodayViewModel.Factory)) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val logged by viewModel.logged.collectAsStateWithLifecycle()
-    val sounds = rememberSounds()
+    val sounds = LocalSoundPlayer.current
     val haptics = LocalHapticFeedback.current
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var sheetFor by rememberSaveable { mutableStateOf<Long?>(null) }
     var confirming by remember { mutableStateOf<LoggedDose?>(null) }
-    val insets = WindowInsets.safeDrawing.asPaddingValues()
 
     val take = { medicationId: Long, multiplier: Double, takenAt: Long? ->
         viewModel.take(medicationId, multiplier, takenAt)
-        sounds.taken()
+        sounds.play(SoundEvent.TAKE)
         haptics.performHapticFeedback(HapticFeedbackType.Confirm)
     }
 
-    Box(Modifier.fillMaxSize().background(Slate.Ground)) {
+    Box(Modifier.fillMaxSize().background(Colors.Ground)) {
         ui?.let { state ->
             val categories = state.categories
             val shown = Category.entries.firstOrNull { it.key == filter && it in categories }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 20.dp,
-                    end = 20.dp,
-                    top = insets.calculateTopPadding() + 22.dp,
-                    // Room for the undo bar over the last card.
-                    bottom = insets.calculateBottomPadding() + 96.dp,
-                ),
+                // Room for the undo bar over the last card.
+                contentPadding = screenPadding(bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item(key = "header") { Header(state.header) }
+                item(key = "header") { ScreenHeader("Today", state.header) }
                 item(key = "strip") { DayStripCard(state.strip) }
                 if (categories.size > 1) {
                     item(key = "filters") { Filters(categories, shown) { filter = it?.key } }
@@ -108,7 +98,7 @@ fun TodayScreen(viewModel: TodayViewModel = viewModel(factory = TodayViewModel.F
                 val cards = state.cards.filter { shown == null || it.category == shown }
                 if (cards.isEmpty()) {
                     item(key = "empty") {
-                        Text("Add a medication to start.", style = MaterialTheme.typography.bodyMedium, color = Slate.Faint)
+                        Text("Add a medication to start.", style = MaterialTheme.typography.bodyMedium, color = Colors.Faint)
                     }
                 }
                 items(cards, key = { it.medication.id }) { card ->
@@ -144,7 +134,7 @@ fun TodayScreen(viewModel: TodayViewModel = viewModel(factory = TodayViewModel.F
                 onAction = { confirming = current },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(start = 12.dp, end = 12.dp, bottom = insets.calculateBottomPadding() + 12.dp)
+                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
                     .fillMaxWidth(),
             )
         }
@@ -159,7 +149,7 @@ fun TodayScreen(viewModel: TodayViewModel = viewModel(factory = TodayViewModel.F
             confirmKind = ButtonKind.Delete,
             onConfirm = {
                 viewModel.undo(dose)
-                sounds.removed()
+                sounds.play(SoundEvent.UNDO)
                 confirming = null
             },
             onDismiss = {
@@ -167,19 +157,6 @@ fun TodayScreen(viewModel: TodayViewModel = viewModel(factory = TodayViewModel.F
                 confirming = null
             },
         )
-    }
-}
-
-@Composable
-private fun Header(subtitle: String) {
-    Column(Modifier.padding(bottom = 2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            "Today",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Slate.Ink,
-            modifier = Modifier.semantics { heading() },
-        )
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Slate.Muted)
     }
 }
 
@@ -193,9 +170,10 @@ private fun DayStripCard(strip: DayStrip) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Doses Today", style = small, color = Slate.Muted)
-                Text(TodayText.dosesToday(strip.count), style = small, color = Slate.Ink)
+                Text("Doses Today", style = small, color = Colors.Muted)
+                Text(TodayText.dosesToday(strip.count), style = small, color = Colors.Ink)
             }
+            val (field, lineColor, surface, accent, ink) = listOf(Colors.Field, Colors.Line, Colors.Surface, Colors.Accent, Colors.Ink)
             Canvas(
                 Modifier
                     .fillMaxWidth()
@@ -206,20 +184,20 @@ private fun DayStripCard(strip: DayStrip) {
                 val y = size.height / 2
                 val nowX = size.width * strip.nowFraction
                 val corner = CornerRadius(line / 2)
-                drawRoundRect(Slate.Field, Offset(0f, y - line / 2), Size(size.width, line), corner)
-                drawRoundRect(Slate.Line, Offset(0f, y - line / 2), Size(nowX, line), corner)
+                drawRoundRect(field, Offset(0f, y - line / 2), Size(size.width, line), corner)
+                drawRoundRect(lineColor, Offset(0f, y - line / 2), Size(nowX, line), corner)
                 strip.dots.forEach {
                     val center = Offset(size.width * it.fraction, y)
-                    drawCircle(Slate.Surface, radius = 10.dp.toPx(), center = center)
-                    drawCircle(Slate.Accent, radius = 7.dp.toPx(), center = center)
+                    drawCircle(surface, radius = 10.dp.toPx(), center = center)
+                    drawCircle(accent, radius = 7.dp.toPx(), center = center)
                 }
-                drawRoundRect(Slate.Ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
+                drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
             }
             Row(
                 Modifier.fillMaxWidth().clearAndSetSemantics { },
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                strip.axis.forEach { Text(it, style = small.copy(fontSize = 11.sp), color = Slate.Faint) }
+                strip.axis.forEach { Text(it, style = small.copy(fontSize = 11.sp), color = Colors.Faint) }
             }
         }
     }
@@ -262,23 +240,23 @@ private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> 
     SlateCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                ProgressRing(card.progress, if (card.overdue) Slate.Warn else Slate.Accent) {
-                    Icon(TypeIcons.of(card.type), contentDescription = null, tint = Slate.Ink)
+                ProgressRing(card.progress, if (card.overdue) Colors.Warn else Colors.Accent) {
+                    Icon(TypeIcons.of(card.type), contentDescription = null, tint = Colors.Ink)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
                         med.name,
                         style = MaterialTheme.typography.titleMedium,
-                        color = Slate.Ink,
+                        color = Colors.Ink,
                         modifier = Modifier.semantics { heading() },
                     )
-                    Text(card.doseLine, style = body, color = Slate.Muted)
+                    Text(card.doseLine, style = body, color = Colors.Muted)
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (card.overdue) card.dueLine?.let { Text(it, style = body, color = Slate.Warn) }
-                Text(card.lastTakenLine, style = body, color = Slate.Muted)
-                if (!card.overdue) card.dueLine?.let { Text(it, style = body, color = Slate.Muted) }
+                if (card.overdue) card.dueLine?.let { Text(it, style = body, color = Colors.Warn) }
+                Text(card.lastTakenLine, style = body, color = Colors.Muted)
+                if (!card.overdue) card.dueLine?.let { Text(it, style = body, color = Colors.Muted) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val multiplier = TodayText.multiplier(med.lastMultiplier)

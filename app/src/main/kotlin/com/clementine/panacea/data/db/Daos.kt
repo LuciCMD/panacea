@@ -45,6 +45,15 @@ interface DoseDao {
     @Query("DELETE FROM dose WHERE id = :id")
     suspend fun delete(id: Long)
 
+    @Query(
+        """
+        SELECT d.*, m.name AS name, m.type AS type FROM dose d
+        JOIN medication m ON m.id = d.medicationId
+        ORDER BY d.takenAt DESC
+        """
+    )
+    fun observeHistory(): Flow<List<DoseRow>>
+
     @Query("SELECT * FROM dose WHERE takenAt >= :since ORDER BY takenAt")
     fun observeSince(since: Long): Flow<List<DoseEntity>>
 
@@ -54,6 +63,18 @@ interface DoseDao {
 
 @Dao
 interface ReminderDao {
+    @Query(
+        """
+        SELECT r.*, m.name AS medicationName FROM reminder r
+        JOIN medication m ON m.id = r.medicationId
+        ORDER BY m.sortOrder, m.name, r.id
+        """
+    )
+    fun observeRows(): Flow<List<ReminderRow>>
+
+    @Query("UPDATE reminder SET enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+
     @Query("SELECT * FROM reminder WHERE enabled = 1")
     fun observeEnabled(): Flow<List<ReminderEntity>>
 

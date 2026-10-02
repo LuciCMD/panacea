@@ -1,0 +1,38 @@
+package com.clementine.panacea.ui.history
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.clementine.panacea.PanaceaApp
+import com.clementine.panacea.data.MedicationRepository
+import com.clementine.panacea.ui.TimeFormats
+import com.clementine.panacea.ui.timeFormats
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
+
+class HistoryViewModel(private val repository: MedicationRepository, formats: TimeFormats) : ViewModel() {
+
+    /** Null until the database has answered. */
+    val days: StateFlow<List<HistoryDay>?> = repository.observeHistory()
+        .map { HistoryModel.build(it, ZonedDateTime.now(), formats) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun remove(item: HistoryItem) {
+        viewModelScope.launch { repository.removeDose(item.id) }
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as PanaceaApp
+                HistoryViewModel(app.container.medications, timeFormats(app))
+            }
+        }
+    }
+}

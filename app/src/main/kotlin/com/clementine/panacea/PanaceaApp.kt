@@ -4,9 +4,11 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import com.clementine.panacea.data.MedicationRepository
+import com.clementine.panacea.data.Settings
 import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.legacy.ImportOutcome
 import com.clementine.panacea.data.legacy.Legacy34Importer
+import com.clementine.panacea.sound.SoundLibrary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -38,4 +40,6 @@ class AppContainer(context: Context) {
     val database: PanaceaDatabase = PanaceaDatabase.build(context)
     val legacyImporter = Legacy34Importer(context, database)
     val medications = MedicationRepository(database)
+    val settings = Settings(context)
+    val soundLibrary = SoundLibrary(context, settings)
 }

@@ -48,14 +48,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
+import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.model.Amounts
 import com.clementine.panacea.model.formatAmount
 import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.icons.Glyphs
-import com.clementine.panacea.ui.theme.Slate
+import com.clementine.panacea.ui.theme.Colors
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalTime
@@ -84,11 +86,11 @@ fun TakeSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-        containerColor = Slate.Surface,
-        contentColor = Slate.Ink,
+        containerColor = Colors.Surface,
+        contentColor = Colors.Ink,
         scrimColor = Color(0x990A0A0E),
         dragHandle = {
-            Box(Modifier.padding(top = 10.dp).size(width = 36.dp, height = 4.dp).background(Slate.Line, RoundedCornerShape(2.dp)))
+            Box(Modifier.padding(top = 10.dp).size(width = 36.dp, height = 4.dp).background(Colors.Line, RoundedCornerShape(2.dp)))
         },
     ) {
         // The sheet has its own window, where Android would shade the navigation bar.
@@ -108,11 +110,11 @@ fun TakeSheet(
                     style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
                     modifier = Modifier.semantics { heading() },
                 )
-                perItem(card)?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Slate.Muted) }
+                perItem(card)?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted) }
             }
 
             Row(
-                Modifier.fillMaxWidth().background(Slate.Raised, MaterialTheme.shapes.medium).padding(14.dp),
+                Modifier.fillMaxWidth().background(Colors.Raised, MaterialTheme.shapes.medium).padding(14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -125,7 +127,7 @@ fun TakeSheet(
                             TodayText.weightOf(med, multiplier),
                         ).joinToString(" · "),
                         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp).merge(Numbers),
-                        color = Slate.Muted,
+                        color = Colors.Muted,
                     )
                 }
                 RoundButton(Glyphs.Plus, "More", enabled = multiplier < Amounts.MAX) { multiplier = Amounts.more(multiplier) }
@@ -148,11 +150,11 @@ fun TakeSheet(
                 }
             }
 
-            HorizontalDivider(color = Slate.LineSoft)
+            HorizontalDivider(color = Colors.LineSoft)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Taken At", style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp))
-                    Text(takenAtText(takenAt, now, formats), style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Slate.Muted)
+                    Text(takenAtText(takenAt, now, formats), style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted)
                 }
                 SlateButton(onClick = { picking = true }) {
                     Icon(Glyphs.Clock, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -161,7 +163,7 @@ fun TakeSheet(
             }
 
             if (multiplier != med.lastMultiplier) {
-                Text("This amount is kept for next time.", style = MaterialTheme.typography.bodyMedium, color = Slate.Muted)
+                Text("This amount is kept for next time.", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
             }
 
             SlateButton(
@@ -215,8 +217,8 @@ private fun RoundButton(icon: ImageVector, label: String, enabled: Boolean, onCl
         onClick = onClick,
         enabled = enabled,
         shape = CircleShape,
-        color = Slate.Field,
-        contentColor = if (enabled) Slate.Ink else Slate.Faint,
+        color = Colors.Field,
+        contentColor = if (enabled) Colors.Ink else Colors.Faint,
         modifier = Modifier.size(56.dp),
     ) {
         Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = label) }
@@ -235,27 +237,27 @@ private fun EarlierTimeDialog(initial: LocalTime, onPick: (LocalTime) -> Unit, o
                 Text(
                     "A time later than now counts as yesterday.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Slate.Muted,
+                    color = Colors.Muted,
                     modifier = Modifier.padding(top = 6.dp, bottom = 18.dp),
                 )
                 TimePicker(
                     state = state,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     colors = TimePickerDefaults.colors(
-                        clockDialColor = Slate.Field,
-                        clockDialSelectedContentColor = Slate.OnAccent,
-                        clockDialUnselectedContentColor = Slate.Ink,
-                        selectorColor = Slate.Accent,
-                        containerColor = Slate.Surface,
-                        periodSelectorBorderColor = Slate.Line,
-                        periodSelectorSelectedContainerColor = Slate.AccentWash,
+                        clockDialColor = Colors.Field,
+                        clockDialSelectedContentColor = Colors.OnAccent,
+                        clockDialUnselectedContentColor = Colors.Ink,
+                        selectorColor = Colors.Accent,
+                        containerColor = Colors.Surface,
+                        periodSelectorBorderColor = Colors.Line,
+                        periodSelectorSelectedContainerColor = Colors.AccentWash,
                         periodSelectorUnselectedContainerColor = Color.Transparent,
-                        periodSelectorSelectedContentColor = Slate.Accent,
-                        periodSelectorUnselectedContentColor = Slate.Muted,
-                        timeSelectorSelectedContainerColor = Slate.AccentWash,
-                        timeSelectorUnselectedContainerColor = Slate.Field,
-                        timeSelectorSelectedContentColor = Slate.Accent,
-                        timeSelectorUnselectedContentColor = Slate.Ink,
+                        periodSelectorSelectedContentColor = Colors.Accent,
+                        periodSelectorUnselectedContentColor = Colors.Muted,
+                        timeSelectorSelectedContainerColor = Colors.AccentWash,
+                        timeSelectorUnselectedContainerColor = Colors.Field,
+                        timeSelectorSelectedContentColor = Colors.Accent,
+                        timeSelectorUnselectedContentColor = Colors.Ink,
                     ),
                 )
                 Row(

@@ -4,21 +4,11 @@ import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.model.WeightUnit
 import com.clementine.panacea.model.formatAmount
+import com.clementine.panacea.ui.TimeFormats
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-
-/** Patterns built once from the phone's language and 12/24-hour setting. */
-data class TimeFormats(
-    val time: DateTimeFormatter,
-    /** "28 Sep" */
-    val shortDate: DateTimeFormatter,
-    /** "Monday" */
-    val weekday: DateTimeFormatter,
-    /** "Friday, 2 October" */
-    val longDate: DateTimeFormatter,
-)
 
 /** The words on the Today screen, kept apart from Compose so they can be tested. */
 object TodayText {

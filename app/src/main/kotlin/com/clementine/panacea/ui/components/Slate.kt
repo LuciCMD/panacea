@@ -42,7 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.clementine.panacea.ui.theme.Slate
+import com.clementine.panacea.ui.theme.Colors
 
 enum class ButtonKind { Plain, Primary, Delete, Text }
 
@@ -57,10 +57,10 @@ fun SlateButton(
     content: @Composable RowScope.() -> Unit,
 ) {
     val (container, text) = when (kind) {
-        ButtonKind.Plain -> Slate.Field to Slate.Ink
-        ButtonKind.Primary -> Slate.Accent to Slate.OnAccent
-        ButtonKind.Delete -> Slate.Bad to Slate.OnAccent
-        ButtonKind.Text -> Color.Transparent to Slate.Accent
+        ButtonKind.Plain -> Colors.Field to Colors.Ink
+        ButtonKind.Primary -> Colors.Accent to Colors.OnAccent
+        ButtonKind.Delete -> Colors.Bad to Colors.OnAccent
+        ButtonKind.Text -> Color.Transparent to Colors.Accent
     }
     Button(
         onClick = onClick,
@@ -70,8 +70,8 @@ fun SlateButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = container,
             contentColor = text,
-            disabledContainerColor = if (kind == ButtonKind.Text) Color.Transparent else Slate.Raised,
-            disabledContentColor = Slate.Muted,
+            disabledContainerColor = if (kind == ButtonKind.Text) Color.Transparent else Colors.Raised,
+            disabledContentColor = Colors.Muted,
         ),
         elevation = null,
         contentPadding = contentPadding,
@@ -92,9 +92,9 @@ fun SlateChip(selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
         selected = selected,
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
-        color = if (selected) Slate.AccentWash else Color.Transparent,
-        contentColor = if (selected) Slate.Accent else Slate.Muted,
-        border = if (selected) null else BorderStroke(1.dp, Slate.LineSoft),
+        color = if (selected) Colors.AccentWash else Color.Transparent,
+        contentColor = if (selected) Colors.Accent else Colors.Muted,
+        border = if (selected) null else BorderStroke(1.dp, Colors.LineSoft),
     ) {
         Row(
             Modifier.heightIn(min = 36.dp).padding(horizontal = 14.dp),
@@ -111,9 +111,9 @@ fun SlateCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
-        color = Slate.Surface,
-        contentColor = Slate.Ink,
-        border = BorderStroke(1.dp, Slate.LineSoft),
+        color = Colors.Surface,
+        contentColor = Colors.Ink,
+        border = BorderStroke(1.dp, Colors.LineSoft),
         content = content,
     )
 }
@@ -125,14 +125,14 @@ fun SlateToast(
     actionLabel: String,
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
-    stripe: Color = Slate.Good,
+    stripe: Color = Colors.Good,
 ) {
     Surface(
         modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
         shape = RoundedCornerShape(10.dp),
-        color = Slate.Surface,
-        contentColor = Slate.Ink,
-        border = BorderStroke(1.dp, Slate.Line),
+        color = Colors.Surface,
+        contentColor = Colors.Ink,
+        border = BorderStroke(1.dp, Colors.Line),
         shadowElevation = 6.dp,
     ) {
         Row(Modifier.height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
@@ -164,11 +164,11 @@ fun ConfirmDialog(
     BasicAlertDialog(onDismissRequest = onDismiss, modifier = Modifier.semantics { paneTitle = title }) {
         SlateCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 16.dp)) {
-                Text(title, style = MaterialTheme.typography.titleLarge, color = Slate.Ink)
+                Text(title, style = MaterialTheme.typography.titleLarge, color = Colors.Ink)
                 Text(
                     text,
                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
-                    color = Slate.Muted,
+                    color = Colors.Muted,
                     modifier = Modifier.padding(top = 12.dp),
                 )
                 Row(
@@ -192,13 +192,14 @@ fun ProgressRing(
     size: Dp = 52.dp,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val track = Colors.Field
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 3.dp.toPx()
             val inset = stroke / 2 + 1.5.dp.toPx()
             val arcSize = Size(this.size.width - inset * 2, this.size.height - inset * 2)
             val topLeft = Offset(inset, inset)
-            drawArc(Slate.Field, 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
+            drawArc(track, 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
             if (progress > 0f) {
                 drawArc(color, -90f, 360f * progress.coerceIn(0f, 1f), false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
             }

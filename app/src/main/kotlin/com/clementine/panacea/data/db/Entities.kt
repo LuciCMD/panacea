@@ -115,6 +115,18 @@ data class MetaEntity(
     val value: String,
 )
 
+/** A dose with the medication it belongs to, for the history list. */
+data class DoseRow(
+    @Embedded val dose: DoseEntity,
+    val name: String,
+    val type: String,
+)
+
+data class ReminderRow(
+    @Embedded val reminder: ReminderEntity,
+    val medicationName: String,
+)
+
 data class MedicationSummary(
     @Embedded val medication: MedicationEntity,
     val lastTakenAt: Long?,

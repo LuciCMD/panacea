@@ -5,6 +5,7 @@ import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.MedicationSummary
 import com.clementine.panacea.data.db.ReminderEntity
+import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.model.Category
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.reminder.Schedule
