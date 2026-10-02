@@ -3,7 +3,7 @@ package com.clementine.panacea.data.backup
 import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
-import com.clementine.panacea.model.formatAmount
+import com.clementine.panacea.model.plainAmount
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -37,13 +37,13 @@ object CsvExport {
                 at.format(DATE),
                 at.format(TIME),
                 med.name,
-                formatAmount(d.amount),
+                plainAmount(d.amount),
                 d.unit,
-                formatAmount(d.multiplier),
-                d.weight?.let(::formatAmount).orEmpty(),
+                plainAmount(d.multiplier),
+                d.weight?.let(::plainAmount).orEmpty(),
                 if (d.weight != null) d.weightUnit.orEmpty() else "",
-                ingredientsOf[med.id].orEmpty().joinToString("; ") { "${it.name} ${formatAmount(it.amount * d.multiplier)} ${it.unit}" },
-                "${formatAmount(total)} ${d.unit}",
+                ingredientsOf[med.id].orEmpty().joinToString("; ") { "${it.name} ${plainAmount(it.amount * d.multiplier)} ${it.unit}" },
+                "${plainAmount(total)} ${d.unit}",
             )
             out.append(row.joinToString(",", transform = ::cell)).append("\r\n")
         }

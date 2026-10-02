@@ -2,6 +2,8 @@ package com.clementine.panacea.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.Assert.assertNull
+import java.util.Locale
 
 class UnitsTest {
     @Test
@@ -45,5 +47,38 @@ class UnitsTest {
         assertEquals("28.35", formatAmount(28.349523125.let { Math.round(it * 100) / 100.0 }))
         assertEquals("0.333", formatAmount(1.0 / 3))
         assertEquals("?", formatAmount(Double.NaN))
+    }
+
+    @Test
+    fun amountsOnScreenAreGroupedTheLocalWay() {
+        assertEquals("1,050", formatAmount(1050.0, Locale.US))
+        assertEquals("12,345.678", formatAmount(12345.6781, Locale.US))
+        assertEquals("1.050", formatAmount(1050.0, Locale.GERMANY))
+        assertEquals("0,25", formatAmount(0.25, Locale.GERMANY))
+        assertEquals("999", formatAmount(999.0, Locale.US))
+    }
+
+    @Test
+    fun amountsToEditOrSaveAreNeverGrouped() {
+        assertEquals("1050", plainAmount(1050.0))
+        assertEquals("0.25", plainAmount(0.25))
+        assertEquals("0.333", plainAmount(1.0 / 3))
+    }
+
+    @Test
+    fun typedAmountsReadTheWayTheyWereMeant() {
+        assertEquals(1000.0, parseAmount("1,000", Locale.US)!!, 0.0)
+        assertEquals(1234567.0, parseAmount("1,234,567", Locale.US)!!, 0.0)
+        assertEquals(0.5, parseAmount("0,5", Locale.US)!!, 0.0)
+        assertEquals(1.5, parseAmount("1,5", Locale.US)!!, 0.0)
+        assertEquals(0.25, parseAmount("0,250", Locale.US)!!, 0.0)
+        assertEquals(1000.5, parseAmount("1,000.5", Locale.US)!!, 0.0)
+        assertEquals(1000.5, parseAmount("1.000,5", Locale.US)!!, 0.0)
+        assertEquals(1000.0, parseAmount("1.000", Locale.GERMANY)!!, 0.0)
+        assertEquals(2.5, parseAmount("2,5", Locale.GERMANY)!!, 0.0)
+        assertEquals(1000.0, parseAmount("1 000", Locale.FRANCE)!!, 0.0)
+        assertEquals(50.0, parseAmount(" 50 ", Locale.US)!!, 0.0)
+        assertNull(parseAmount("-2", Locale.US))
+        assertNull(parseAmount("abc", Locale.US))
     }
 }

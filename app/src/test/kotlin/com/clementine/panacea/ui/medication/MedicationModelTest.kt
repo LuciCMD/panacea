@@ -46,8 +46,8 @@ class MedicationModelTest {
         )
         val totals = MedicationModel.totals(med, doses, now)!!
         assertEquals(listOf("2", "3", "3", "4"), totals.rows.map { it.doses })
-        assertEquals(listOf("600 mg", "800 mg", "800 mg", "1000 mg"), totals.rows.map { it.amount })
-        assertEquals("Last 24 Hours: 2 doses, 600 mg, 1050 mg", totals.rows[0].spoken(totals.showAmount, totals.showWeight))
+        assertEquals(listOf("600 mg", "800 mg", "800 mg", "1,000 mg"), totals.rows.map { it.amount })
+        assertEquals("Last 24 Hours: 2 doses, 600 mg, 1,050 mg", totals.rows[0].spoken(totals.showAmount, totals.showWeight))
     }
 
     @Test

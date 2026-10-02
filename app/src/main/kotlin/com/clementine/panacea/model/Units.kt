@@ -1,7 +1,11 @@
 package com.clementine.panacea.model
 
 import java.math.BigDecimal
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.text.NumberFormat
 import java.math.RoundingMode
+import java.util.Locale
 
 /** Units offered for a dose and each ingredient: the active amount. The same list as 3.4. */
 val DoseUnits: List<String> = listOf(
@@ -30,11 +34,50 @@ enum class WeightUnit(val key: String, val grams: Double) {
     }
 }
 
-/** An amount for display: up to three decimals, no trailing zeros ("50", "0.25", "28.35"). */
-fun formatAmount(value: Double): String {
+/**
+ * An amount for the screen: up to three decimals, no trailing zeros, grouped the phone's way
+ * ("50", "0.25", "1,050"). Not for fields or files; those take [plainAmount].
+ */
+fun formatAmount(value: Double, locale: Locale = Locale.getDefault()): String {
+    if (!value.isFinite()) return "?"
+    val format = (NumberFormat.getNumberInstance(locale) as DecimalFormat).apply {
+        minimumFractionDigits = 0
+        maximumFractionDigits = 3
+        roundingMode = RoundingMode.HALF_UP
+        isGroupingUsed = true
+    }
+    return format.format(BigDecimal.valueOf(value))
+}
+
+/** An amount to edit or to write to a file: "1050", "0.25", with no grouping, so it reads back as it is. */
+fun plainAmount(value: Double): String {
     if (!value.isFinite()) return "?"
     return BigDecimal.valueOf(value)
         .setScale(3, RoundingMode.HALF_UP)
         .stripTrailingZeros()
         .toPlainString()
 }
+
+/**
+ * A number as people type it: "0.5", "0,5", " 50 ", "1,000" or "1.000,5". A single comma or point is the
+ * decimal separator, unless it splits off thousands the way the phone groups them ("1,000" in English,
+ * "1.000" in German). With both, the last one is the decimal separator. Null if it isn't a number, or
+ * is below zero.
+ */
+fun parseAmount(text: String, locale: Locale = Locale.getDefault()): Double? {
+    // Spaces, no-break spaces and apostrophes are thousands separators somewhere.
+    val t = text.trim().filterNot { it.code in SEPARATOR_CODES }
+    val group = DecimalFormatSymbols.getInstance(locale).groupingSeparator
+    val thousands = Regex("""[1-9]\d{0,2}(${Regex.escape(group.toString())}\d{3})+""")
+    val normal = when {
+        ',' in t && '.' in t -> {
+            val decimal = if (t.lastIndexOf(',') > t.lastIndexOf('.')) ',' else '.'
+            t.filterNot { it == (if (decimal == ',') '.' else ',') }.replace(decimal, '.')
+        }
+        (',' in t || '.' in t) && thousands.matches(t) -> t.filterNot { it == group }
+        else -> t.replace(',', '.')
+    }
+    return normal.toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 }
+}
+
+private val SEPARATOR_CODES = setOf(0x20, 0xA0, 0x202F, 0x27)

@@ -9,7 +9,8 @@ import com.clementine.panacea.model.Category
 import com.clementine.panacea.model.DEFAULT_DOSE_UNIT
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.WeightUnit
-import com.clementine.panacea.model.formatAmount
+import com.clementine.panacea.model.parseAmount
+import com.clementine.panacea.model.plainAmount
 
 data class IngredientDraft(val name: String = "", val amount: String = "", val unit: String = DEFAULT_DOSE_UNIT) {
     val isBlank get() = name.isBlank() && amount.isBlank()
@@ -52,21 +53,20 @@ object Drafts {
     fun from(med: MedicationEntity, ingredients: List<IngredientEntity>) = MedicationDraft(
         id = med.id,
         name = med.name,
-        dose = if (med.dose > 0) formatAmount(med.dose) else "",
+        dose = if (med.dose > 0) plainAmount(med.dose) else "",
         doseUnit = med.doseUnit,
-        weight = med.weight?.let(::formatAmount).orEmpty(),
+        weight = med.weight?.let(::plainAmount).orEmpty(),
         weightUnit = WeightUnit.fromKey(med.weightUnit).key,
         category = Category.fromKey(med.category),
         type = MedicationType.fromKey(med.type),
         ingredients = ingredients.sortedBy { it.position }
-            .map { IngredientDraft(it.name, if (it.amount > 0) formatAmount(it.amount) else "", it.unit) },
+            .map { IngredientDraft(it.name, if (it.amount > 0) plainAmount(it.amount) else "", it.unit) },
         photoFront = med.photoFront,
         photoBack = med.photoBack,
     )
 
-    /** A number as people type it: "0.5", "0,5" or " 50 ". Null if it isn't one, or is below zero. */
-    fun parse(text: String): Double? =
-        text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0 }
+    /** A number as people type it; see [parseAmount]. */
+    fun parse(text: String): Double? = parseAmount(text)
 
     fun check(d: MedicationDraft, existing: List<MedicationName>): DraftProblems {
         val name = d.name.trim()
