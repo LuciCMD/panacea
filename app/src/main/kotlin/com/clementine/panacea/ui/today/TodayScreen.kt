@@ -255,6 +255,7 @@ private fun ImportProblemsCard(problems: List<String>, onDismiss: () -> Unit) {
     SectionCard(
         "Some 3.4 Data Wasn't Brought Over",
         hint = "Everything else came across. Panacea 3.4's own files are still on this phone, unchanged.",
+        warning = true,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             problems.forEach { problem ->

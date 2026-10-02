@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.clementine.panacea.ui.components.SlateIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.clementine.panacea.ui.theme.Overlay
 import com.clementine.panacea.data.PhotoStore
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.icons.Glyphs
@@ -64,7 +65,7 @@ fun PillPhoto(name: String?, contentDescription: String?, modifier: Modifier = M
 fun PhotoViewer(name: String, front: String?, back: String?, start: PillSide, onClose: () -> Unit) {
     var side by remember { mutableStateOf(if (start == PillSide.BACK && back != null) PillSide.BACK else PillSide.FRONT) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Box(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing)) {
+        Box(Modifier.fillMaxSize().background(Overlay.Backdrop).windowInsetsPadding(WindowInsets.safeDrawing)) {
             PillPhoto(
                 if (side == PillSide.FRONT) front else back,
                 "$name, ${side.label.lowercase()}",
@@ -73,8 +74,8 @@ fun PhotoViewer(name: String, front: String?, back: String?, start: PillSide, on
                 scale = ContentScale.Fit,
             )
             Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(name, style = MaterialTheme.typography.titleLarge, color = Color.White, modifier = Modifier.weight(1f).padding(start = 12.dp))
-                IconButton(onClick = onClose) { Icon(Glyphs.Close, contentDescription = "Close", tint = Color.White) }
+                Text(name, style = MaterialTheme.typography.titleLarge, color = Overlay.Ink, modifier = Modifier.weight(1f).padding(start = 12.dp))
+                SlateIconButton(onClick = onClose) { Icon(Glyphs.Close, contentDescription = "Close", tint = Overlay.Ink) }
             }
             if (front != null && back != null) {
                 Row(
@@ -82,7 +83,7 @@ fun PhotoViewer(name: String, front: String?, back: String?, start: PillSide, on
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     PillSide.entries.forEach { s ->
-                        SlateChip(selected = side == s, onClick = { side = s }) { Text(s.label, color = if (side == s) Color.Unspecified else Color.White) }
+                        SlateChip(selected = side == s, onClick = { side = s }) { Text(s.label, color = if (side == s) Color.Unspecified else Overlay.Ink) }
                     }
                 }
             }

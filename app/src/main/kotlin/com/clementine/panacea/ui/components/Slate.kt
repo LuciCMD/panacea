@@ -3,6 +3,17 @@ package com.clementine.panacea.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import com.clementine.panacea.ui.theme.SlateIndication
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -19,9 +30,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +57,10 @@ import com.clementine.panacea.ui.theme.Colors
 
 enum class ButtonKind { Plain, Primary, Delete, Text }
 
-/** Slate button: flat, radius 8, no border. Delete is only for the confirm step of a removal. */
+/**
+ * Slate button: flat, radius 8, no border. Pressed and hovered it takes the white wash, focused from
+ * a keyboard an accent ring, and disabled it fades to 40%. Delete is only for the confirm step of a removal.
+ */
 @Composable
 fun SlateButton(
     onClick: () -> Unit,
@@ -64,21 +77,23 @@ fun SlateButton(
         ButtonKind.Delete -> Colors.Bad to Colors.OnAccent
         ButtonKind.Text -> Color.Transparent to Colors.Accent
     }
-    Button(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
-        enabled = enabled,
-        shape = shape ?: MaterialTheme.shapes.small,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = container,
-            contentColor = text,
-            disabledContainerColor = if (kind == ButtonKind.Text) Color.Transparent else Colors.Raised,
-            disabledContentColor = Colors.Muted,
-        ),
-        elevation = null,
-        contentPadding = contentPadding,
-    ) {
+    val s = shape ?: MaterialTheme.shapes.small
+    CompositionLocalProvider(LocalContentColor provides text, LocalTextStyle provides MaterialTheme.typography.labelLarge) {
         Row(
+            modifier
+                .minimumInteractiveComponentSize()
+                .heightIn(min = 48.dp)
+                .alpha(if (enabled) 1f else DISABLED_ALPHA)
+                .clip(s)
+                .background(container)
+                .clickable(
+                    interactionSource = null,
+                    indication = SlateIndication(s),
+                    enabled = enabled,
+                    role = Role.Button,
+                    onClick = onClick,
+                )
+                .padding(contentPadding),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
             content = content,
@@ -86,20 +101,38 @@ fun SlateButton(
     }
 }
 
+/** A round 48 dp icon button with Slate's washes and focus ring; give its icon a content description. */
+@Composable
+fun SlateIconButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalContentColor provides Colors.Ink) {
+        Box(
+            modifier
+                .size(48.dp)
+                .alpha(if (enabled) 1f else DISABLED_ALPHA)
+                .clip(CircleShape)
+                .clickable(interactionSource = null, indication = SlateIndication(CircleShape), enabled = enabled, role = Role.Button, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) { content() }
+    }
+}
+
+/** How much of a disabled control shows, in place of a separate grey look. */
+const val DISABLED_ALPHA = 0.4f
+
 /** A pill that can be picked; the picked one is washed in the accent. */
 @Composable
 fun SlateChip(selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
-    Surface(
-        onClick = onClick,
-        selected = selected,
-        modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        color = if (selected) Colors.AccentWash else Color.Transparent,
-        contentColor = if (selected) Colors.Accent else Colors.Muted,
-        border = if (selected) null else BorderStroke(1.dp, Colors.LineSoft),
-    ) {
+    val shape = RoundedCornerShape(18.dp)
+    CompositionLocalProvider(LocalContentColor provides if (selected) Colors.Accent else Colors.Muted) {
         Row(
-            Modifier.heightIn(min = 36.dp).padding(horizontal = 14.dp),
+            modifier
+                .minimumInteractiveComponentSize()
+                .clip(shape)
+                .background(if (selected) Colors.AccentWash else Color.Transparent)
+                .then(if (selected) Modifier else Modifier.border(1.dp, Colors.LineSoft, shape))
+                .selectable(selected = selected, interactionSource = null, indication = SlateIndication(shape), onClick = onClick)
+                .heightIn(min = 36.dp)
+                .padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content,
@@ -107,15 +140,15 @@ fun SlateChip(selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
     }
 }
 
-/** A flat card: surface fill, 1 px soft line, radius 12. */
+/** A flat card: surface fill, 1 px soft line (or [border], such as warn), radius 12. */
 @Composable
-fun SlateCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun SlateCard(modifier: Modifier = Modifier, border: Color? = null, content: @Composable () -> Unit) {
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         color = Colors.Surface,
         contentColor = Colors.Ink,
-        border = BorderStroke(1.dp, Colors.LineSoft),
+        border = BorderStroke(1.dp, border ?: Colors.LineSoft),
         content = content,
     )
 }

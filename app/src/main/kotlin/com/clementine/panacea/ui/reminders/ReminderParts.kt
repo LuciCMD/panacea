@@ -155,7 +155,7 @@ fun rememberAskForNotifications(settingsIfRefused: Boolean = true, onAnswer: (Bo
 fun NotificationsOffCard() {
     if (rememberNotificationsAllowed()) return
     val ask = rememberAskForNotifications()
-    SectionCard("Notifications Are Off", "Reminders can't show until Panacea may send notifications.") {
+    SectionCard("Notifications Are Off", "Reminders can't show until Panacea may send notifications.", warning = true) {
         SlateButton(onClick = ask, kind = ButtonKind.Primary, modifier = Modifier.fillMaxWidth()) {
             Icon(Glyphs.Bell, contentDescription = null)
             Text("Allow Notifications")

@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.clementine.panacea.ui.components.SlateIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -125,7 +125,7 @@ fun EditReminderScreen(
     ) {
         item(key = "header") {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
-                IconButton(onClick = close, modifier = Modifier.padding(end = 4.dp)) {
+                SlateIconButton(onClick = close, modifier = Modifier.padding(end = 4.dp)) {
                     Icon(Glyphs.Close, contentDescription = "Close without saving", tint = Colors.Ink)
                 }
                 Text(
@@ -355,7 +355,7 @@ private fun TimePill(minutes: Int, f: TimeFormats, onChange: () -> Unit, onRemov
                 Text(time, style = MaterialTheme.typography.bodyLarge.merge(Numbers))
             }
             if (onRemove != null) {
-                IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
+                SlateIconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
                     Icon(Glyphs.Close, contentDescription = "Remove $time", tint = Colors.Muted, modifier = Modifier.size(16.dp))
                 }
             }

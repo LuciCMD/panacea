@@ -1,5 +1,9 @@
 package com.clementine.panacea.ui.today
 
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
+import com.clementine.panacea.ui.theme.SlateIndication
+import com.clementine.panacea.ui.components.DISABLED_ALPHA
 import android.text.format.DateFormat
 import android.view.ViewParent
 import androidx.compose.foundation.background
@@ -21,7 +25,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
@@ -65,6 +68,7 @@ import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.edit.PillSide
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
+import com.clementine.panacea.ui.theme.Overlay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalTime
@@ -96,7 +100,7 @@ fun TakeSheet(
         shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
         containerColor = Colors.Surface,
         contentColor = Colors.Ink,
-        scrimColor = Color(0x990A0A0E),
+        scrimColor = Overlay.SheetScrim,
         dragHandle = {
             Box(
                 Modifier
@@ -146,7 +150,7 @@ fun TakeSheet(
                             }
                         }
                     }
-                    Text("Tap a photo to check it up close.", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted, modifier = Modifier.weight(1f))
+                    Text("Tap a photo to check it up close.", style = MaterialTheme.typography.bodyMedium, color = Colors.Faint, modifier = Modifier.weight(1f))
                 }
             }
 
@@ -250,14 +254,15 @@ private fun takenAtText(takenAt: Long?, now: ZonedDateTime, f: TimeFormats): Str
 
 @Composable
 private fun RoundButton(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = CircleShape,
-        color = Colors.Field,
-        contentColor = if (enabled) Colors.Ink else Colors.Faint,
-        modifier = Modifier.size(56.dp),
+    Box(
+        Modifier
+            .size(56.dp)
+            .alpha(if (enabled) 1f else DISABLED_ALPHA)
+            .clip(CircleShape)
+            .background(Colors.Field)
+            .clickable(interactionSource = null, indication = SlateIndication(CircleShape), enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = label) }
+        Icon(icon, contentDescription = label, tint = Colors.Ink)
     }
 }

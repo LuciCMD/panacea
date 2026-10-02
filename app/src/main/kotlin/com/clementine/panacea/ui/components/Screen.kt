@@ -55,10 +55,19 @@ fun ScreenHeader(title: String, subtitle: String? = null, modifier: Modifier = M
     }
 }
 
-/** A card with a heading and, if needed, one line saying what it's for. */
+/**
+ * A card with a heading and, if needed, a [hint] saying what it's for (faint: it can be done without).
+ * A [warning] card says something that matters: its text is muted rather than faint, and its edge is warn.
+ */
 @Composable
-fun SectionCard(title: String, hint: String? = null, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    SlateCard(modifier.fillMaxWidth()) {
+fun SectionCard(
+    title: String,
+    hint: String? = null,
+    modifier: Modifier = Modifier,
+    warning: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    SlateCard(modifier.fillMaxWidth(), border = if (warning) Colors.Warn else null) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
@@ -67,7 +76,7 @@ fun SectionCard(title: String, hint: String? = null, modifier: Modifier = Modifi
                     color = Colors.Ink,
                     modifier = Modifier.semantics { heading() },
                 )
-                hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted) }
+                hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = if (warning) Colors.Muted else Colors.Faint) }
             }
             content()
         }

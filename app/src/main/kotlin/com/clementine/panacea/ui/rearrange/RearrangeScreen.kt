@@ -23,7 +23,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.clementine.panacea.ui.components.SlateIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -164,7 +164,7 @@ fun RearrangeScreen(onBack: () -> Unit, viewModel: RearrangeViewModel = viewMode
 @Composable
 private fun Header(onBack: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-        IconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
+        SlateIconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
             Icon(Glyphs.Back, contentDescription = "Back", tint = Colors.Ink)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {

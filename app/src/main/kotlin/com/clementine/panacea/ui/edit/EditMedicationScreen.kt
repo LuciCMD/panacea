@@ -1,5 +1,8 @@
 package com.clementine.panacea.ui.edit
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import com.clementine.panacea.ui.theme.SlateIndication
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -28,9 +31,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.clementine.panacea.ui.components.SlateIconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,8 +48,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -145,7 +145,7 @@ fun EditMedicationScreen(
     ) {
         item(key = "header") {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
-                IconButton(onClick = close, modifier = Modifier.padding(end = 4.dp)) {
+                SlateIconButton(onClick = close, modifier = Modifier.padding(end = 4.dp)) {
                     Icon(Glyphs.Close, contentDescription = "Close without saving", tint = Colors.Ink)
                 }
                 Text(
@@ -263,7 +263,7 @@ private fun BasicsCard(d: MedicationDraft, problems: DraftProblems, update: (Med
 
 @Composable
 private fun Hint(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Faint)
 }
 
 @Composable
@@ -311,25 +311,20 @@ private fun TypeCard(d: MedicationDraft, update: (MedicationDraft) -> Unit) {
 
 @Composable
 private fun TypeTile(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.semantics {
-            role = Role.RadioButton
-            this.selected = selected
-        },
-        shape = MaterialTheme.shapes.small,
-        color = if (selected) Colors.AccentWash else Colors.Field,
-        contentColor = if (selected) Colors.Accent else Colors.Ink,
-        border = if (selected) BorderStroke(1.dp, Colors.Accent) else null,
+    val shape = MaterialTheme.shapes.small
+    val color = if (selected) Colors.Accent else Colors.Ink
+    Column(
+        modifier
+            .clip(shape)
+            .background(if (selected) Colors.AccentWash else Colors.Field)
+            .then(if (selected) Modifier.border(1.dp, Colors.Accent, shape) else Modifier)
+            .selectable(selected = selected, interactionSource = null, indication = SlateIndication(shape), role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Column(
-            Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Icon(icon, contentDescription = null)
-            Text(label, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-        }
+        Icon(icon, contentDescription = null, tint = color)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 
@@ -382,14 +377,16 @@ private fun PhotoSlot(
     var menu by remember { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box {
-            Surface(
-                onClick = { if (photo == null) onTake() else menu = true },
-                shape = RoundedCornerShape(12.dp),
-                color = Colors.Field,
-                contentColor = Colors.Muted,
-                modifier = Modifier
+            val tile = RoundedCornerShape(12.dp)
+            Box(
+                Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
+                    .clip(tile)
+                    .background(Colors.Field)
+                    .clickable(interactionSource = null, indication = SlateIndication(tile), role = Role.Button) {
+                        if (photo == null) onTake() else menu = true
+                    }
                     .semantics { contentDescription = if (photo == null) "Take a photo of the ${side.label.lowercase()}" else "${side.label} photo, options" },
             ) {
                 if (photo != null) {
@@ -400,8 +397,8 @@ private fun PhotoSlot(
                         verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Icon(Glyphs.Camera, contentDescription = null, modifier = Modifier.size(28.dp))
-                        Text("Add ${side.label}", style = MaterialTheme.typography.bodyMedium)
+                        Icon(Glyphs.Camera, contentDescription = null, tint = Colors.Muted, modifier = Modifier.size(28.dp))
+                        Text("Add ${side.label}", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
                     }
                 }
             }
@@ -451,7 +448,7 @@ private fun IngredientsCard(d: MedicationDraft, problems: DraftProblems, update:
                         accessibleLabel = "Ingredient ${i + 1} name",
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                     )
-                    IconButton(onClick = { update(d.copy(ingredients = d.ingredients.filterIndexed { j, _ -> j != i })) }) {
+                    SlateIconButton(onClick = { update(d.copy(ingredients = d.ingredients.filterIndexed { j, _ -> j != i })) }) {
                         Icon(Glyphs.Close, contentDescription = ing.name.trim().ifEmpty { null }?.let { "Remove $it" } ?: "Remove ingredient ${i + 1}", tint = Colors.Muted)
                     }
                 }

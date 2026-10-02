@@ -24,7 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.clementine.panacea.ui.components.SlateIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -226,7 +226,7 @@ fun MedicationScreen(
 @Composable
 private fun Header(name: String, subtitle: String, onBack: () -> Unit, onEdit: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
-        IconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
+        SlateIconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
             Icon(Glyphs.Back, contentDescription = "Back", tint = Colors.Ink)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {

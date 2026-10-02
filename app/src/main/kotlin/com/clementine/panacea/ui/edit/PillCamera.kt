@@ -37,7 +37,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.clementine.panacea.ui.components.SlateIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -73,6 +73,7 @@ import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
+import com.clementine.panacea.ui.theme.Overlay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
@@ -81,8 +82,6 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-private val Scrim = Color(0x99000000)
-private val Soft = Color(0xCCFFFFFF)
 
 /**
  * Photographs the pill one side at a time, like an ID check: a square guide to fill, a look at the
@@ -131,7 +130,7 @@ fun PillCamera(sides: List<PillSide>, onPhoto: (PillSide, String) -> Unit, onClo
         onClose()
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().background(Overlay.Backdrop)) {
         val shown = review
         when {
             shown != null -> ReviewPhoto(shown)
@@ -159,25 +158,25 @@ fun PillCamera(sides: List<PillSide>, onPhoto: (PillSide, String) -> Unit, onClo
         // What to photograph, over the top of everything.
         Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = {
+                SlateIconButton(onClick = {
                     review?.let(store::delete)
                     onClose()
-                }) { Icon(Glyphs.Close, contentDescription = "Close the camera", tint = Color.White) }
+                }) { Icon(Glyphs.Close, contentDescription = "Close the camera", tint = Overlay.Ink) }
                 Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                    Text(side.title, style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Text(side.title, style = MaterialTheme.typography.titleLarge, color = Overlay.Ink)
                     if (sides.size > 1) {
-                        Text("Step ${step + 1} of ${sides.size}", style = MaterialTheme.typography.bodyMedium, color = Soft)
+                        Text("Step ${step + 1} of ${sides.size}", style = MaterialTheme.typography.bodyMedium, color = Overlay.Soft)
                     }
                 }
                 if (side == PillSide.BACK && sides.size > 1 && review == null) {
-                    SlateButton(onClick = onClose, kind = ButtonKind.Text) { Text("Skip", color = Color.White) }
+                    SlateButton(onClick = onClose, kind = ButtonKind.Text) { Text("Skip", color = Overlay.Ink) }
                 }
             }
             if (review == null && granted) {
                 Text(
                     "Fill the square with the pill. A plain, light surface works best.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Soft,
+                    color = Overlay.Soft,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                 )
             }
@@ -244,7 +243,7 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: () 
             Text(
                 "The camera isn't available right now.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                color = Overlay.Ink,
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
             )
         }
@@ -257,23 +256,23 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: () 
                 .padding(horizontal = 24.dp, vertical = 28.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onChoose, modifier = Modifier.size(56.dp)) {
-                Icon(Glyphs.Image, contentDescription = "Choose from your photos", tint = Color.White)
+            SlateIconButton(onClick = onChoose, modifier = Modifier.size(56.dp)) {
+                Icon(Glyphs.Image, contentDescription = "Choose from your photos", tint = Overlay.Ink)
             }
             Spacer(Modifier.weight(1f))
             Surface(
                 onClick = { if (!busy && !failed) onCapture(capture, viewSize) },
                 enabled = !busy && !failed,
                 shape = CircleShape,
-                color = Color.White,
+                color = Overlay.Ink,
                 modifier = Modifier
                     .size(76.dp)
-                    .border(4.dp, Scrim, CircleShape)
+                    .border(4.dp, Overlay.Scrim, CircleShape)
                     .semantics { contentDescription = "Take the photo" },
             ) {}
             Spacer(Modifier.weight(1f))
             val hasFlash = camera?.cameraInfo?.hasFlashUnit() == true
-            IconButton(
+            SlateIconButton(
                 onClick = {
                     torch = !torch
                     camera?.cameraControl?.enableTorch(torch)
@@ -287,7 +286,7 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: () 
                     tint = when {
                         !hasFlash -> Color.Transparent
                         torch -> Colors.Accent
-                        else -> Color.White
+                        else -> Overlay.Ink
                     },
                 )
             }
@@ -309,7 +308,7 @@ private fun GuideOverlay() {
             addRect(androidx.compose.ui.geometry.Rect(Offset.Zero, size))
             addRoundRect(hole)
         }
-        drawPath(path, Scrim)
+        drawPath(path, Overlay.Scrim)
         drawRoundRect(
             accent, topLeft, Size(side, side), corner,
             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()),
@@ -336,7 +335,7 @@ private fun NoCamera(asked: Boolean, onAsk: () -> Unit, onChoose: () -> Unit) {
             Text(
                 "Panacea needs the camera to photograph your pill. You can pick a photo you already have instead.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                color = Overlay.Ink,
             )
             SlateButton(onClick = onAsk) { Text("Allow the Camera") }
         }

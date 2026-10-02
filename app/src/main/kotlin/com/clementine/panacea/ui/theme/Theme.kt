@@ -1,5 +1,6 @@
 package com.clementine.panacea.ui.theme
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -44,7 +45,22 @@ data class Palette(
     val accentWash: Color get() = accent.copy(alpha = 0.16f)
 }
 
-private val LocalPalette = staticCompositionLocalOf { Themes.SLATE.palette }
+internal val LocalPalette = staticCompositionLocalOf { Themes.SLATE.palette }
+
+/**
+ * Colours over photos and the camera's live view, which stay light on dark whatever the theme, so the
+ * controls read against any picture.
+ */
+object Overlay {
+    /** Behind a photo shown full screen, and the camera. */
+    val Backdrop = Color.Black
+    val Ink = Color.White
+    val Soft = Color(0xCCFFFFFF)
+    /** Behind controls laid over the picture. */
+    val Scrim = Color(0x99000000)
+    /** Dims the screen behind a sheet. */
+    val SheetScrim = Color(0x990A0A0E)
+}
 
 /** The current theme's colours, for use inside composables. */
 object Colors {
@@ -120,6 +136,9 @@ private val PanaceaShapes = Shapes(
 @Composable
 fun PanaceaTheme(palette: Palette = Themes.SLATE.palette, content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalPalette provides palette) {
-        MaterialTheme(colorScheme = palette.scheme(), typography = PanaceaType, shapes = PanaceaShapes, content = content)
+        MaterialTheme(colorScheme = palette.scheme(), typography = PanaceaType, shapes = PanaceaShapes) {
+            // Washes and an accent focus ring instead of Material's ripple, for every plain clickable.
+            CompositionLocalProvider(LocalIndication provides SlateIndication(), content = content)
+        }
     }
 }
