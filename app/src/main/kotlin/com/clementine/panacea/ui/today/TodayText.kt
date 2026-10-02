@@ -86,18 +86,32 @@ object TodayText {
         return "$whenDue · ${ago(at.toInstant().toEpochMilli(), now)}, not logged yet"
     }
 
-    /** "just now", "12 min ago", "4 h ago", "4 h 12 min ago". */
+    /** "just now", "12 min ago", "4 h 12 min ago", then "1 day 4 h ago", and past a week "9 days ago". */
     fun ago(at: Long, now: ZonedDateTime): String {
         val minutes = (now.toInstant().toEpochMilli() - at) / 60_000
         if (minutes < 1) return "just now"
         val h = minutes / 60
         val m = minutes % 60
+        val days = counted((h / 24).toInt(), "day")
         return when {
             h == 0L -> "$m min ago"
-            m == 0L -> "$h h ago"
-            else -> "$h h $m min ago"
+            h < 24 -> if (m == 0L) "$h h ago" else "$h h $m min ago"
+            h < 7 * 24 && h % 24 != 0L -> "$days ${h % 24} h ago"
+            else -> "$days ago"
         }
     }
+
+    /** The due line of a medication learning its routine before it has one. */
+    const val LEARNING = "Learning when you usually take it"
+
+    /** Today's ⓘ: how to read a card. */
+    const val HOW_TO_READ =
+        "The ring around each medication fills as its next dose comes due, and turns orange once one is missed. " +
+            "The × button sets how many each Take logs."
+
+    /** The day strip's ⓘ. */
+    const val STRIP =
+        "Each dot is a dose logged today, placed at the time it was taken. The upright line is now."
 
     fun inLast24h(total: Double, unit: String) = "${formatAmount(total)} $unit in the last 24 h"
 

@@ -54,16 +54,17 @@ fun rememberTake(viewModel: TodayViewModel): (medicationId: Long, multiplier: Do
 }
 
 /**
- * What's been had, then what's due, always in that order. The two answers lead in ink; the next time
- * is muted until it's missed, when it turns warn at the same size.
+ * What's been had, then what's due, always in that order. The answers lead in ink; the next time is
+ * muted until it's missed, when it turns warn at the same size. [withTotal] adds the last 24 hours'
+ * total, which the medication's page shows and Today leaves out.
  */
 @Composable
-fun StatusLines(card: CardState) {
+fun StatusLines(card: CardState, withTotal: Boolean = false) {
     val lead = MaterialTheme.typography.bodyLarge.merge(Numbers)
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(keepPhrases(card.lastTakenLine), style = lead, color = Colors.Ink)
-        Text(keepPhrases(card.last24hLine), style = lead, color = Colors.Ink)
+        if (withTotal) Text(keepPhrases(card.last24hLine), style = lead, color = Colors.Ink)
         card.dueLine?.let {
             Text(
                 keepPhrases(it),

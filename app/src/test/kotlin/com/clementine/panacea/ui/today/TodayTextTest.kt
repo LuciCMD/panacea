@@ -46,6 +46,12 @@ class TodayTextTest {
         assertEquals("12 min ago", TodayText.ago(ms(10, 2, 13, 4), now))
         assertEquals("4 h ago", TodayText.ago(ms(10, 2, 9, 16), now))
         assertEquals("4 h 12 min ago", TodayText.ago(ms(10, 2, 9, 4), now))
+        assertEquals("23 h 59 min ago", TodayText.ago(ms(10, 1, 13, 17), now))
+        assertEquals("1 day ago", TodayText.ago(ms(10, 1, 13, 16), now))
+        assertEquals("1 day 4 h ago", TodayText.ago(ms(10, 1, 9, 4), now))
+        assertEquals("6 days 23 h ago", TodayText.ago(ms(9, 25, 14, 0), now))
+        assertEquals("7 days ago", TodayText.ago(ms(9, 25, 9, 4), now))
+        assertEquals("21 days ago", TodayText.ago(ms(9, 11, 9, 4), now))
     }
 
     @Test

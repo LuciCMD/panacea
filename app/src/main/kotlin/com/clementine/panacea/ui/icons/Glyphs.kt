@@ -28,6 +28,7 @@ object Glyphs {
     val Grip = strokeIcon("Grip", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01")
     val Rearrange = strokeIcon("Rearrange", "M7 20V4M3.5 7.5L7 4l3.5 3.5M17 4v16M13.5 16.5L17 20l3.5-3.5")
     val More = strokeIcon("More", "M5 12h.01M12 12h.01M19 12h.01")
+    val Info = strokeIcon("Info", "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M12 11v5M12 7.5h.01")
 
     // Bottom bar
     val Today = strokeIcon("Today", "M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM3 10h18M8 3v4M16 3v4")

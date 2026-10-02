@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,6 +47,7 @@ import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.ProgressRing
 import com.clementine.panacea.ui.components.AxisLabels
 import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.InfoTip
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
@@ -81,7 +83,7 @@ fun TodayScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(key = "header") {
-                    ScreenHeader("Today", state.header) {
+                    ScreenHeader("Today", state.header, info = TodayText.HOW_TO_READ.takeIf { state.cards.isNotEmpty() }) {
                         if (state.cards.size >= 2) {
                             SlateButton(
                                 onClick = onRearrange,
@@ -102,16 +104,15 @@ fun TodayScreen(
                 if (importProblems.isNotEmpty()) {
                     item(key = "import") { ImportProblemsCard(importProblems, viewModel::dismissImportProblems) }
                 }
-                item(key = "strip") { DayStripCard(state.strip) }
+                if (state.cards.isEmpty()) {
+                    item(key = "empty") { NoMedicationsCard(onAdd) }
+                } else {
+                    item(key = "strip") { DayStripCard(state.strip) }
+                }
                 if (categories.size > 1) {
                     item(key = "filters") { Filters(categories, shown) { filter = it?.key } }
                 }
                 val cards = state.cards.filter { shown == null || it.category == shown }
-                if (cards.isEmpty()) {
-                    item(key = "empty") {
-                        Text("Add a medication to start.", style = MaterialTheme.typography.bodyMedium, color = Colors.Faint)
-                    }
-                }
                 items(cards, key = { it.medication.id }) { card ->
                     MedicationCard(
                         card,
@@ -153,8 +154,10 @@ private fun DayStripCard(strip: DayStrip) {
             Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Doses Today", style = small, color = Colors.Muted)
+                InfoTip(about = "Doses Today", text = TodayText.STRIP, modifier = Modifier.padding(start = 2.dp))
+                Spacer(Modifier.weight(1f))
                 Text(TodayText.dosesToday(strip.count), style = small, color = Colors.Ink)
             }
             val (field, lineColor, surface, accent, ink) = listOf(Colors.Field, Colors.Line, Colors.Surface, Colors.Accent, Colors.Ink)
@@ -178,6 +181,32 @@ private fun DayStripCard(strip: DayStrip) {
                 drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
             }
             AxisLabels(strip.axis, small.copy(fontSize = 11.sp), Colors.Faint, Modifier.clearAndSetSemantics { })
+        }
+    }
+}
+
+/** Before anything is added: what Today will show, and the way to start. */
+@Composable
+private fun NoMedicationsCard(onAdd: () -> Unit) {
+    SlateCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "No Medications Yet",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Colors.Ink,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text(
+                    "Add what you take, and Today shows how much you last took and when, and when the next dose is due.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Colors.Muted,
+                )
+            }
+            SlateButton(onClick = onAdd, kind = ButtonKind.Primary, modifier = Modifier.fillMaxWidth()) {
+                Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text("Add Medication")
+            }
         }
     }
 }

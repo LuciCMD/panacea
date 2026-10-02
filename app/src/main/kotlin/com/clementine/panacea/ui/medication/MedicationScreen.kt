@@ -134,7 +134,7 @@ fun MedicationScreen(
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 CardRing(card)
-                                StatusLines(card)
+                                StatusLines(card, withTotal = true)
                             }
                             TakeButtons(
                                 med,

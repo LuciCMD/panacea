@@ -40,15 +40,25 @@ fun screenPadding(bottom: Dp = 24.dp): PaddingValues {
 }
 
 @Composable
-fun ScreenHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier, action: @Composable (() -> Unit)? = null) {
+fun ScreenHeader(
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+    /** How to read the page, behind an ⓘ after the title. */
+    info: String? = null,
+    action: @Composable (() -> Unit)? = null,
+) {
     Row(modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.headlineMedium,
-                color = Colors.Ink,
-                modifier = Modifier.semantics { heading() },
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Colors.Ink,
+                    modifier = Modifier.semantics { heading() },
+                )
+                info?.let { InfoTip(about = title, text = it) }
+            }
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted) }
         }
         action?.invoke()

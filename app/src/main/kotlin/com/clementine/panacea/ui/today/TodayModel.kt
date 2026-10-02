@@ -31,7 +31,7 @@ data class CardState(
     val doseLine: String,
     /** "Taken at 8:27 · 3 h 39 min ago": when it was last taken. */
     val lastTakenLine: String,
-    /** "15 mg in the last 24 h", or the count of doses when no dose is set; always shown. */
+    /** "15 mg in the last 24 h", or the count of doses when no dose is set; on the medication's page. */
     val last24hLine: String,
     /** "Next at 21:00", "Usually around 23:30" (learned), or the overdue warning; null without either. */
     val dueLine: String?,
@@ -52,7 +52,6 @@ object TodayModel {
     /** An unlogged reminder older than this is history, not something due. */
     private val OVERDUE_FOR = Duration.ofHours(12)
     private val ONE_DAY = Duration.ofHours(24)
-    private val RECENT = Duration.ofHours(12)
 
     /** A learned dose is due from this long before its usual time, as a fixed reminder's early window. */
     private const val LEARNED_EARLY_MINUTES = 60L
@@ -99,7 +98,7 @@ object TodayModel {
         val type = MedicationType.fromKey(med.type)
         val lastAmount = TodayText.doseAmount(s.lastAmount ?: 0.0, s.lastUnit ?: med.doseUnit, s.lastDoseMultiplier ?: 1.0, type)
         var lastTaken = TodayText.lastTaken(s.lastTakenAt, lastAmount, now, f)
-        s.lastTakenAt?.takeIf { nowMs - it in 0..RECENT.toMillis() }?.let { lastTaken += " · " + TodayText.ago(it, now) }
+        s.lastTakenAt?.takeIf { it <= nowMs }?.let { lastTaken += " · " + TodayText.ago(it, now) }
         val inDay = doses.filter { nowMs - it.takenAt in 0..ONE_DAY.toMillis() }
         val last24h = if (med.dose > 0) {
             TodayText.inLast24h(inDay.filter { it.unit == med.doseUnit }.sumOf { it.amount }, med.doseUnit)
@@ -132,7 +131,10 @@ object TodayModel {
             doseLine = TodayText.doseLine(med, ingredients),
             lastTakenLine = lastTaken,
             last24hLine = last24h,
-            dueLine = due.overdueAt?.let { TodayText.overdue(it, now, f) } ?: due.next?.let { TodayText.next(it, now, f) },
+            dueLine = due.overdueAt?.let { TodayText.overdue(it, now, f) }
+                ?: due.next?.let { TodayText.next(it, now, f) }
+                // Learning, but too few doses yet to know a routine: say so, rather than nothing.
+                ?: TodayText.LEARNING.takeIf { med.learnRoutine && reminders.isEmpty() },
             overdue = due.overdueAt != null,
             dueNow = due.overdueAt != null || due.soon,
             progress = if (due.overdueAt != null) 1f else due.progress,

@@ -98,6 +98,17 @@ class TodayModelTest {
     }
 
     @Test
+    fun learningWithoutARoutineYetSaysSo() {
+        val med = MedicationEntity(id = 1, name = "Melatonin", dose = 3.0, doseUnit = "mg", category = "OTC", type = "GUMMY", sortOrder = 0, learnRoutine = true)
+        fun card(reminders: List<ReminderEntity>) = TodayModel.build(
+            listOf(MedicationSummary(med, ms(10, 1, 23, 30))), emptyList(), reminders, emptyList(), emptyList(), now, formats,
+            learningTimes = mapOf(1L to listOf(ms(10, 1, 23, 30))),
+        ).cards.single()
+        assertEquals("Learning when you usually take it", card(emptyList()).dueLine)
+        assertEquals("Next at 21:00", card(listOf(daily(21 * 60))).dueLine)
+    }
+
+    @Test
     fun fixedRemindersOutrankALearnedRoutine() {
         val med = MedicationEntity(id = 1, name = "Melatonin", dose = 3.0, doseUnit = "mg", category = "OTC", type = "GUMMY", sortOrder = 0, learnRoutine = true)
         val times = (22..30).map { ms(9, it, 23, 30) } + ms(10, 1, 23, 30)
@@ -139,6 +150,7 @@ class TodayModelTest {
         assertNull(ibuprofen.dueLine)
         assertFalse(ibuprofen.dueNow)
         val sertraline = ui.cards[1]
+        assertEquals("Took 50 mg at 9:04 · 4 h 12 min ago", sertraline.lastTakenLine)
         assertEquals("50 mg in the last 24 h", sertraline.last24hLine)
         assertEquals("Next at 9:00 tomorrow", sertraline.dueLine)
         assertFalse(sertraline.overdue)
