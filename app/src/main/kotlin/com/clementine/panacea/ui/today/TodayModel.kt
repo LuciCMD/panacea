@@ -29,10 +29,8 @@ data class CardState(
     val type: MedicationType,
     val category: Category,
     val doseLine: String,
-    /** "Taken at 8:27 · 3 h 39 min ago": when it was last taken. */
+    /** "Took 7.5 mg at 8:27 · 3 h 39 min ago": what was last taken, and when. */
     val lastTakenLine: String,
-    /** "15 mg in the last 24 h", or the count of doses when no dose is set; on the medication's page. */
-    val last24hLine: String,
     /** "Next at 21:00", "Usually around 23:30" (learned), or the overdue warning; null without either. */
     val dueLine: String?,
     val overdue: Boolean,
@@ -51,7 +49,6 @@ data class StripDot(val fraction: Float, val label: String)
 object TodayModel {
     /** An unlogged reminder older than this is history, not something due. */
     private val OVERDUE_FOR = Duration.ofHours(12)
-    private val ONE_DAY = Duration.ofHours(24)
 
     /** A learned dose is due from this long before its usual time, as a fixed reminder's early window. */
     private const val LEARNED_EARLY_MINUTES = 60L
@@ -99,12 +96,6 @@ object TodayModel {
         val lastAmount = TodayText.doseAmount(s.lastAmount ?: 0.0, s.lastUnit ?: med.doseUnit, s.lastDoseMultiplier ?: 1.0, type)
         var lastTaken = TodayText.lastTaken(s.lastTakenAt, lastAmount, now, f)
         s.lastTakenAt?.takeIf { it <= nowMs }?.let { lastTaken += " · " + TodayText.ago(it, now) }
-        val inDay = doses.filter { nowMs - it.takenAt in 0..ONE_DAY.toMillis() }
-        val last24h = if (med.dose > 0) {
-            TodayText.inLast24h(inDay.filter { it.unit == med.doseUnit }.sumOf { it.amount }, med.doseUnit)
-        } else {
-            TodayText.dosesInLast24h(inDay.size)
-        }
 
         // Fixed reminders say when it's due; without any, a learned routine says when it usually is.
         if (reminders.isEmpty() && med.learnRoutine && learningTimes != null) {
@@ -115,7 +106,6 @@ object TodayModel {
                     category = Category.fromKey(med.category),
                     doseLine = TodayText.doseLine(med, ingredients),
                     lastTakenLine = lastTaken,
-                    last24hLine = last24h,
                     dueLine = TodayText.usually(l.expected, l.missed, now, f),
                     overdue = l.missed,
                     dueNow = l.missed || !now.isBefore(l.expected.minusMinutes(LEARNED_EARLY_MINUTES)),
@@ -130,7 +120,6 @@ object TodayModel {
             category = Category.fromKey(med.category),
             doseLine = TodayText.doseLine(med, ingredients),
             lastTakenLine = lastTaken,
-            last24hLine = last24h,
             dueLine = due.overdueAt?.let { TodayText.overdue(it, now, f) }
                 ?: due.next?.let { TodayText.next(it, now, f) }
                 // Learning, but too few doses yet to know a routine: say so, rather than nothing.

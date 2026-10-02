@@ -24,11 +24,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +48,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.clementine.panacea.ui.edit.EditMedicationScreen
@@ -197,53 +198,61 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
             .background(Colors.Ground)
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
     ) {
-        NavDisplay(
-            backStack = backStack,
-            modifier = Modifier.weight(1f),
-            onBack = { pop() },
-            transitionSpec = { fade() },
-            popTransitionSpec = { fade() },
-            predictivePopTransitionSpec = { fade() },
-            entryProvider = { route ->
-                NavEntry(route, contentKey = route.id) {
-                    when (route) {
-                        is Route.Top -> when (route.tab) {
-                            Tab.TODAY -> TodayScreen(
-                                onAdd = { backStack.add(Route.EditMedication(null)) },
-                                onOpen = { backStack.add(Route.Medication(it)) },
-                                onRearrange = { backStack.add(Route.Rearrange) },
+        Box(Modifier.weight(1f)) {
+            NavDisplay(
+                backStack = backStack,
+                modifier = Modifier.fillMaxSize(),
+                onBack = { pop() },
+                transitionSpec = { fade() },
+                popTransitionSpec = { fade() },
+                predictivePopTransitionSpec = { fade() },
+                entryProvider = { route ->
+                    NavEntry(route, contentKey = route.id) {
+                        when (route) {
+                            is Route.Top -> when (route.tab) {
+                                Tab.TODAY -> TodayScreen(
+                                    onAdd = { backStack.add(Route.EditMedication(null)) },
+                                    onOpen = { backStack.add(Route.Medication(it)) },
+                                    onRearrange = { backStack.add(Route.Rearrange) },
+                                )
+                                Tab.REMINDERS -> RemindersScreen(
+                                    onAdd = { backStack.add(Route.EditReminder(null)) },
+                                    onOpen = { backStack.add(Route.EditReminder(it)) },
+                                    onOpenMedication = { backStack.add(Route.Medication(it)) },
+                                )
+                                Tab.HISTORY -> HistoryScreen()
+                                Tab.SETTINGS -> SettingsScreen()
+                            }
+                            is Route.Medication -> MedicationScreen(
+                                route.medicationId,
+                                onBack = { backStack.remove(route) },
+                                onEdit = { backStack.add(Route.EditMedication(route.medicationId)) },
+                                onAddReminder = { backStack.add(Route.EditReminder(null, route.medicationId)) },
+                                onOpenReminder = { backStack.add(Route.EditReminder(it)) },
                             )
-                            Tab.REMINDERS -> RemindersScreen(
-                                onAdd = { backStack.add(Route.EditReminder(null)) },
-                                onOpen = { backStack.add(Route.EditReminder(it)) },
-                                onOpenMedication = { backStack.add(Route.Medication(it)) },
+                            Route.Rearrange -> RearrangeScreen(onBack = { backStack.remove(Route.Rearrange) })
+                            is Route.EditReminder -> EditReminderScreen(route.reminderId, route.medicationId, onDone = { backStack.remove(route) })
+                            is Route.EditMedication -> EditMedicationScreen(
+                                route.medicationId,
+                                onDone = { pop() },
+                                // Its own page goes too; there's nothing left to show.
+                                onRemoved = { id ->
+                                    backStack.removeAll {
+                                        (it is Route.Medication && it.medicationId == id) || (it is Route.EditMedication && it.medicationId == id)
+                                    }
+                                },
                             )
-                            Tab.HISTORY -> HistoryScreen()
-                            Tab.SETTINGS -> SettingsScreen()
                         }
-                        is Route.Medication -> MedicationScreen(
-                            route.medicationId,
-                            onBack = { backStack.remove(route) },
-                            onEdit = { backStack.add(Route.EditMedication(route.medicationId)) },
-                            onAddReminder = { backStack.add(Route.EditReminder(null, route.medicationId)) },
-                            onOpenReminder = { backStack.add(Route.EditReminder(it)) },
-                        )
-                        Route.Rearrange -> RearrangeScreen(onBack = { backStack.remove(Route.Rearrange) })
-                        is Route.EditReminder -> EditReminderScreen(route.reminderId, route.medicationId, onDone = { backStack.remove(route) })
-                        is Route.EditMedication -> EditMedicationScreen(
-                            route.medicationId,
-                            onDone = { pop() },
-                            // Its own page goes too; there's nothing left to show.
-                            onRemoved = { id ->
-                                backStack.removeAll {
-                                    (it is Route.Medication && it.medicationId == id) || (it is Route.EditMedication && it.medicationId == id)
-                                }
-                            },
-                        )
                     }
-                }
-            },
-        )
+                },
+            )
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    .background(Colors.Ground),
+            )
+        }
         if (tab != null) {
             BottomBar(tab) { picked ->
                 // Every tab sits on top of Today, so Back from any of them comes home first.
@@ -296,7 +305,7 @@ private fun BottomBar(current: Tab, onPick: (Tab) -> Unit) {
                     }
                     Text(
                         t.label,
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         softWrap = false,
                         color = if (selected) Colors.Ink else Colors.Muted,

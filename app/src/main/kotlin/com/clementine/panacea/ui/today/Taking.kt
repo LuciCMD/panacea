@@ -23,7 +23,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.model.MedicationType
@@ -33,6 +32,7 @@ import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateToast
+import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import kotlinx.coroutines.delay
@@ -55,16 +55,15 @@ fun rememberTake(viewModel: TodayViewModel): (medicationId: Long, multiplier: Do
 
 /**
  * What's been had, then what's due, always in that order. The answers lead in ink; the next time is
- * muted until it's missed, when it turns warn at the same size. [withTotal] adds the last 24 hours'
- * total, which the medication's page shows and Today leaves out.
+ * muted until it's missed, when it turns warn at the same size. The 24 h total is the medication
+ * page's Totals card, not a status line.
  */
 @Composable
-fun StatusLines(card: CardState, withTotal: Boolean = false) {
+fun StatusLines(card: CardState) {
     val lead = MaterialTheme.typography.bodyLarge.merge(Numbers)
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(keepPhrases(card.lastTakenLine), style = lead, color = Colors.Ink)
-        if (withTotal) Text(keepPhrases(card.last24hLine), style = lead, color = Colors.Ink)
         card.dueLine?.let {
             Text(
                 keepPhrases(it),
@@ -108,7 +107,7 @@ fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAm
         ) {
             Text(
                 TodayText.multiplier(med.lastMultiplier),
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp).merge(Numbers),
+                style = MaterialTheme.typography.labelLarge.merge(Numbers),
                 color = if (usual) Colors.Muted else Colors.Ink,
                 fontWeight = if (usual) FontWeight.Normal else FontWeight.Medium,
             )
@@ -125,7 +124,7 @@ fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAm
                 .weight(1f)
                 .semantics { contentDescription = if (justTaken) "${med.name} logged" else "Take $amount of ${med.name}" },
         ) {
-            Icon(Glyphs.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+            Icon(Glyphs.Check, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
             Text(
                 // The name is the card's title; the button says what a tap will log.
                 if (justTaken) "Logged" else "Take $amount",

@@ -113,11 +113,6 @@ object TodayText {
     const val STRIP =
         "Each dot is a dose logged today, placed at the time it was taken. The upright line is now."
 
-    fun inLast24h(total: Double, unit: String) = "${formatAmount(total)} $unit in the last 24 h"
-
-    /** For a medication with no dose set: "2 doses in the last 24 h". */
-    fun dosesInLast24h(count: Int) = "${counted(count, "dose")} in the last 24 h"
-
     fun header(now: ZonedDateTime, f: TimeFormats) = "${now.format(f.longDate)} · ${now.format(f.time)}"
 
     fun dosesToday(count: Int) = if (count == 1) "1 logged" else "$count logged"

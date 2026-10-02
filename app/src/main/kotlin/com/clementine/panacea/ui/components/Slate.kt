@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
@@ -57,6 +58,10 @@ import com.clementine.panacea.ui.theme.Colors
 
 /** Tonal is the accent, quietly: a lavender tint with lavender text, for an action that isn't due. */
 enum class ButtonKind { Plain, Primary, Tonal, Delete, Text }
+
+/** An icon beside text, sized in text units so it grows with Android's font size as the words do. */
+@Composable
+fun textIcon(size: Dp): Dp = with(LocalDensity.current) { size.value.sp.toDp() }
 
 /**
  * Slate button: flat, radius 8, no border. Pressed and hovered it takes the white wash, focused from
@@ -176,7 +181,7 @@ fun SlateToast(
             Box(Modifier.width(5.dp).fillMaxHeight().background(stripe))
             Text(
                 message,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f).padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             )
             SlateButton(onClick = onAction, kind = ButtonKind.Text, modifier = Modifier.padding(end = 6.dp)) {
@@ -206,7 +211,7 @@ fun ConfirmDialog(
                 Text(title, style = MaterialTheme.typography.titleLarge, color = Colors.Ink)
                 Text(
                     text,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                    style = MaterialTheme.typography.bodyLarge,
                     color = Colors.Muted,
                     modifier = Modifier.padding(top = 12.dp),
                 )

@@ -31,7 +31,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import com.clementine.panacea.ui.components.SlateIconButton
+import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.ConfirmDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,15 +63,15 @@ import com.clementine.panacea.model.Category
 import com.clementine.panacea.model.DoseUnits
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.WeightUnit
-import com.clementine.panacea.ui.components.ButtonKind
-import com.clementine.panacea.ui.components.ConfirmDialog
 import com.clementine.panacea.ui.components.FieldLabel
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.SlateDropdown
+import com.clementine.panacea.ui.components.SlateIconButton
 import com.clementine.panacea.ui.components.SlateTextField
 import com.clementine.panacea.ui.components.screenPadding
+import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.icons.TypeIcons
 import com.clementine.panacea.ui.theme.Colors
@@ -489,7 +490,7 @@ private fun IngredientsCard(d: MedicationDraft, problems: DraftProblems, update:
         }
         if (d.ingredients.size < Drafts.MAX_INGREDIENTS) {
             SlateButton(onClick = { update(d.copy(ingredients = d.ingredients + IngredientDraft())) }) {
-                Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
                 Text("Add Ingredient", style = MaterialTheme.typography.labelLarge)
             }
         }

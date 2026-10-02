@@ -24,7 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import com.clementine.panacea.ui.components.SlateIconButton
+import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.ConfirmDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,19 +47,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundEvent
-import com.clementine.panacea.ui.components.ButtonKind
-import com.clementine.panacea.ui.components.ConfirmDialog
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
+import com.clementine.panacea.ui.components.SlateIconButton
 import com.clementine.panacea.ui.components.screenPadding
+import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.edit.PhotoViewer
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.edit.PillSide
@@ -134,7 +134,7 @@ fun MedicationScreen(
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 CardRing(card)
-                                StatusLines(card, withTotal = true)
+                                StatusLines(card)
                             }
                             TakeButtons(
                                 med,
@@ -167,7 +167,7 @@ fun MedicationScreen(
             }
             item(key = "add-reminder") {
                 SlateButton(onClick = onAddReminder, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
                     Text("Add Reminder")
                 }
             }
@@ -323,7 +323,7 @@ private fun FactRow(fact: Fact) {
 
 @Composable
 private fun TotalsCard(totals: Totals) {
-    val head = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp)
+    val head = MaterialTheme.typography.labelMedium
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     SectionCard("Totals") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -390,7 +390,7 @@ private fun DayCard(day: HistoryDay, onRemove: (HistoryItem) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             day.title,
-            style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
+            style = MaterialTheme.typography.labelMedium,
             color = Colors.Muted,
             modifier = Modifier.padding(start = 4.dp),
         )

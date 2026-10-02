@@ -26,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.sound.LocalSoundPlayer
@@ -65,7 +64,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = viewModel(factory = HistoryViewM
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     day.title,
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
+                    style = MaterialTheme.typography.labelMedium,
                     color = Colors.Muted,
                     modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                 )

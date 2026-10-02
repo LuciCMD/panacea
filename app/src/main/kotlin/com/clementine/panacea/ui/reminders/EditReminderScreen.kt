@@ -20,7 +20,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import com.clementine.panacea.ui.components.SlateIconButton
+import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.ConfirmDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,17 +43,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.model.RepeatType
 import com.clementine.panacea.ui.TimeFormats
-import com.clementine.panacea.ui.components.ButtonKind
-import com.clementine.panacea.ui.components.ConfirmDialog
 import com.clementine.panacea.ui.components.FieldLabel
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.SlateDropdown
+import com.clementine.panacea.ui.components.SlateIconButton
 import com.clementine.panacea.ui.components.SlateTextField
 import com.clementine.panacea.ui.components.TimeDialog
 import com.clementine.panacea.ui.components.screenPadding
+import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import java.time.LocalTime
@@ -368,7 +369,7 @@ private fun TimeButton(minutes: Int, f: TimeFormats, label: String, onClick: () 
     val time = format(minutes, f)
     // The button reads out as "From, 8:00".
     SlateButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Icon(Glyphs.Clock, contentDescription = label, modifier = Modifier.size(18.dp))
+        Icon(Glyphs.Clock, contentDescription = label, modifier = Modifier.size(textIcon(18.dp)))
         Text(time, style = MaterialTheme.typography.bodyLarge.merge(Numbers))
     }
 }

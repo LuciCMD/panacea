@@ -39,7 +39,6 @@ import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 
@@ -166,7 +165,7 @@ fun <T> SlateDropdown(
                     text = {
                         Text(
                             label(option),
-                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = if (isSelected) Colors.Accent else Colors.Ink,
                             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
                         )

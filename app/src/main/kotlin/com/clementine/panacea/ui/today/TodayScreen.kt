@@ -39,21 +39,21 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.model.Category
-import com.clementine.panacea.ui.components.Numbers
-import com.clementine.panacea.ui.components.ProgressRing
 import com.clementine.panacea.ui.components.AxisLabels
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.InfoTip
+import com.clementine.panacea.ui.components.Numbers
+import com.clementine.panacea.ui.components.ProgressRing
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.screenPadding
+import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.icons.TypeIcons
@@ -147,7 +147,7 @@ fun TodayScreen(
 
 @Composable
 private fun DayStripCard(strip: DayStrip) {
-    val small = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp).merge(Numbers)
+    val small = MaterialTheme.typography.bodyMedium.merge(Numbers)
     val description = if (strip.dots.isEmpty()) "No doses logged today" else "Logged today: " + strip.dots.joinToString { it.label }
     SlateCard(Modifier.fillMaxWidth()) {
         Column(
@@ -180,7 +180,7 @@ private fun DayStripCard(strip: DayStrip) {
                 }
                 drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
             }
-            AxisLabels(strip.axis, small.copy(fontSize = 11.sp), Colors.Faint, Modifier.clearAndSetSemantics { })
+            AxisLabels(strip.axis, MaterialTheme.typography.bodySmall.merge(Numbers), Colors.Faint, Modifier.clearAndSetSemantics { })
         }
     }
 }
@@ -204,7 +204,7 @@ private fun NoMedicationsCard(onAdd: () -> Unit) {
                 )
             }
             SlateButton(onClick = onAdd, kind = ButtonKind.Primary, modifier = Modifier.fillMaxWidth()) {
-                Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
                 Text("Add Medication")
             }
         }

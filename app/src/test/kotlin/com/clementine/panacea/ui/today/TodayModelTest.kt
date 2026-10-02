@@ -146,12 +146,10 @@ class TodayModelTest {
 
         val ibuprofen = ui.cards[0]
         assertEquals("Took 200 mg at 10:00 · 3 h 16 min ago", ibuprofen.lastTakenLine)
-        assertEquals("600 mg in the last 24 h", ibuprofen.last24hLine)
         assertNull(ibuprofen.dueLine)
         assertFalse(ibuprofen.dueNow)
         val sertraline = ui.cards[1]
         assertEquals("Took 50 mg at 9:04 · 4 h 12 min ago", sertraline.lastTakenLine)
-        assertEquals("50 mg in the last 24 h", sertraline.last24hLine)
         assertEquals("Next at 9:00 tomorrow", sertraline.dueLine)
         assertFalse(sertraline.overdue)
         assertFalse(sertraline.dueNow)
@@ -175,13 +173,7 @@ class TodayModelTest {
         val missed = card(listOf(daily(12 * 60)))
         assertTrue(missed.overdue)
         assertTrue(missed.dueNow)
-        assertEquals("0 mg in the last 24 h", missed.last24hLine)
         // No schedule at all: never due, and Take stays the quieter kind.
         assertFalse(card(emptyList()).dueNow)
-        // Without a dose set, the day is counted in doses.
-        val noDose = TodayModel.build(
-            listOf(MedicationSummary(med.copy(dose = 0.0), null)), emptyList(), emptyList(), emptyList(), emptyList(), now, formats,
-        ).cards.single()
-        assertEquals("0 doses in the last 24 h", noDose.last24hLine)
     }
 }

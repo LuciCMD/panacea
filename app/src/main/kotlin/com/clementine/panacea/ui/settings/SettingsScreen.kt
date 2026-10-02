@@ -43,7 +43,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.data.Settings
@@ -59,6 +58,7 @@ import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.screenPadding
+import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.theme.Palette
@@ -126,7 +126,7 @@ private fun ThemeTile(key: String, selected: Boolean, modifier: Modifier, onClic
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (selected) Icon(Glyphs.Check, contentDescription = null, tint = Colors.Accent, modifier = Modifier.size(16.dp))
+            if (selected) Icon(Glyphs.Check, contentDescription = null, tint = Colors.Accent, modifier = Modifier.size(textIcon(16.dp)))
             Text(
                 label,
                 style = MaterialTheme.typography.bodyMedium,
@@ -201,12 +201,12 @@ private fun SoundsCard(viewModel: SettingsViewModel) {
                     val custom = setting.custom
                     if (custom != null) {
                         SlateChip(mode == SoundMode.CUSTOM, { viewModel.setMode(event, SoundMode.CUSTOM) }) {
-                            Icon(Glyphs.File, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Glyphs.File, contentDescription = null, modifier = Modifier.size(textIcon(16.dp)))
                             ChipText(custom.name, Modifier.widthIn(max = 180.dp))
                         }
                     }
                     SlateChip(false, { pick(event) }) {
-                        Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(textIcon(16.dp)))
                         ChipText(if (adding == event) "Adding…" else if (custom == null) "Choose a File" else "Another File")
                     }
                 }
@@ -300,7 +300,7 @@ private fun AboutCard() {
             Text("Panacea ${version.orEmpty()}".trim(), style = MaterialTheme.typography.bodyLarge, color = Colors.Ink)
             Text(
                 "Everything stays on this phone: no account, no internet, no tracking.",
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                style = MaterialTheme.typography.bodyMedium,
                 color = Colors.Muted,
             )
         }

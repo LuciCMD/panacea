@@ -3,6 +3,7 @@ package com.clementine.panacea.ui.today
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.Role
 import com.clementine.panacea.ui.theme.SlateIndication
+import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.DISABLED_ALPHA
 import android.text.format.DateFormat
 import android.view.ViewParent
@@ -51,19 +52,18 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.model.Amounts
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.formatAmount
-import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.TimeDialog
 import com.clementine.panacea.ui.components.pastTime
+import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.edit.PhotoViewer
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.edit.PillSide
@@ -107,8 +107,7 @@ fun TakeSheet(
                 Modifier
                     .padding(top = 10.dp)
                     .size(width = 36.dp, height = 4.dp)
-                    .background(Colors.Line, RoundedCornerShape(2.dp))
-                    .semantics { contentDescription = "Drag handle" },
+                    .background(Colors.Line, RoundedCornerShape(2.dp)),
             )
         },
     ) {
@@ -126,7 +125,7 @@ fun TakeSheet(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     "Take ${med.name}",
-                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
+                    style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.semantics { heading() },
                 )
                 perItem(card)?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted) }
@@ -164,7 +163,7 @@ fun TakeSheet(
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         TodayText.multiplier(multiplier),
-                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = 40.sp, lineHeight = 46.sp).merge(Numbers),
+                        style = MaterialTheme.typography.displaySmall.merge(Numbers),
                         // Read as "1.5 tablets", not "multiplication sign 1.5".
                         modifier = Modifier.semantics { contentDescription = MedicationType.fromKey(med.type).pieces(multiplier) },
                     )
@@ -173,7 +172,7 @@ fun TakeSheet(
                             TodayText.amount(med, multiplier).takeIf { med.dose > 0 },
                             TodayText.weightOf(med, multiplier),
                         ).joinToString(" · "),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp).merge(Numbers),
+                        style = MaterialTheme.typography.bodyLarge.merge(Numbers),
                         color = Colors.Muted,
                     )
                 }
@@ -204,11 +203,11 @@ fun TakeSheet(
             HorizontalDivider(color = Colors.LineSoft)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("Taken At", style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp))
+                    Text("Taken At", style = MaterialTheme.typography.bodyLarge)
                     Text(takenAtText(takenAt, now, formats), style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted)
                 }
                 SlateButton(onClick = { picking = true }) {
-                    Icon(Glyphs.Clock, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Glyphs.Clock, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
                     Text(if (takenAt == null) "I Took It Earlier" else "Change Time", style = MaterialTheme.typography.labelLarge)
                 }
             }
@@ -225,7 +224,8 @@ fun TakeSheet(
                 kind = ButtonKind.Primary,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             ) {
-                Text("Take ${TodayText.amount(med, multiplier)}", style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp).merge(Numbers))
+                Icon(Glyphs.Check, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
+                Text("Take ${TodayText.amount(med, multiplier)}", style = MaterialTheme.typography.labelLarge.merge(Numbers))
             }
         }
     }

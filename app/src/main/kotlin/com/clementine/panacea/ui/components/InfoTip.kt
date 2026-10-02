@@ -45,14 +45,14 @@ fun InfoTip(about: String, text: String, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
     Box(
         modifier
-            // Small on screen; Compose widens the touch area to 48dp around it.
-            .size(28.dp)
+            // Small on screen, growing with the text; Compose widens the touch area to 48dp around it.
+            .size(textIcon(28.dp))
             .clip(CircleShape)
             .clickable(onClickLabel = "Explain") { open = !open }
             .semantics { contentDescription = "About $about" },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Glyphs.Info, contentDescription = null, tint = if (open) Colors.Accent else Colors.Faint, modifier = Modifier.size(18.dp))
+        Icon(Glyphs.Info, contentDescription = null, tint = if (open) Colors.Accent else Colors.Faint, modifier = Modifier.size(textIcon(18.dp)))
         if (open) {
             val density = LocalDensity.current
             val beside = remember(density) { with(density) { Beside(gap = 12.dp.roundToPx(), margin = 16.dp.roundToPx()) } }
