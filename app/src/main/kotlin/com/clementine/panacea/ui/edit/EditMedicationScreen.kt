@@ -53,6 +53,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.data.db.MedicationCounts
@@ -283,7 +285,14 @@ private fun TypeCard(d: MedicationDraft, update: (MedicationDraft) -> Unit) {
     SectionCard("Type") {
         val types = if (all) MedicationType.entries else CommonTypes
         val tiles: List<MedicationType?> = if (all) types else types + null   // null is "More"
-        tiles.chunked(4).forEach { row ->
+        // Fewer, wider tiles when the phone's text is large, so names like Suppository still fit.
+        val scale = LocalDensity.current.fontScale
+        val columns = when {
+            scale < 1.3f -> 4
+            scale < 1.7f -> 3
+            else -> 2
+        }
+        tiles.chunked(columns).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { t ->
                     TypeTile(
@@ -294,7 +303,7 @@ private fun TypeCard(d: MedicationDraft, update: (MedicationDraft) -> Unit) {
                         onClick = { if (t == null) all = true else update(d.copy(type = t)) },
                     )
                 }
-                repeat(4 - row.size) { Box(Modifier.weight(1f)) }
+                repeat(columns - row.size) { Box(Modifier.weight(1f)) }
             }
         }
     }
@@ -319,7 +328,7 @@ private fun TypeTile(label: String, icon: androidx.compose.ui.graphics.vector.Im
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Icon(icon, contentDescription = null)
-            Text(label, style = MaterialTheme.typography.bodySmall, maxLines = 1, textAlign = TextAlign.Center)
+            Text(label, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
         }
     }
 }
@@ -443,7 +452,7 @@ private fun IngredientsCard(d: MedicationDraft, problems: DraftProblems, update:
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                     )
                     IconButton(onClick = { update(d.copy(ingredients = d.ingredients.filterIndexed { j, _ -> j != i })) }) {
-                        Icon(Glyphs.Close, contentDescription = "Remove ingredient ${i + 1}", tint = Colors.Muted)
+                        Icon(Glyphs.Close, contentDescription = ing.name.trim().ifEmpty { null }?.let { "Remove $it" } ?: "Remove ingredient ${i + 1}", tint = Colors.Muted)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(end = 52.dp)) {

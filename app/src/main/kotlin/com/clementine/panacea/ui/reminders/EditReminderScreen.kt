@@ -3,6 +3,7 @@ package com.clementine.panacea.ui.reminders
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -342,18 +343,19 @@ private fun format(minutes: Int, f: TimeFormats) = LocalTime.of(minutes / 60, mi
 @Composable
 private fun TimePill(minutes: Int, f: TimeFormats, onChange: () -> Unit, onRemove: (() -> Unit)?) {
     val time = format(minutes, f)
-    Surface(shape = RoundedCornerShape(18.dp), color = Colors.Field, contentColor = Colors.Ink) {
+    Surface(shape = RoundedCornerShape(24.dp), color = Colors.Field, contentColor = Colors.Ink) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                time,
-                style = MaterialTheme.typography.bodyLarge.merge(Numbers),
-                modifier = Modifier
+            Box(
+                Modifier
                     .clickable(onClickLabel = "Change $time", onClick = onChange)
-                    .heightIn(min = 36.dp)
-                    .padding(start = 14.dp, end = if (onRemove == null) 14.dp else 4.dp, top = 8.dp, bottom = 8.dp),
-            )
+                    .heightIn(min = 48.dp)
+                    .padding(start = 16.dp, end = if (onRemove == null) 16.dp else 2.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(time, style = MaterialTheme.typography.bodyLarge.merge(Numbers))
+            }
             if (onRemove != null) {
-                IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
                     Icon(Glyphs.Close, contentDescription = "Remove $time", tint = Colors.Muted, modifier = Modifier.size(16.dp))
                 }
             }

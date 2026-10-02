@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -228,7 +230,8 @@ private fun BottomBar(current: Tab, onPick: (Tab) -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(68.dp)
+                .heightIn(min = 68.dp)
+                .height(IntrinsicSize.Min)
                 .padding(horizontal = 8.dp)
                 .selectableGroup(),
             verticalAlignment = Alignment.CenterVertically,
@@ -239,6 +242,7 @@ private fun BottomBar(current: Tab, onPick: (Tab) -> Unit) {
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .padding(vertical = 6.dp)
                         .selectable(selected = selected, onClick = { onPick(t) }, role = Role.Tab),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
@@ -254,6 +258,8 @@ private fun BottomBar(current: Tab, onPick: (Tab) -> Unit) {
                     Text(
                         t.label,
                         fontSize = 12.sp,
+                        maxLines = 1,
+                        softWrap = false,
                         color = if (selected) Colors.Ink else Colors.Muted,
                         fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
                     )

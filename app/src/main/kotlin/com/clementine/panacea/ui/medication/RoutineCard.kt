@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.clementine.panacea.ui.components.AxisLabels
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateSwitch
@@ -76,10 +77,6 @@ private fun DayLine(routine: RoutineUi) {
                 drawRect(tick, Offset((t * size.width - w / 2).coerceIn(0f, size.width - w), mid - h / 2), Size(w, h))
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            routine.axis.forEach {
-                Text(it, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp).merge(Numbers), color = Colors.Faint)
-            }
-        }
+        AxisLabels(routine.axis, MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp).merge(Numbers), Colors.Faint)
     }
 }

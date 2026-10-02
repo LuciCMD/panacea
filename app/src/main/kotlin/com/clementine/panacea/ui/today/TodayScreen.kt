@@ -44,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.model.Category
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.ProgressRing
+import com.clementine.panacea.ui.components.AxisLabels
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SectionCard
@@ -176,12 +177,7 @@ private fun DayStripCard(strip: DayStrip) {
                 }
                 drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
             }
-            Row(
-                Modifier.fillMaxWidth().clearAndSetSemantics { },
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                strip.axis.forEach { Text(it, style = small.copy(fontSize = 11.sp), color = Colors.Faint) }
-            }
+            AxisLabels(strip.axis, small.copy(fontSize = 11.sp), Colors.Faint, Modifier.clearAndSetSemantics { })
         }
     }
 }

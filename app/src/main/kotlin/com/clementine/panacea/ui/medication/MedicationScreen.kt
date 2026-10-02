@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -270,7 +271,8 @@ private fun PhotosCard(med: MedicationEntity, onView: (PillSide) -> Unit, onEdit
                             null,
                             tile
                                 .background(Colors.Field)
-                                .clickable(onClickLabel = "View the ${side.label.lowercase()} up close") { onView(side) },
+                                .clickable(onClickLabel = "View the ${side.label.lowercase()} up close") { onView(side) }
+                                .semantics { contentDescription = "${side.label} of ${med.name}" },
                             px = 640,
                         )
                     } else {
@@ -398,9 +400,11 @@ private fun DayCard(day: HistoryDay, onRemove: (HistoryItem) -> Unit) {
                     Row(
                         Modifier
                             .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                             .clickable(onClickLabel = "Remove this dose") { onRemove(item) }
                             .padding(horizontal = 14.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(item.time, style = body, color = Colors.Ink, modifier = Modifier.widthIn(min = 64.dp))
                         Text(item.amount, style = body, color = Colors.Muted, modifier = Modifier.weight(1f))

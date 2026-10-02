@@ -98,7 +98,13 @@ fun TakeSheet(
         contentColor = Colors.Ink,
         scrimColor = Color(0x990A0A0E),
         dragHandle = {
-            Box(Modifier.padding(top = 10.dp).size(width = 36.dp, height = 4.dp).background(Colors.Line, RoundedCornerShape(2.dp)))
+            Box(
+                Modifier
+                    .padding(top = 10.dp)
+                    .size(width = 36.dp, height = 4.dp)
+                    .background(Colors.Line, RoundedCornerShape(2.dp))
+                    .semantics { contentDescription = "Drag handle" },
+            )
         },
     ) {
         // The sheet has its own window, where Android would shade the navigation bar.
