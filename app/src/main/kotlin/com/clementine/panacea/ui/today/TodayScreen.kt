@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -45,6 +45,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.model.Category
 import com.clementine.panacea.ui.components.AxisLabels
 import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.EmptyCard
 import com.clementine.panacea.ui.components.InfoTip
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.ProgressRing
@@ -54,7 +55,6 @@ import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.screenPadding
-import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.icons.TypeIcons
@@ -106,7 +106,15 @@ fun TodayScreen(
                     item(key = "import") { ImportProblemsCard(importProblems, viewModel::dismissImportProblems) }
                 }
                 if (state.cards.isEmpty()) {
-                    item(key = "empty") { NoMedicationsCard(onAdd) }
+                    item(key = "empty") {
+                        EmptyCard(
+                            "No Medications Yet",
+                            "Add what you take, and Today shows how much you last took and when, and when the next dose is due.",
+                            "Add Medication",
+                            Glyphs.Plus,
+                            onAdd,
+                        )
+                    }
                 } else {
                     item(key = "strip") { DayStripCard(state.strip) }
                 }
@@ -182,32 +190,6 @@ private fun DayStripCard(strip: DayStrip) {
                 drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
             }
             AxisLabels(strip.axis, MaterialTheme.typography.bodySmall.merge(Numbers), Colors.Muted, Modifier.padding(top = 8.dp).clearAndSetSemantics { })
-        }
-    }
-}
-
-/** Before anything is added: what Today will show, and the way to start. */
-@Composable
-private fun NoMedicationsCard(onAdd: () -> Unit) {
-    SlateCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    "No Medications Yet",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Colors.Ink,
-                    modifier = Modifier.semantics { heading() },
-                )
-                Text(
-                    "Add what you take, and Today shows how much you last took and when, and when the next dose is due.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Colors.Muted,
-                )
-            }
-            SlateButton(onClick = onAdd, kind = ButtonKind.Primary, modifier = Modifier.fillMaxWidth()) {
-                Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
-                Text("Add Medication")
-            }
         }
     }
 }

@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -19,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -98,6 +101,23 @@ fun SectionCard(
                 hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted) }
             }
             content()
+        }
+    }
+}
+
+/** An empty list: what will show up here, and the one thing to do about it. */
+@Composable
+fun EmptyCard(title: String, text: String, action: String, icon: ImageVector, onAction: () -> Unit) {
+    SlateCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = Colors.Ink, modifier = Modifier.semantics { heading() })
+                Text(text, style = MaterialTheme.typography.bodyLarge, color = Colors.Muted)
+            }
+            SlateButton(onClick = onAction, kind = ButtonKind.Primary, modifier = Modifier.fillMaxWidth()) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
+                Text(action)
+            }
         }
     }
 }

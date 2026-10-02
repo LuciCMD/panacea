@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,13 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clementine.panacea.ui.components.EmptyCard
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.screenPadding
 import com.clementine.panacea.ui.counted
-import com.clementine.panacea.ui.theme.Colors
+import com.clementine.panacea.ui.icons.Glyphs
 
 @Composable
-fun HistoryScreen(viewModel: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory)) {
+fun HistoryScreen(onGoToday: () -> Unit, viewModel: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory)) {
     val days by viewModel.days.collectAsStateWithLifecycle()
     // An id, so the sheet shows the dose as it is after a change.
     var opened by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -39,7 +38,13 @@ fun HistoryScreen(viewModel: HistoryViewModel = viewModel(factory = HistoryViewM
         }
         if (list != null && list.isEmpty()) {
             item(key = "empty") {
-                Text("Doses you log show up here.", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
+                EmptyCard(
+                    "Nothing Logged Yet",
+                    "Each dose you log on Today shows up here, by day. Tap one to change its time or amount.",
+                    "Go to Today",
+                    Glyphs.Today,
+                    onGoToday,
+                )
             }
         }
         items(list.orEmpty(), key = { it.doses.first().id }) { day ->

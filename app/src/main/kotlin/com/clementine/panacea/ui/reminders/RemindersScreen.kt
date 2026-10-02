@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,27 +31,27 @@ import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.ReminderEntity
-import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.reminder.Reminders
+import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.reminder.Schedule
 import com.clementine.panacea.ui.Prompt
 import com.clementine.panacea.ui.TimeFormats
+import com.clementine.panacea.ui.components.EmptyCard
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.screenPadding
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.minuteTicks
-import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.timeFormats
 import com.clementine.panacea.ui.today.TodayText
+import java.time.Instant
+import java.time.ZonedDateTime
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZonedDateTime
 
 data class ReminderCard(
     val id: Long,
@@ -203,6 +202,7 @@ class RemindersViewModel(private val repository: MedicationRepository, private v
 @Composable
 fun RemindersScreen(
     onAdd: () -> Unit,
+    onAddMedication: () -> Unit,
     onOpen: (reminderId: Long) -> Unit,
     onOpenMedication: (medicationId: Long) -> Unit,
     viewModel: RemindersViewModel = viewModel(factory = RemindersViewModel.Factory),
@@ -252,12 +252,18 @@ fun RemindersScreen(
         }
         if (state.isEmpty) {
             item(key = "empty") {
-                val text = if (state.hasMedications) {
-                    "Tap + to set up a reminder, or turn on Learn My Routine on a medication's page."
+                if (state.hasMedications) {
+                    EmptyCard(
+                        "No Reminders Yet",
+                        "A reminder goes off at the times you choose. To be asked only when a usual dose seems missed, " +
+                            "turn on Learn My Routine on a medication's page.",
+                        "Add Reminder",
+                        Glyphs.Plus,
+                        onAdd,
+                    )
                 } else {
-                    "Add a medication first, then set up its reminders here."
+                    EmptyCard("No Medications Yet", "Add a medication first, then set up its reminders here.", "Add Medication", Glyphs.Plus, onAddMedication)
                 }
-                Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
             }
         }
         items(state.cards, key = { it.id }) { card ->

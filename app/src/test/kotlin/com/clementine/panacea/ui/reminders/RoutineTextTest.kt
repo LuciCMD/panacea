@@ -42,6 +42,10 @@ class RoutineTextTest {
             RoutineText.summary(Routine.Learning(3, 2), on = true, nextAsk = null, now, formats),
         )
         assertEquals(
+            "Panacea has 3 of the 5 doses it needs to learn your routine. Turn this on to be asked when a dose seems to be missing.",
+            RoutineText.summary(Routine.Learning(3, 2), on = false, nextAsk = null, now, formats),
+        )
+        assertEquals(
             "You usually take it around 9:00, give or take 20 minutes. Turn this on to be asked when a dose seems to be missing.",
             RoutineText.summary(morning, on = false, nextAsk = null, now, formats),
         )

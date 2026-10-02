@@ -34,10 +34,15 @@ object RoutineText {
         return when (routine) {
             is Routine.Learning -> {
                 val doses = "${routine.doses} of ${Routines.MIN_DOSES} doses"
-                "Still learning: $doses so far, on ${plural(routine.days, "day")}. " +
-                    "It needs ${Routines.MIN_DOSES} doses over at least ${Routines.MIN_DAYS} days in the last 4 weeks."
+                if (on) {
+                    "Still learning: $doses so far, on ${plural(routine.days, "day")}. " +
+                        "It needs ${Routines.MIN_DOSES} doses over at least ${Routines.MIN_DAYS} days in the last 4 weeks."
+                } else {
+                    "Panacea has ${routine.doses} of the ${Routines.MIN_DOSES} doses it needs to learn your routine. $ask"
+                }
             }
-            is Routine.Irregular -> "Your doses don't follow a steady pattern yet, so Panacea won't ask for now."
+            is Routine.Irregular ->
+                if (on) "Your doses don't follow a steady pattern yet, so Panacea won't ask for now." else "Your doses don't follow a steady pattern yet. $ask"
             is Routine.TimesOfDay -> {
                 val spread = routine.slots.singleOrNull()?.let { ", give or take ${minutes(it.spread)}" }.orEmpty()
                 "You usually take it $usually$spread. $ask"

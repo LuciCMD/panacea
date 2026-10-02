@@ -163,6 +163,12 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
     val backStack = rememberSaveable(saver = BackStackSaver) { mutableListOf(start).toMutableStateList() }
     val tab = (backStack.last() as? Route.Top)?.tab
     val pop = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
+    val goTo = { picked: Tab ->
+        // Every tab sits on top of Today, so Back from any of them comes home first.
+        backStack.clear()
+        backStack.add(start)
+        if (picked != Tab.TODAY) backStack.add(Route.Top(picked))
+    }
     // Each holds a Prompt's key while its dialog is open.
     var alreadyTaken by rememberSaveable { mutableStateOf<String?>(null) }
     var tookEarlier by rememberSaveable { mutableStateOf<String?>(null) }
@@ -217,10 +223,11 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
                                 )
                                 Tab.REMINDERS -> RemindersScreen(
                                     onAdd = { backStack.add(Route.EditReminder(null)) },
+                                    onAddMedication = { backStack.add(Route.EditMedication(null)) },
                                     onOpen = { backStack.add(Route.EditReminder(it)) },
                                     onOpenMedication = { backStack.add(Route.Medication(it)) },
                                 )
-                                Tab.HISTORY -> HistoryScreen()
+                                Tab.HISTORY -> HistoryScreen(onGoToday = { goTo(Tab.TODAY) })
                                 Tab.SETTINGS -> SettingsScreen()
                             }
                             is Route.Medication -> MedicationScreen(
@@ -254,12 +261,7 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
             )
         }
         if (tab != null) {
-            BottomBar(tab) { picked ->
-                // Every tab sits on top of Today, so Back from any of them comes home first.
-                backStack.clear()
-                backStack.add(start)
-                if (picked != Tab.TODAY) backStack.add(Route.Top(picked))
-            }
+            BottomBar(tab, goTo)
         }
     }
 }

@@ -83,6 +83,9 @@ private val CommonTypes = listOf(
     MedicationType.DROPS, MedicationType.INHALER, MedicationType.IV_INJECTION,
 )
 
+/** Added after the common ones, so those stay put. Unspecified is only for medications brought over without a type. */
+private val MoreTypes = MedicationType.entries - CommonTypes.toSet() - MedicationType.UNSPECIFIED
+
 /** Adds a medication when [id] is null, otherwise edits that one. */
 @Composable
 fun EditMedicationScreen(
@@ -299,9 +302,9 @@ private fun CategoryCard(d: MedicationDraft, update: (MedicationDraft) -> Unit) 
 
 @Composable
 private fun TypeCard(d: MedicationDraft, update: (MedicationDraft) -> Unit) {
-    var all by rememberSaveable { mutableStateOf(d.type !in CommonTypes) }
+    var all by rememberSaveable { mutableStateOf(d.type in MoreTypes) }
     SectionCard("Type") {
-        val types = if (all) MedicationType.entries else CommonTypes
+        val types = if (all) CommonTypes + MoreTypes else CommonTypes
         val tiles: List<MedicationType?> = if (all) types else types + null   // null is "More"
         // Fewer, wider tiles when the phone's text is large, so names like Suppository still fit.
         val scale = LocalDensity.current.fontScale

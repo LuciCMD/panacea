@@ -126,7 +126,6 @@ fun MedicationScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "header") { Header(med.name, ui.subtitle, onBack, onEdit) }
-            item(key = "photos") { PhotosCard(med, onView = { viewing = it }, onEdit = onEdit) }
             if (card != null) {
                 item(key = "take") {
                     SlateCard(Modifier.fillMaxWidth()) {
@@ -145,7 +144,10 @@ fun MedicationScreen(
                     }
                 }
             }
-            item(key = "details") { DetailsCard(ui) }
+            if (med.photoFront != null || med.photoBack != null) {
+                item(key = "photos") { PhotosCard(med, onView = { viewing = it }, onEdit = onEdit) }
+            }
+            item(key = "details") { DetailsCard(ui, onAddPhotos = onEdit.takeIf { med.photoFront == null && med.photoBack == null }) }
             ui.totals?.let { totals -> item(key = "totals") { TotalsCard(totals, card?.had.orEmpty().filter { it.name != null }) } }
 
             item(key = "reminders") { SectionLabel("Reminders") }
@@ -158,7 +160,7 @@ fun MedicationScreen(
             if (ui.reminders.any { it.enabled } || ui.routine.on) {
                 item(key = "notifications") { NotificationsOffCard() }
             }
-            if (ui.reminders.isEmpty()) {
+            if (ui.reminders.isEmpty() && !ui.routine.on) {
                 item(key = "reminders-none") { Quiet("No reminders for this one yet.") }
             }
             items(ui.reminders, key = { "reminder-${it.id}" }) { r ->
@@ -241,15 +243,6 @@ private fun Header(name: String, subtitle: String, onBack: () -> Unit, onEdit: (
 
 @Composable
 private fun PhotosCard(med: MedicationEntity, onView: (PillSide) -> Unit, onEdit: () -> Unit) {
-    if (med.photoFront == null && med.photoBack == null) {
-        SectionCard("Pill Photos", "A photo of each side lets you check a pill at a glance.") {
-            SlateButton(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
-                Icon(Glyphs.Camera, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text("Add Pill Photos")
-            }
-        }
-        return
-    }
     SlateCard(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PillSide.entries.forEach { side ->
@@ -287,7 +280,7 @@ private fun PhotosCard(med: MedicationEntity, onView: (PillSide) -> Unit, onEdit
 }
 
 @Composable
-private fun DetailsCard(ui: MedicationUi) {
+private fun DetailsCard(ui: MedicationUi, onAddPhotos: (() -> Unit)?) {
     SectionCard("Details") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ui.facts.forEach { FactRow(it) }
@@ -297,6 +290,12 @@ private fun DetailsCard(ui: MedicationUi) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Ingredients", style = MaterialTheme.typography.labelLarge, color = Colors.Ink)
                 ui.ingredients.forEach { FactRow(it) }
+            }
+        }
+        onAddPhotos?.let {
+            SlateButton(onClick = it, modifier = Modifier.fillMaxWidth()) {
+                Icon(Glyphs.Camera, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
+                Text("Add Pill Photos")
             }
         }
     }
