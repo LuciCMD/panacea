@@ -39,6 +39,7 @@ import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundEvent
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.ConfirmDialog
+import com.clementine.panacea.ui.components.DoseTimeDialog
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.RoundIconButton
 import com.clementine.panacea.ui.components.SlateButton
@@ -54,7 +55,6 @@ import com.clementine.panacea.ui.today.TodayText
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.ZonedDateTime
 
 /**
  * A day of doses: its name and total above a card of rows. [showMedication] names each dose's
@@ -165,20 +165,29 @@ fun DoseSheet(
     if (picking) {
         val zone = ZoneId.systemDefault()
         val at = Instant.ofEpochMilli(item.dose.takenAt).atZone(zone)
-        TimeDialog(
-            title = "When Did You Take It?",
-            initial = at.toLocalTime(),
-            // The day stays; only a dose from today can land in the future, and that means yesterday.
-            hint = "A time later than now counts as yesterday.".takeIf { at.toLocalDate() == LocalDate.now(zone) },
-            confirmLabel = "Change Time",
-            onPick = { time ->
-                val moved = at.with(time).withSecond(0).withNano(0)
-                val past = if (moved.isAfter(ZonedDateTime.now(zone))) moved.minusDays(1) else moved
-                onChangeTime(past.toInstant().toEpochMilli())
-                picking = false
-            },
-            onDismiss = { picking = false },
-        )
+        if (at.toLocalDate() >= LocalDate.now(zone).minusDays(1)) {
+            DoseTimeDialog(
+                initial = at,
+                confirmLabel = "Change Time",
+                onPick = {
+                    onChangeTime(it.toInstant().toEpochMilli())
+                    picking = false
+                },
+                onDismiss = { picking = false },
+            )
+        } else {
+            // An older dose keeps its day.
+            TimeDialog(
+                title = "When Did You Take It?",
+                initial = at.toLocalTime(),
+                confirmLabel = "Change Time",
+                onPick = { time ->
+                    onChangeTime(at.with(time).withSecond(0).withNano(0).toInstant().toEpochMilli())
+                    picking = false
+                },
+                onDismiss = { picking = false },
+            )
+        }
     }
     if (amounting) {
         AmountDialog(item, onSave = { onChangeAmount(it); amounting = false }, onDismiss = { amounting = false })

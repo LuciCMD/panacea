@@ -164,7 +164,7 @@ fun MedicationScreen(
                 item(key = "reminders-none") { Quiet("No reminders for this one yet.") }
             }
             items(ui.reminders, key = { "reminder-${it.id}" }) { r ->
-                ReminderRow(r, onToggle = { viewModel.setReminderEnabled(r.id, it) }, onOpen = { onOpenReminder(r.id) }, showMedication = false)
+                ReminderRow(r, onToggle = { viewModel.setReminderEnabled(r.id, it) }, onOpen = { onOpenReminder(r.id) })
             }
             item(key = "add-reminder") {
                 SlateButton(onClick = onAddReminder, modifier = Modifier.fillMaxWidth()) {
@@ -288,7 +288,7 @@ private fun DetailsCard(ui: MedicationUi, onAddPhotos: (() -> Unit)?) {
         if (ui.ingredients.isNotEmpty()) {
             HorizontalDivider(color = Colors.LineSoft)
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Ingredients", style = MaterialTheme.typography.labelLarge, color = Colors.Ink)
+                Text("Ingredients", style = MaterialTheme.typography.bodyLarge, color = Colors.Ink, modifier = Modifier.semantics { heading() })
                 ui.ingredients.forEach { FactRow(it) }
             }
         }
@@ -370,9 +370,10 @@ private fun MutedCard(text: String, onUnmute: () -> Unit) {
 private fun SectionLabel(text: String) {
     Text(
         text,
-        style = MaterialTheme.typography.titleMedium,
+        // A size above the cards' own titles: these head a run of cards, not one.
+        style = MaterialTheme.typography.titleLarge,
         color = Colors.Ink,
-        modifier = Modifier.padding(start = 4.dp, top = 12.dp).semantics { heading() },
+        modifier = Modifier.padding(start = 4.dp, top = 20.dp).semantics { heading() },
     )
 }
 

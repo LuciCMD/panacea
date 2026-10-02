@@ -7,16 +7,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -36,8 +38,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -45,19 +49,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.ui.Prompt
 import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.DoseTimeDialog
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateSwitch
-import com.clementine.panacea.ui.components.TimeDialog
-import com.clementine.panacea.ui.components.pastTime
+import com.clementine.panacea.ui.icons.Glyphs
+import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.today.TodayText
 import com.clementine.panacea.ui.today.TodayViewModel
 import com.clementine.panacea.ui.today.rememberTake
-import com.clementine.panacea.ui.icons.Glyphs
-import com.clementine.panacea.ui.theme.Colors
-import java.time.LocalTime
 import java.time.ZonedDateTime
 
 /** How long a mute lasts; Until Tomorrow stands in for "not today". */
@@ -167,41 +169,64 @@ fun NotificationsOffCard() {
 }
 
 /** One reminder: tap to edit it, the switch turns it on or off. */
+/** A reminder on its medication's page, where when it goes off is what tells reminders apart. */
 @Composable
-fun ReminderRow(card: ReminderCard, onToggle: (Boolean) -> Unit, onOpen: () -> Unit, showMedication: Boolean = true) {
-    val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
+fun ReminderRow(card: ReminderCard, onToggle: (Boolean) -> Unit, onOpen: () -> Unit) {
     SlateCard(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.padding(start = 0.dp, end = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Column(
-                Modifier
-                    .weight(1f)
-                    .clickable(role = Role.Button, onClickLabel = "Edit this reminder", onClick = onOpen)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                val scheduleColor = if (card.enabled) Colors.Ink else Colors.Muted
-                if (showMedication) {
-                    Text(card.medication, style = MaterialTheme.typography.titleMedium, color = Colors.Ink)
-                    Text(card.schedule, style = body, color = scheduleColor)
-                } else {
-                    // On a medication's own page the schedule is what tells reminders apart.
-                    Text(card.schedule, style = MaterialTheme.typography.titleMedium.merge(Numbers), color = scheduleColor)
-                }
-                card.note?.let { Text(it, style = body, color = Colors.Muted) }
-                Text(card.next, style = body, color = if (card.muted) Colors.Warn else Colors.Muted)
-            }
-            // Two reminders for one medication differ only by when, so the switch says both.
-            val label = if (showMedication) "${card.medication} Reminder, ${card.schedule}" else "Reminder, ${card.schedule}"
-            SlateSwitch(
-                checked = card.enabled,
-                onCheckedChange = onToggle,
-                modifier = Modifier.semantics { contentDescription = label },
+        ReminderLine(card, onToggle, onOpen, MaterialTheme.typography.titleMedium, PaddingValues(16.dp))
+    }
+}
+
+/** One medication's reminders on the Reminders tab: its name once, then each reminder by when it goes off. */
+@Composable
+fun MedicationReminders(cards: List<ReminderCard>, onToggle: (id: Long, on: Boolean) -> Unit, onOpen: (id: Long) -> Unit) {
+    SlateCard(Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                cards.first().medication,
+                style = MaterialTheme.typography.titleMedium,
+                color = Colors.Ink,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp).semantics { heading() },
             )
+            cards.forEachIndexed { i, card ->
+                if (i > 0) HorizontalDivider(color = Colors.LineSoft, modifier = Modifier.padding(start = 16.dp))
+                ReminderLine(
+                    card,
+                    onToggle = { onToggle(card.id, it) },
+                    onOpen = { onOpen(card.id) },
+                    scheduleStyle = MaterialTheme.typography.bodyLarge,
+                    padding = PaddingValues(start = 16.dp, end = 16.dp, top = if (i == 0) 4.dp else 12.dp, bottom = 14.dp),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun ReminderLine(card: ReminderCard, onToggle: (Boolean) -> Unit, onOpen: () -> Unit, scheduleStyle: TextStyle, padding: PaddingValues) {
+    val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
+    Row(
+        Modifier.padding(end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(
+            Modifier
+                .weight(1f)
+                .clickable(role = Role.Button, onClickLabel = "Edit this reminder", onClick = onOpen)
+                .padding(padding),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(card.schedule, style = scheduleStyle.merge(Numbers), color = if (card.enabled) Colors.Ink else Colors.Muted)
+            card.note?.let { Text(it, style = body, color = Colors.Muted) }
+            Text(card.next, style = body, color = if (card.muted) Colors.Warn else Colors.Muted)
+        }
+        // Two reminders for one medication differ only by when, so the switch says both.
+        SlateSwitch(
+            checked = card.enabled,
+            onCheckedChange = onToggle,
+            modifier = Modifier.semantics { contentDescription = "${card.medication} Reminder, ${card.schedule}" },
+        )
     }
 }
 
@@ -305,14 +330,12 @@ fun TookEarlierDialog(prompt: Prompt, onClose: () -> Unit) {
     val take = rememberTake(today)
     val (medicationId, _) = rememberPromptMedication(prompt, reminders, onClose) ?: return
     val med = ui?.cards?.firstOrNull { it.medication.id == medicationId }?.medication ?: return
-    TimeDialog(
-        title = "When Did You Take It?",
-        hint = "A time later than now counts as yesterday.",
-        initial = LocalTime.now(),
+    DoseTimeDialog(
+        initial = ZonedDateTime.now(),
         // It logs the usual amount, so it says which.
         confirmLabel = "Log ${TodayText.amount(med, med.lastMultiplier)}",
-        onPick = { time ->
-            take(med.id, med.lastMultiplier, pastTime(time, ZonedDateTime.now()).toInstant().toEpochMilli())
+        onPick = { at ->
+            take(med.id, med.lastMultiplier, at.toInstant().toEpochMilli())
             // Even a time too early to count for the reminder answers it.
             reminders.dealtWith(prompt)
             onClose()
@@ -332,6 +355,7 @@ fun LaterDialog(prompt: Prompt, onClose: () -> Unit) {
         onDismiss = onClose,
     ) {
         LaterChoice.entries.forEach { choice ->
+            if (choice == LaterChoice.NOT_TODAY) HorizontalDivider(color = Colors.LineSoft, modifier = Modifier.padding(vertical = 4.dp))
             SlateButton(
                 onClick = {
                     viewModel.later(prompt, medicationId, choice)

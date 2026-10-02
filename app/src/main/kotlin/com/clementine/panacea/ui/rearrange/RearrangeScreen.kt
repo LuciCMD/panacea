@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,8 +23,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import com.clementine.panacea.model.Category
-import com.clementine.panacea.ui.components.SlateIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,7 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clementine.panacea.model.Category
 import com.clementine.panacea.ui.components.SlateCard
+import com.clementine.panacea.ui.components.SlateIconButton
 import com.clementine.panacea.ui.components.screenPadding
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.icons.Glyphs
@@ -140,22 +140,22 @@ fun RearrangeScreen(onBack: () -> Unit, viewModel: RearrangeViewModel = viewMode
                         )
                     },
             ) {
-                ItemCard(item, dragging, Modifier.weight(1f))
-                Box(
-                    Modifier
-                        .padding(start = 4.dp)
-                        .size(width = 48.dp, height = 64.dp)
-                        .pointerInput(item.id) {
-                            detectDragGestures(
-                                onDragStart = { start(item.id) },
-                                onDrag = { change, amount -> change.consume(); drag.by(amount.y) },
-                                onDragEnd = end,
-                                onDragCancel = end,
-                            )
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Glyphs.Grip, contentDescription = null, tint = if (dragging) Colors.Accent else Colors.Muted)
+                ItemCard(item, dragging, Modifier.weight(1f)) {
+                    Box(
+                        Modifier
+                            .size(48.dp)
+                            .pointerInput(item.id) {
+                                detectDragGestures(
+                                    onDragStart = { start(item.id) },
+                                    onDrag = { change, amount -> change.consume(); drag.by(amount.y) },
+                                    onDragEnd = end,
+                                    onDragCancel = end,
+                                )
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Glyphs.Grip, contentDescription = null, tint = if (dragging) Colors.Accent else Colors.Muted)
+                    }
                 }
             }
         }
@@ -181,7 +181,7 @@ private fun Header(onBack: () -> Unit) {
 }
 
 @Composable
-private fun ItemCard(item: RearrangeItem, lifted: Boolean, modifier: Modifier) {
+private fun ItemCard(item: RearrangeItem, lifted: Boolean, modifier: Modifier, grip: @Composable () -> Unit) {
     val shape = MaterialTheme.shapes.medium
     SlateCard(
         modifier
@@ -189,7 +189,7 @@ private fun ItemCard(item: RearrangeItem, lifted: Boolean, modifier: Modifier) {
             .then(if (lifted) Modifier.border(1.5.dp, Colors.Accent, shape) else Modifier),
     ) {
         Row(
-            Modifier.background(if (lifted) Colors.Raised else Colors.Surface).padding(horizontal = 14.dp, vertical = 10.dp),
+            Modifier.background(if (lifted) Colors.Raised else Colors.Surface).padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -205,6 +205,7 @@ private fun ItemCard(item: RearrangeItem, lifted: Boolean, modifier: Modifier) {
                 val kind = listOfNotNull(item.category.label.takeIf { item.category != Category.UNCATEGORIZED }, item.type.label).joinToString(" · ")
                 Text(kind, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted, maxLines = 1)
             }
+            grip()
         }
     }
 }

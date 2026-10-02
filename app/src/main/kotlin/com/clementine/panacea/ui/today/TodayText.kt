@@ -128,7 +128,7 @@ object TodayText {
 
     /** Today's ⓘ: how to read a card. */
     const val HOW_TO_READ =
-        "The ring around each medication fills as its next dose comes due, and turns orange once one is missed. " +
+        "The ring around each medication fills as its next dose comes due, and changes colour once one is missed. " +
             "The × button sets how many each Take logs."
 
     /** The day strip's ⓘ. */

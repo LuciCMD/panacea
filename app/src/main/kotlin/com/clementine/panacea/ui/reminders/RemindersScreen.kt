@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -55,6 +56,7 @@ import kotlinx.coroutines.launch
 
 data class ReminderCard(
     val id: Long,
+    val medicationId: Long,
     val medication: String,
     val schedule: String,
     val note: String?,
@@ -68,6 +70,7 @@ fun reminderCard(r: ReminderEntity, medication: String, now: ZonedDateTime, f: T
     val muted = r.enabled && mutedUntil > now.toInstant().toEpochMilli()
     return ReminderCard(
         id = r.id,
+        medicationId = r.medicationId,
         medication = medication,
         schedule = ReminderText.schedule(r, f),
         note = r.note.trim().ifEmpty { null },
@@ -231,7 +234,11 @@ fun RemindersScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (!state.isEmpty) {
                         val muted = state.muteAllText != null
-                        SlateButton(onClick = { if (muted) viewModel.unmute(null) else muting = true }) {
+                        SlateButton(
+                            onClick = { if (muted) viewModel.unmute(null) else muting = true },
+                            shape = CircleShape,
+                            modifier = Modifier.height(48.dp),
+                        ) {
                             Icon(if (muted) Glyphs.Bell else Glyphs.BellOff, contentDescription = null, modifier = Modifier.size(20.dp))
                             Text(if (muted) "Unmute" else "Mute All")
                         }
@@ -266,8 +273,9 @@ fun RemindersScreen(
                 }
             }
         }
-        items(state.cards, key = { it.id }) { card ->
-            ReminderRow(card, onToggle = { viewModel.setEnabled(card.id, it) }, onOpen = { onOpen(card.id) })
+        // Already in Today's order, so grouping keeps it.
+        items(state.cards.groupBy { it.medicationId }.toList(), key = { "medication-${it.first}" }) { (_, cards) ->
+            MedicationReminders(cards, onToggle = viewModel::setEnabled, onOpen = onOpen)
         }
         items(state.learned, key = { "learned-${it.medicationId}" }) { card ->
             LearnedRow(card, onStop = { viewModel.stopLearning(card.medicationId) }, onOpen = { onOpenMedication(card.medicationId) })

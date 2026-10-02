@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -14,6 +15,11 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,10 +31,37 @@ import com.clementine.panacea.ui.theme.Colors
 import java.time.LocalTime
 import java.time.ZonedDateTime
 
-/** When a dose picked as [time] was taken: today, or yesterday if that time is still to come. */
-fun pastTime(time: LocalTime, now: ZonedDateTime): ZonedDateTime {
+/** When a dose picked as [time] on [yesterday] or today was taken; a time still to come today can only be yesterday. */
+fun takenAt(time: LocalTime, yesterday: Boolean, now: ZonedDateTime): ZonedDateTime {
     val today = now.with(time).withSecond(0).withNano(0)
-    return if (today.isAfter(now)) today.minusDays(1) else today
+    return if (yesterday || today.isAfter(now)) today.minusDays(1) else today
+}
+
+/** Whether [time] today is still to come. */
+private fun later(time: LocalTime, now: ZonedDateTime) = now.with(time).withSecond(0).withNano(0).isAfter(now)
+
+/** When a dose was taken: a time, today or yesterday. */
+@Composable
+fun DoseTimeDialog(initial: ZonedDateTime, onPick: (ZonedDateTime) -> Unit, onDismiss: () -> Unit, confirmLabel: String = "Set Time") {
+    val now = remember { ZonedDateTime.now(initial.zone) }
+    var yesterday by rememberSaveable { mutableStateOf(initial.toLocalDate() < now.toLocalDate()) }
+    TimeDialog(
+        title = "When Did You Take It?",
+        initial = initial.toLocalTime(),
+        confirmLabel = confirmLabel,
+        onPick = { onPick(takenAt(it, yesterday, now)) },
+        onDismiss = onDismiss,
+        day = { time ->
+            val later = later(time, now)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.selectableGroup()) {
+                SlateChip(selected = !yesterday && !later, onClick = { yesterday = false }) { Text("Today") }
+                SlateChip(selected = yesterday || later, onClick = { yesterday = true }) { Text("Yesterday") }
+            }
+            if (later && !yesterday) {
+                Text("That time hasn't come yet today.", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
+            }
+        },
+    )
 }
 
 /** A clock to pick a time on, in the phone's 12- or 24-hour style. */
@@ -41,6 +74,8 @@ fun TimeDialog(
     onDismiss: () -> Unit,
     hint: String? = null,
     confirmLabel: String = "Set Time",
+    /** Shown above the clock, with the time as it's being picked. */
+    day: (@Composable (LocalTime) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val state = rememberTimePickerState(initial.hour, initial.minute, DateFormat.is24HourFormat(context))
@@ -55,6 +90,11 @@ fun TimeDialog(
                         color = Colors.Muted,
                         modifier = Modifier.padding(top = 6.dp),
                     )
+                }
+                if (day != null) {
+                    Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        day(LocalTime.of(state.hour, state.minute))
+                    }
                 }
                 TimePicker(
                     state = state,

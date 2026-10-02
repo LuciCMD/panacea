@@ -41,13 +41,12 @@ import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.formatAmount
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.DoseTimeDialog
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.RoundIconButton
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateChip
 import com.clementine.panacea.ui.components.SlateSheet
-import com.clementine.panacea.ui.components.TimeDialog
-import com.clementine.panacea.ui.components.pastTime
 import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.edit.PhotoViewer
 import com.clementine.panacea.ui.edit.PillPhoto
@@ -55,7 +54,6 @@ import com.clementine.panacea.ui.edit.PillSide
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import java.time.Instant
-import java.time.LocalTime
 import java.time.ZonedDateTime
 import kotlinx.coroutines.launch
 
@@ -170,7 +168,8 @@ fun TakeSheet(
                     role = Role.Button,
                     modifier = Modifier.semantics { contentDescription = "Save ${MedicationType.fromKey(med.type).pieces(multiplier)} as a Preset" },
                 ) {
-                    Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(textIcon(18.dp)))
+                    Text("Save as Preset", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -207,12 +206,10 @@ fun TakeSheet(
     viewing?.let { PhotoViewer(med.name, med.photoFront, med.photoBack, it) { viewing = null } }
 
     if (picking) {
-        TimeDialog(
-            title = "When Did You Take It?",
-            hint = "A time later than now counts as yesterday.",
-            initial = takenAt?.let { Instant.ofEpochMilli(it).atZone(now.zone).toLocalTime() } ?: LocalTime.now(),
-            onPick = { time ->
-                takenAt = pastTime(time, ZonedDateTime.now()).toInstant().toEpochMilli()
+        DoseTimeDialog(
+            initial = takenAt?.let { Instant.ofEpochMilli(it).atZone(now.zone) } ?: ZonedDateTime.now(),
+            onPick = { at ->
+                takenAt = at.toInstant().toEpochMilli()
                 picking = false
             },
             onDismiss = { picking = false },
