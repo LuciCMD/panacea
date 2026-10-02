@@ -9,6 +9,7 @@ import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.counted
 import java.time.Instant
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 /** The words on the Today screen, kept apart from Compose so they can be tested. */
@@ -130,12 +131,13 @@ object TodayText {
         "The ring around each medication fills as its next dose comes due, and changes colour once one is missed. " +
             "The × button sets how many each Take logs."
 
+    /** The day strip's ⓘ. */
+    const val STRIP =
+        "Each dot is a dose logged today, placed at the time it was taken. The upright line is now."
 
-    /** "Friday, October 2 · 2:34 PM · 8 doses today"; the count only once there is one. */
-    fun header(now: ZonedDateTime, f: TimeFormats, dosesToday: Int = 0) =
-        listOfNotNull(now.format(f.longDate), now.format(f.time), dosesToday.takeIf { it > 0 }?.let { "${counted(it, "dose")} today" })
-            .joinToString(" · ")
+    fun header(now: ZonedDateTime, f: TimeFormats) = "${now.format(f.longDate)} · ${now.format(f.time)}"
 
+    fun dosesToday(count: Int) = if (count == 1) "1 logged" else "$count logged"
 
     fun logged(name: String, amount: String, takenAt: ZonedDateTime, now: ZonedDateTime, f: TimeFormats): String {
         val time = takenAt.format(f.time)
