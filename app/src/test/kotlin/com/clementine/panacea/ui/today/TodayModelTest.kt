@@ -119,7 +119,10 @@ class TodayModelTest {
             DoseEntity(id = 3, medicationId = 2, takenAt = ms(10, 2, 9, 4), multiplier = 1.0, amount = 50.0, unit = "mg"),
         )
         val ui = TodayModel.build(
-            summaries = listOf(MedicationSummary(a, ms(10, 2, 10, 0)), MedicationSummary(b, ms(10, 2, 9, 4))),
+            summaries = listOf(
+                MedicationSummary(a, ms(10, 2, 10, 0), lastAmount = 200.0, lastUnit = "mg", lastDoseMultiplier = 1.0),
+                MedicationSummary(b, ms(10, 2, 9, 4), lastAmount = 50.0, lastUnit = "mg", lastDoseMultiplier = 1.0),
+            ),
             ingredients = emptyList(),
             reminders = listOf(daily(9 * 60, medicationId = 2)),
             doses = doses,
@@ -131,7 +134,7 @@ class TodayModelTest {
         assertEquals(listOf(Category.PRESCRIBED, Category.OTC), ui.categories)
 
         val ibuprofen = ui.cards[0]
-        assertEquals("Taken at 10:00 · 3 h 16 min ago", ibuprofen.lastTakenLine)
+        assertEquals("Took 200 mg at 10:00 · 3 h 16 min ago", ibuprofen.lastTakenLine)
         assertEquals("600 mg in the last 24 h", ibuprofen.last24hLine)
         assertNull(ibuprofen.dueLine)
         assertFalse(ibuprofen.dueNow)

@@ -30,8 +30,17 @@ enum class MedicationType(val key: String, val label: String, val noun: String) 
     OTHER("OTHER", "Other", "item"),
     UNSPECIFIED("UNSPECIFIED", "Unspecified", "item");
 
+    /** "1 tablet", "0.5 tablet", "2 gummies": [m] of this form, the noun plural above one. */
+    fun pieces(m: Double): String = "${formatAmount(m)} ${if (m > 1) plural(noun) else noun}"
+
     companion object {
         fun fromKey(key: String?): MedicationType = entries.firstOrNull { it.key == key } ?: UNSPECIFIED
+
+        private fun plural(noun: String) = when {
+            noun.endsWith("y") -> noun.dropLast(1) + "ies"
+            noun.endsWith("ch") || noun.endsWith("s") -> noun + "es"
+            else -> noun + "s"
+        }
     }
 }
 

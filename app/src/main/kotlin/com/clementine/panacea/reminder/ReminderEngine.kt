@@ -99,17 +99,11 @@ object ReminderEngine {
 
     /** "20 mg, 1 capsule. With lunch." */
     fun text(med: MedicationEntity, note: String): String {
-        val type = MedicationType.fromKey(med.type)
         val m = med.lastMultiplier
-        val count = "${formatAmount(m)} ${if (m > 1) plural(type.noun) else type.noun}"
+        val count = MedicationType.fromKey(med.type).pieces(m)
         val amount = if (med.dose > 0) "${formatAmount(med.dose * m)} ${med.doseUnit}, $count" else count
         val n = note.trim().trimEnd('.')
         return if (n.isEmpty()) "$amount." else "$amount. $n."
     }
 
-    private fun plural(noun: String) = when {
-        noun.endsWith("y") -> noun.dropLast(1) + "ies"
-        noun.endsWith("ch") || noun.endsWith("s") -> noun + "es"
-        else -> noun + "s"
-    }
 }

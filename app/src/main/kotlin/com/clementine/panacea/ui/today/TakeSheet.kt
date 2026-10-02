@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.model.Amounts
+import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.formatAmount
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.Numbers
@@ -161,7 +162,12 @@ fun TakeSheet(
             ) {
                 RoundButton(Glyphs.Minus, "Less", enabled = multiplier > Amounts.MIN) { multiplier = Amounts.less(multiplier) }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(TodayText.multiplier(multiplier), style = MaterialTheme.typography.headlineMedium.copy(fontSize = 40.sp, lineHeight = 46.sp).merge(Numbers))
+                    Text(
+                        TodayText.multiplier(multiplier),
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = 40.sp, lineHeight = 46.sp).merge(Numbers),
+                        // Read as "1.5 tablets", not "multiplication sign 1.5".
+                        modifier = Modifier.semantics { contentDescription = MedicationType.fromKey(med.type).pieces(multiplier) },
+                    )
                     Text(
                         listOfNotNull(
                             TodayText.amount(med, multiplier).takeIf { med.dose > 0 },
@@ -176,7 +182,11 @@ fun TakeSheet(
 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 presets.forEach { p ->
-                    SlateChip(selected = p == multiplier, onClick = { multiplier = p }) {
+                    SlateChip(
+                        selected = p == multiplier,
+                        onClick = { multiplier = p },
+                        modifier = Modifier.semantics { contentDescription = MedicationType.fromKey(med.type).pieces(p) },
+                    ) {
                         Text(TodayText.multiplier(p), style = MaterialTheme.typography.bodyMedium.merge(Numbers))
                     }
                 }
@@ -184,7 +194,7 @@ fun TakeSheet(
                     SlateChip(
                         selected = false,
                         onClick = { onSavePreset(multiplier) },
-                        modifier = Modifier.semantics { contentDescription = "Save ${TodayText.multiplier(multiplier)} as a Preset" },
+                        modifier = Modifier.semantics { contentDescription = "Save ${MedicationType.fromKey(med.type).pieces(multiplier)} as a Preset" },
                     ) {
                         Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(18.dp))
                     }

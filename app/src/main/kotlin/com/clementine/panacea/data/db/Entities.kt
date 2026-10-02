@@ -146,4 +146,8 @@ data class MedicationCounts(val doses: Int, val reminders: Int)
 data class MedicationSummary(
     @Embedded val medication: MedicationEntity,
     val lastTakenAt: Long?,
+    /** The last dose's amount, unit and multiplier, as logged. */
+    val lastAmount: Double? = null,
+    val lastUnit: String? = null,
+    val lastDoseMultiplier: Double? = null,
 )

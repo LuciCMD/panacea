@@ -11,8 +11,12 @@ import kotlinx.coroutines.flow.Flow
 interface MedicationDao {
     @Query(
         """
-        SELECT m.*, (SELECT MAX(d.takenAt) FROM dose d WHERE d.medicationId = m.id) AS lastTakenAt
+        SELECT m.*, l.takenAt AS lastTakenAt, l.amount AS lastAmount, l.unit AS lastUnit,
+            l.multiplier AS lastDoseMultiplier
         FROM medication m
+        LEFT JOIN dose l ON l.id = (
+            SELECT d.id FROM dose d WHERE d.medicationId = m.id ORDER BY d.takenAt DESC, d.id DESC LIMIT 1
+        )
         ORDER BY m.sortOrder, m.name
         """
     )

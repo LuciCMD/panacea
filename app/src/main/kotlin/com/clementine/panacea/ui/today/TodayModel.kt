@@ -96,7 +96,9 @@ object TodayModel {
         val med = s.medication
         val nowMs = now.toInstant().toEpochMilli()
 
-        var lastTaken = TodayText.lastTaken(s.lastTakenAt, now, f)
+        val type = MedicationType.fromKey(med.type)
+        val lastAmount = TodayText.doseAmount(s.lastAmount ?: 0.0, s.lastUnit ?: med.doseUnit, s.lastDoseMultiplier ?: 1.0, type)
+        var lastTaken = TodayText.lastTaken(s.lastTakenAt, lastAmount, now, f)
         s.lastTakenAt?.takeIf { nowMs - it in 0..RECENT.toMillis() }?.let { lastTaken += " · " + TodayText.ago(it, now) }
         val inDay = doses.filter { nowMs - it.takenAt in 0..ONE_DAY.toMillis() }
         val last24h = if (med.dose > 0) {

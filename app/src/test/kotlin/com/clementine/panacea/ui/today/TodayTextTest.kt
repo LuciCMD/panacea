@@ -16,11 +16,11 @@ class TodayTextTest {
 
     @Test
     fun lastTakenWordsDependOnTheDay() {
-        assertEquals("Not taken yet", TodayText.lastTaken(null, now, formats))
-        assertEquals("Taken at 9:04", TodayText.lastTaken(ms(10, 2, 9, 4), now, formats))
-        assertEquals("Last taken yesterday at 22:10", TodayText.lastTaken(ms(10, 1, 22, 10), now, formats))
-        assertEquals("Last taken Monday at 8:00", TodayText.lastTaken(ms(9, 28, 8, 0), now, formats))
-        assertEquals("Last taken 21 Sep at 8:00", TodayText.lastTaken(ms(9, 21, 8, 0), now, formats))
+        assertEquals("Not taken yet", TodayText.lastTaken(null, "50 mg", now, formats))
+        assertEquals("Took 50 mg at 9:04", TodayText.lastTaken(ms(10, 2, 9, 4), "50 mg", now, formats))
+        assertEquals("Took 2 gummies yesterday at 22:10", TodayText.lastTaken(ms(10, 1, 22, 10), "2 gummies", now, formats))
+        assertEquals("Took 50 mg on Monday at 8:00", TodayText.lastTaken(ms(9, 28, 8, 0), "50 mg", now, formats))
+        assertEquals("Took 50 mg on 21 Sep at 8:00", TodayText.lastTaken(ms(9, 21, 8, 0), "50 mg", now, formats))
     }
 
     @Test
@@ -64,7 +64,7 @@ class TodayTextTest {
     @Test
     fun amountsScaleWithTheMultiplier() {
         assertEquals("100 mg", TodayText.amount(med, 2.0))
-        assertEquals("× 2", TodayText.amount(med.copy(dose = 0.0), 2.0))
+        assertEquals("2 tablets", TodayText.amount(med.copy(dose = 0.0), 2.0))
         assertEquals("0.62 g", TodayText.weightOf(med.copy(weight = 0.31), 2.0))
         assertEquals(null, TodayText.weightOf(med, 2.0))
         assertEquals("× 0.25", TodayText.multiplier(0.25))

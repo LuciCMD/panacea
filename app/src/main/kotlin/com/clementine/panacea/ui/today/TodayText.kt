@@ -2,6 +2,7 @@ package com.clementine.panacea.ui.today
 
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
+import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.WeightUnit
 import com.clementine.panacea.model.formatAmount
 import com.clementine.panacea.ui.TimeFormats
@@ -28,9 +29,13 @@ object TodayText {
         return parts.joinToString(" · ").ifEmpty { "No dose set" }
     }
 
-    /** What [multiplier] of the medication amounts to: "100 mg", or "× 2" when no dose is set. */
+    /** What [multiplier] of the medication amounts to: "100 mg", or "2 tablets" when no dose is set. */
     fun amount(med: MedicationEntity, multiplier: Double): String =
-        if (med.dose > 0) "${formatAmount(med.dose * multiplier)} ${med.doseUnit}" else "× ${formatAmount(multiplier)}"
+        if (med.dose > 0) "${formatAmount(med.dose * multiplier)} ${med.doseUnit}" else MedicationType.fromKey(med.type).pieces(multiplier)
+
+    /** What a logged dose was: "7.5 mg" as logged, or "2 tablets" when it had no amount. */
+    fun doseAmount(amount: Double, unit: String, multiplier: Double, type: MedicationType): String =
+        if (amount > 0) "${formatAmount(amount)} $unit" else type.pieces(multiplier)
 
     /** What [multiplier] of the medication weighs, or null when its weight isn't known. */
     fun weightOf(med: MedicationEntity, multiplier: Double): String? =
@@ -40,15 +45,16 @@ object TodayText {
 
     private fun weight(value: Double, unit: String) = "${formatAmount(value)} ${WeightUnit.fromKey(unit).key}"
 
-    fun lastTaken(lastTakenAt: Long?, now: ZonedDateTime, f: TimeFormats): String {
+    /** "Took 7.5 mg at 8:27", "Took 7.5 mg yesterday at 22:10", "Took 7.5 mg on Monday at 8:00". */
+    fun lastTaken(lastTakenAt: Long?, amount: String, now: ZonedDateTime, f: TimeFormats): String {
         if (lastTakenAt == null) return "Not taken yet"
         val taken = Instant.ofEpochMilli(lastTakenAt).atZone(now.zone)
         val time = taken.format(f.time)
         return when (val days = daysBetween(taken, now)) {
-            0L -> "Taken at $time"
-            1L -> "Last taken yesterday at $time"
-            in 2..WEEK_DAYS -> "Last taken ${taken.format(f.weekday)} at $time"
-            else -> if (days < 0) "Taken at $time" else "Last taken ${taken.format(f.shortDate)} at $time"
+            0L -> "Took $amount at $time"
+            1L -> "Took $amount yesterday at $time"
+            in 2..WEEK_DAYS -> "Took $amount on ${taken.format(f.weekday)} at $time"
+            else -> if (days < 0) "Took $amount at $time" else "Took $amount on ${taken.format(f.shortDate)} at $time"
         }
     }
 

@@ -20,11 +20,13 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.clementine.panacea.data.db.MedicationEntity
+import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundEvent
 import com.clementine.panacea.ui.components.ButtonKind
@@ -95,14 +97,21 @@ fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAm
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        val multiplier = TodayText.multiplier(med.lastMultiplier)
+        val pieces = MedicationType.fromKey(med.type).pieces(med.lastMultiplier)
+        // Anything but one of it stands out, so a large amount left from last time is noticed.
+        val usual = med.lastMultiplier == 1.0
         SlateButton(
             onClick = onAmount,
             modifier = Modifier
                 .widthIn(min = 64.dp)
-                .semantics { contentDescription = "Change amount for ${med.name}, now $multiplier" },
+                .semantics { contentDescription = "Change amount for ${med.name}, now $pieces" },
         ) {
-            Text(multiplier, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp).merge(Numbers))
+            Text(
+                TodayText.multiplier(med.lastMultiplier),
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp).merge(Numbers),
+                color = if (usual) Colors.Muted else Colors.Ink,
+                fontWeight = if (usual) FontWeight.Normal else FontWeight.Medium,
+            )
         }
         val amount = TodayText.amount(med, med.lastMultiplier)
         SlateButton(
@@ -114,11 +123,12 @@ fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAm
             kind = if (dueNow) ButtonKind.Primary else ButtonKind.Tonal,
             modifier = Modifier
                 .weight(1f)
-                .semantics { contentDescription = if (justTaken) "${med.name} logged" else "Take ${med.name}, $amount" },
+                .semantics { contentDescription = if (justTaken) "${med.name} logged" else "Take $amount of ${med.name}" },
         ) {
             Icon(Glyphs.Check, contentDescription = null, modifier = Modifier.size(20.dp))
             Text(
-                if (justTaken) "Logged" else "Take ${med.name}",
+                // The name is the card's title; the button says what a tap will log.
+                if (justTaken) "Logged" else "Take $amount",
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
