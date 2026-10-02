@@ -44,6 +44,15 @@ object BackupText {
         return Age("Last backed up $text", warn = days >= DUE_DAYS)
     }
 
+    /**
+     * Whether the Settings tab should call out the backup: the last one is [DUE_DAYS] old, or there's
+     * never been one and doses go back that far. A phone set up last week isn't nagged.
+     */
+    fun due(lastBackup: Long?, firstDose: Long?, now: ZonedDateTime): Boolean {
+        val since = lastBackup ?: firstDose ?: return false
+        return ChronoUnit.DAYS.between(Instant.ofEpochMilli(since).atZone(now.zone).toLocalDate(), now.toLocalDate()) >= DUE_DAYS
+    }
+
     fun exported(w: Written) = "Exported ${count(w.doses, "dose")}."
 
     fun restored(medications: Int, doses: Int, problems: Int): String {

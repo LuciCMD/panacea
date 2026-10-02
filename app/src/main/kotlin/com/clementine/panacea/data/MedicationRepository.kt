@@ -40,6 +40,9 @@ class MedicationRepository(private val db: PanaceaDatabase) {
 
     fun observeDosesSince(since: Long): Flow<List<DoseEntity>> = doses.observeSince(since)
 
+    /** When the first dose still kept was taken; null with none. */
+    fun observeFirstDoseAt(): Flow<Long?> = doses.observeFirstTakenAt()
+
     fun observeEnabledReminders(): Flow<List<ReminderEntity>> = db.reminderDao().observeEnabled()
 
     fun observeHistory(): Flow<List<DoseRow>> = doses.observeHistory()

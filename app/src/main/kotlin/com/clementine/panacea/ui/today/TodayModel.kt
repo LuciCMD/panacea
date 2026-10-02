@@ -5,19 +5,19 @@ import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.MedicationSummary
 import com.clementine.panacea.data.db.ReminderEntity
-import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.model.Category
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.reminder.Schedule
+import com.clementine.panacea.ui.TimeFormats
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZonedDateTime
 
 data class TodayUi(
+    /** "Friday, October 2 · 2:34 PM · 8 doses today" */
     val header: String,
-    val strip: DayStrip,
     val cards: List<CardState>,
     /** Categories that have a medication, in their usual order. */
     val categories: List<Category>,
@@ -42,10 +42,6 @@ data class CardState(
     val had: List<Had> = emptyList(),
 )
 
-/** Today's doses on a midnight-to-midnight line, with [axis] labels at 0, 6, 12, 18 and 24 h. */
-data class DayStrip(val count: Int, val dots: List<StripDot>, val nowFraction: Float, val axis: List<String>)
-
-data class StripDot(val fraction: Float, val label: String)
 
 /** Builds the Today screen from the data, at a given moment. Pure, so it can be tested. */
 object TodayModel {
@@ -78,8 +74,7 @@ object TodayModel {
                 .copy(had = Intake.last24h(s.medication, allMedications, ingredients, doses, nowMs))
         }
         return TodayUi(
-            header = TodayText.header(now, f),
-            strip = strip(summaries, doses, now, f),
+            header = TodayText.header(now, f, dosesToday(doses, now)),
             cards = cards,
             categories = Category.entries.filter { c -> cards.any { it.category == c } },
             presets = presets,
@@ -210,19 +205,11 @@ object TodayModel {
         return ((now.toInstant().toEpochMilli() - start).toFloat() / (end - start)).coerceIn(0f, 1f)
     }
 
-    private fun strip(summaries: List<MedicationSummary>, doses: List<DoseEntity>, now: ZonedDateTime, f: TimeFormats): DayStrip {
-        val dayStart = now.toLocalDate().atStartOfDay(now.zone)
-        val dayEnd = now.toLocalDate().plusDays(1).atStartOfDay(now.zone)
-        val startMs = dayStart.toInstant().toEpochMilli()
-        val length = (dayEnd.toInstant().toEpochMilli() - startMs).toFloat()
+    /** Doses logged since midnight. */
+    private fun dosesToday(doses: List<DoseEntity>, now: ZonedDateTime): Int {
+        val startMs = now.toLocalDate().atStartOfDay(now.zone).toInstant().toEpochMilli()
         val nowMs = now.toInstant().toEpochMilli()
-        val names = summaries.associate { it.medication.id to it.medication.name }
-        val today = doses.filter { it.takenAt in startMs..nowMs }.sortedBy { it.takenAt }
-        val dots = today.map {
-            val time = Instant.ofEpochMilli(it.takenAt).atZone(now.zone).format(f.time)
-            StripDot((it.takenAt - startMs) / length, "${names[it.medicationId] ?: "Removed medication"} at $time")
-        }
-        return DayStrip(today.size, dots, (nowMs - startMs) / length, axis(f))
+        return doses.count { it.takenAt in startMs..nowMs }
     }
 
     /** Labels for a midnight-to-midnight line: 0, 6, 12, 18 and 24 h. */

@@ -129,9 +129,9 @@ fun SlateSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifie
         onCheckedChange = onCheckedChange,
         modifier = modifier,
         colors = SwitchDefaults.colors(
-            checkedThumbColor = Colors.Accent,
-            checkedTrackColor = Colors.AccentDim,
-            checkedBorderColor = Colors.AccentDim,
+            checkedThumbColor = if (Colors.IsLight) Colors.OnAccent else Colors.Accent,
+            checkedTrackColor = if (Colors.IsLight) Colors.Accent else Colors.AccentDim,
+            checkedBorderColor = if (Colors.IsLight) Colors.Accent else Colors.AccentDim,
             uncheckedThumbColor = Colors.Muted,
             uncheckedTrackColor = Colors.Field,
             uncheckedBorderColor = Colors.Line,

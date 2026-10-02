@@ -180,6 +180,9 @@ interface DoseDao {
     @Query("SELECT * FROM dose WHERE takenAt >= :since ORDER BY takenAt")
     fun observeSince(since: Long): Flow<List<DoseEntity>>
 
+    @Query("SELECT MIN(takenAt) FROM dose")
+    fun observeFirstTakenAt(): Flow<Long?>
+
     @Insert
     suspend fun insertAll(doses: List<DoseEntity>)
 

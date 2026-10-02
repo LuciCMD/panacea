@@ -15,6 +15,15 @@ import java.util.Locale
 
 class BackupTextTest {
     @Test
+    fun theSettingsTabCallsOutAnOverdueBackupOnly() {
+        assertFalse(BackupText.due(ms(9, 3, 9, 0), ms(1, 1, 9, 0), now))
+        assertTrue(BackupText.due(ms(9, 2, 9, 0), ms(1, 1, 9, 0), now))
+        assertFalse(BackupText.due(null, ms(9, 20, 9, 0), now))
+        assertTrue(BackupText.due(null, ms(8, 1, 9, 0), now))
+        assertFalse(BackupText.due(null, null, now))
+    }
+
+    @Test
     fun saysHowOldTheLastBackupIs() {
         assertEquals(BackupText.Age("Not backed up yet", warn = true), BackupText.age(null, now, formats))
         assertEquals(BackupText.Age("Last backed up today at 9:12", warn = false), BackupText.age(ms(10, 2, 9, 12), now, formats))

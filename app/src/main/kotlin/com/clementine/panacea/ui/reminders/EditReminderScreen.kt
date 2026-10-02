@@ -20,9 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.ui.semantics.Role
-import com.clementine.panacea.ui.components.ButtonKind
-import com.clementine.panacea.ui.components.ConfirmDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -44,6 +42,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.model.RepeatType
 import com.clementine.panacea.ui.TimeFormats
+import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.ConfirmDialog
 import com.clementine.panacea.ui.components.FieldLabel
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SectionCard
@@ -138,32 +138,35 @@ fun EditReminderScreen(
                 )
             }
         }
-        item(key = "medication") {
-            SectionCard("Medication") {
-                val names = meds.associate { it.id to it.name }
-                SlateDropdown(
-                    d.medicationId,
-                    meds.map { it.id },
-                    { names[it] ?: "Pick a Medication" },
-                    { update(d.copy(medicationId = it)) },
-                    "Medication",
-                    Modifier.fillMaxWidth(),
-                )
-                problems.medication?.let { Problem(it) }
+        item(key = "details") {
+            SectionCard("Details") {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FieldLabel("Medication")
+                    val names = meds.associate { it.id to it.name }
+                    SlateDropdown(
+                        d.medicationId,
+                        meds.map { it.id },
+                        { names[it] ?: "Pick a Medication" },
+                        { update(d.copy(medicationId = it)) },
+                        "Medication",
+                        Modifier.fillMaxWidth(),
+                    )
+                    problems.medication?.let { Problem(it) }
+                }
+                // The label's ⓘ row brings its own space above the field.
+                Column {
+                    FieldLabel("Note", info = "Shown on this reminder's notification, after the amount.")
+                    SlateTextField(
+                        d.note, { update(d.copy(note = it)) },
+                        placeholder = "With lunch",
+                        error = problems.note,
+                        accessibleLabel = "Note",
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                    )
+                }
             }
         }
         item(key = "repeat") { RepeatCard(d, problems, f, update) { picking = it } }
-        item(key = "note") {
-            SectionCard("Note", info = "Shown on this reminder's notification, after the amount.") {
-                SlateTextField(
-                    d.note, { update(d.copy(note = it)) },
-                    placeholder = "With lunch",
-                    error = problems.note,
-                    accessibleLabel = "Note",
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
-                )
-            }
-        }
         item(key = "early") {
             SectionCard(
                 "Early Doses",

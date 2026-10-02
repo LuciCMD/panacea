@@ -13,9 +13,9 @@ enum class Themes(val key: String, val label: String, val palette: Palette) {
         Palette(
             abyss = Color(0xFF1A1B21), ground = Color(0xFF1F2027), surface = Color(0xFF2A2B33),
             raised = Color(0xFF31323B), field = Color(0xFF3A3B46), line = Color(0xFF474855), lineSoft = Color(0xFF34353F),
-            ink = Color(0xFFE4E4E8), muted = Color(0xFFA4A5AF), faint = Color(0xFF7E7F8A), onAccent = Color(0xFF1F1B2B),
+            ink = Color(0xFFE4E4E8), muted = Color(0xFFA4A5AF), faint = Color(0xFF888995), onAccent = Color(0xFF1F1B2B),
             accent = Color(0xFFB39DF0), accentDim = Color(0xFF7D6AB5),
-            good = Color(0xFF6CC77A), warn = Color(0xFFF5A742), bad = Color(0xFFEF6B67),
+            good = Color(0xFF6CC77A), warn = Color(0xFFF5A742), bad = Color(0xFFF27671),
         ),
     ),
 
@@ -40,7 +40,7 @@ enum class Themes(val key: String, val label: String, val palette: Palette) {
             raised = Color(0xFF29312B), field = Color(0xFF323B35), line = Color(0xFF434E46), lineSoft = Color(0xFF2E3730),
             ink = Color(0xFFE2E8E3), muted = Color(0xFFA2AEA6), faint = Color(0xFF7C8981), onAccent = Color(0xFF13201A),
             accent = Color(0xFF9DD3A8), accentDim = Color(0xFF5E9A6D),
-            good = Color(0xFF7CC98A), warn = Color(0xFFE8B04E), bad = Color(0xFFEF6B67),
+            good = Color(0xFF7CC98A), warn = Color(0xFFE8B04E), bad = Color(0xFFF27671),
         ),
     ),
 
@@ -52,11 +52,11 @@ enum class Themes(val key: String, val label: String, val palette: Palette) {
             raised = Color(0xFF24303C), field = Color(0xFF2C3946), line = Color(0xFF3D4C5B), lineSoft = Color(0xFF283542),
             ink = Color(0xFFE2E8EF), muted = Color(0xFF9FADBD), faint = Color(0xFF788698), onAccent = Color(0xFF0B1820),
             accent = Color(0xFF6FC6EA), accentDim = Color(0xFF3F86A8),
-            good = Color(0xFF6CC77A), warn = Color(0xFFF5A742), bad = Color(0xFFEF6B67),
+            good = Color(0xFF6CC77A), warn = Color(0xFFF5A742), bad = Color(0xFFF27671),
         ),
     ),
 
-    /** Warm charcoal with a coral accent, after the launcher icon; warnings turn yellow to stay apart. */
+    /** Warm charcoal with a coral accent, after the launcher icon; warnings turn yellow and errors rose to stay apart from it. */
     EMBER(
         "ember", "Ember",
         Palette(
@@ -64,7 +64,7 @@ enum class Themes(val key: String, val label: String, val palette: Palette) {
             raised = Color(0xFF332D28), field = Color(0xFF3D3630), line = Color(0xFF514840), lineSoft = Color(0xFF383029),
             ink = Color(0xFFEDE6E0), muted = Color(0xFFB5A99F), faint = Color(0xFF8C8178), onAccent = Color(0xFF2A1206),
             accent = Color(0xFFFF9A6B), accentDim = Color(0xFFB5633C),
-            good = Color(0xFF7CC98A), warn = Color(0xFFF2C744), bad = Color(0xFFF06A6A),
+            good = Color(0xFF7CC98A), warn = Color(0xFFF2C744), bad = Color(0xFFF46A83),
         ),
     ),
 
@@ -74,9 +74,9 @@ enum class Themes(val key: String, val label: String, val palette: Palette) {
         Palette(
             abyss = Color(0xFF000000), ground = Color(0xFF000000), surface = Color(0xFF101013),
             raised = Color(0xFF17171B), field = Color(0xFF202026), line = Color(0xFF37373F), lineSoft = Color(0xFF222228),
-            ink = Color(0xFFE4E4E8), muted = Color(0xFFA4A5AF), faint = Color(0xFF7E7F8A), onAccent = Color(0xFF1F1B2B),
+            ink = Color(0xFFE4E4E8), muted = Color(0xFFA4A5AF), faint = Color(0xFF888995), onAccent = Color(0xFF1F1B2B),
             accent = Color(0xFFB39DF0), accentDim = Color(0xFF7D6AB5),
-            good = Color(0xFF6CC77A), warn = Color(0xFFF5A742), bad = Color(0xFFEF6B67),
+            good = Color(0xFF6CC77A), warn = Color(0xFFF5A742), bad = Color(0xFFF27671),
         ),
     ),
 

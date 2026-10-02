@@ -308,7 +308,8 @@ fun AlreadyTakenDialog(prompt: Prompt, onTookEarlier: (medicationId: Long) -> Un
         text = "Log when you took $name, or put this reminder away if the dose is already in History.",
         onDismiss = onClose,
     ) {
-        SlateButton(onClick = { onTookEarlier(medicationId) }, kind = ButtonKind.Primary, modifier = Modifier.fillMaxWidth()) {
+        // Which applies depends on the person, so neither is the primary.
+        SlateButton(onClick = { onTookEarlier(medicationId) }, modifier = Modifier.fillMaxWidth()) {
             Text("Took It Earlier")
         }
         SlateButton(

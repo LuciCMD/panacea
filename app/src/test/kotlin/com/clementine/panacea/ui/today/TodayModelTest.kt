@@ -121,7 +121,7 @@ class TodayModelTest {
     }
 
     @Test
-    fun buildsCardsStripAndFilters() {
+    fun buildsCardsHeaderAndFilters() {
         val a = MedicationEntity(id = 1, name = "Ibuprofen", dose = 200.0, doseUnit = "mg", category = "OTC", type = "ORAL_TABLET", sortOrder = 0)
         val b = MedicationEntity(id = 2, name = "Sertraline", dose = 50.0, doseUnit = "mg", category = "Prescribed", type = "ORAL_TABLET", sortOrder = 1)
         val doses = listOf(
@@ -141,7 +141,6 @@ class TodayModelTest {
             now = now,
             f = formats,
         )
-        assertEquals("Friday, 2 October · 13:16", ui.header)
         assertEquals(listOf(Category.PRESCRIBED, Category.OTC), ui.categories)
 
         val ibuprofen = ui.cards[0]
@@ -154,10 +153,8 @@ class TodayModelTest {
         assertFalse(sertraline.overdue)
         assertFalse(sertraline.dueNow)
 
-        assertEquals(2, ui.strip.count)
-        assertEquals(listOf("Sertraline at 9:04", "Ibuprofen at 10:00"), ui.strip.dots.map { it.label })
-        assertEquals((13 * 60 + 16) / 1440f, ui.strip.nowFraction, 0.0001f)
-        assertEquals(listOf("0:00", "6:00", "12:00", "18:00", "24:00"), ui.strip.axis)
+        assertEquals("Friday, 2 October · 13:16 · 2 doses today", ui.header)
+        assertEquals(listOf("0:00", "6:00", "12:00", "18:00", "24:00"), TodayModel.axis(formats))
     }
 
     @Test

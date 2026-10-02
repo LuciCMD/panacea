@@ -107,7 +107,7 @@ fun SlateTextField(
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         if (value.isEmpty() && placeholder != null) {
-                            Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = Colors.Faint)
+                            Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = Colors.Muted)
                         }
                         inner()
                     }

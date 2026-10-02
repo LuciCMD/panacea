@@ -1,6 +1,5 @@
 package com.clementine.panacea.ui.today
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -9,10 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,9 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -43,10 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.model.Category
-import com.clementine.panacea.ui.components.AxisLabels
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.EmptyCard
-import com.clementine.panacea.ui.components.InfoTip
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.ProgressRing
 import com.clementine.panacea.ui.components.ScreenHeader
@@ -84,7 +76,7 @@ fun TodayScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(key = "header") {
-                    ScreenHeader("Today", state.header, info = TodayText.HOW_TO_READ.takeIf { state.cards.isNotEmpty() }) {
+                    ScreenHeader("Today", keepPhrases(state.header), info = TodayText.HOW_TO_READ.takeIf { state.cards.isNotEmpty() }) {
                         if (state.cards.size >= 2) {
                             SlateButton(
                                 onClick = onRearrange,
@@ -115,8 +107,6 @@ fun TodayScreen(
                             onAdd,
                         )
                     }
-                } else {
-                    item(key = "strip") { DayStripCard(state.strip) }
                 }
                 if (categories.size > 1) {
                     item(key = "filters") { Filters(categories, shown) { filter = it?.key } }
@@ -151,46 +141,6 @@ fun TodayScreen(
                 .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
                 .fillMaxWidth(),
         )
-    }
-}
-
-@Composable
-private fun DayStripCard(strip: DayStrip) {
-    val small = MaterialTheme.typography.bodyMedium.merge(Numbers)
-    val description = if (strip.dots.isEmpty()) "No doses logged today" else "Logged today: " + strip.dots.joinToString { it.label }
-    SlateCard(Modifier.fillMaxWidth()) {
-        Column(
-            // The label row is the ⓘ's 48dp tall, which brings its own space above and below.
-            Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
-        ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Doses Today", style = small, color = Colors.Muted)
-                InfoTip(about = "Doses Today", text = TodayText.STRIP)
-                Spacer(Modifier.weight(1f))
-                Text(TodayText.dosesToday(strip.count), style = small, color = Colors.Ink)
-            }
-            val (field, lineColor, surface, accent, ink) = listOf(Colors.Field, Colors.Line, Colors.Surface, Colors.Accent, Colors.Ink)
-            Canvas(
-                Modifier
-                    .fillMaxWidth()
-                    .height(22.dp)
-                    .clearAndSetSemantics { contentDescription = description },
-            ) {
-                val line = 2.dp.toPx()
-                val y = size.height / 2
-                val nowX = size.width * strip.nowFraction
-                val corner = CornerRadius(line / 2)
-                drawRoundRect(field, Offset(0f, y - line / 2), Size(size.width, line), corner)
-                drawRoundRect(lineColor, Offset(0f, y - line / 2), Size(nowX, line), corner)
-                strip.dots.forEach {
-                    val center = Offset(size.width * it.fraction, y)
-                    drawCircle(surface, radius = 10.dp.toPx(), center = center)
-                    drawCircle(accent, radius = 7.dp.toPx(), center = center)
-                }
-                drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
-            }
-            AxisLabels(strip.axis, MaterialTheme.typography.bodySmall.merge(Numbers), Colors.Muted, Modifier.padding(top = 8.dp).clearAndSetSemantics { })
-        }
     }
 }
 

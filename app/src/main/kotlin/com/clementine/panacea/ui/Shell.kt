@@ -9,13 +9,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,20 +37,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.ui.edit.EditMedicationScreen
 import com.clementine.panacea.ui.history.HistoryScreen
 import com.clementine.panacea.ui.icons.Glyphs
@@ -60,9 +67,12 @@ import com.clementine.panacea.ui.reminders.EditReminderScreen
 import com.clementine.panacea.ui.reminders.LaterDialog
 import com.clementine.panacea.ui.reminders.RemindersScreen
 import com.clementine.panacea.ui.reminders.TookEarlierDialog
+import com.clementine.panacea.ui.settings.BackupText
 import com.clementine.panacea.ui.settings.SettingsScreen
 import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.today.TodayScreen
+import java.time.ZonedDateTime
+import kotlinx.coroutines.flow.combine
 
 enum class Tab(val label: String, val icon: ImageVector) {
     TODAY("Today", Glyphs.Today),
@@ -266,7 +276,7 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
             )
         }
         if (tab != null) {
-            BottomBar(tab, goTo)
+            BottomBar(tab, backupDue = rememberBackupDue(), onPick = goTo)
         }
     }
 }
@@ -277,8 +287,20 @@ private fun openMedication(backStack: MutableList<Route>, medicationId: Long) {
     backStack.add(Route.Medication(medicationId))
 }
 
+/** Whether a backup is overdue, for the dot on the Settings tab. */
 @Composable
-private fun BottomBar(current: Tab, onPick: (Tab) -> Unit) {
+private fun rememberBackupDue(): Boolean {
+    val container = (LocalContext.current.applicationContext as PanaceaApp).container
+    val due = remember {
+        combine(container.settings.lastBackup, container.medications.observeFirstDoseAt()) { last, first ->
+            BackupText.due(last, first, ZonedDateTime.now())
+        }
+    }
+    return due.collectAsStateWithLifecycle(false).value
+}
+
+@Composable
+private fun BottomBar(current: Tab, backupDue: Boolean, onPick: (Tab) -> Unit) {
     Column(Modifier.fillMaxWidth().background(Colors.Ground)) {
         HorizontalDivider(color = Colors.LineSoft)
         Row(
@@ -309,6 +331,16 @@ private fun BottomBar(current: Tab, onPick: (Tab) -> Unit) {
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(t.icon, contentDescription = null, tint = if (selected) Colors.Accent else Colors.Muted)
+                        if (t == Tab.SETTINGS && backupDue) {
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 4.dp, end = 14.dp)
+                                    .size(8.dp)
+                                    .background(Colors.Warn, CircleShape)
+                                    .semantics { contentDescription = "Backup due" },
+                            )
+                        }
                     }
                     Text(
                         t.label,

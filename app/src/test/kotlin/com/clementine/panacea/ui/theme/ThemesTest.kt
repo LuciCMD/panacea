@@ -33,12 +33,17 @@ class ThemesTest {
             for (bg in listOf(p.ground, p.surface, p.raised)) check(t, "ink", p.ink, bg, 7.0)
             check(t, "ink on field", p.ink, p.field, 7.0)
             check(t, "muted on surface", p.muted, p.surface, 4.5)
+            check(t, "placeholder (muted) on field", p.muted, p.field, 4.5)
             check(t, "faint on surface", p.faint, p.surface, 3.5)
+            check(t, "faint icon on field", p.faint, p.field, 3.0)
             check(t, "text on accent", p.onAccent, p.accent, 4.5)
             check(t, "accent on surface", p.accent, p.surface, 4.5)
             check(t, "warn on surface", p.warn, p.surface, 4.5)
             check(t, "good on surface", p.good, p.surface, 3.0)
             check(t, "text on the delete button", p.onAccent, p.bad, 4.5)
+            for (bg in listOf(p.ground, p.surface, p.raised)) check(t, "bad text", p.bad, bg, 4.5)
+            // A light theme's switch track is the accent, which must show on the surface around it.
+            if (p.isLight) check(t, "switch track on surface", p.accent, p.surface, 3.0)
         }
     }
 
