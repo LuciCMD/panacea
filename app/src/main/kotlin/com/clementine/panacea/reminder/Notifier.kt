@@ -93,6 +93,10 @@ class Notifier(private val context: Context) {
 
     fun cancelAsk(medicationId: Long) = manager.cancel(LEARNED_TAG, notificationId(medicationId))
 
+    fun isShowing(reminderId: Long) = manager.activeNotifications.any { it.tag == null && it.id == notificationId(reminderId) }
+
+    fun isAsking(medicationId: Long) = manager.activeNotifications.any { it.tag == LEARNED_TAG && it.id == notificationId(medicationId) }
+
     /** Every notification the app is showing. */
     fun cancelAll() = manager.cancelAll()
 

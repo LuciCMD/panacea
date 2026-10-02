@@ -20,6 +20,9 @@ import java.time.ZonedDateTime
  * medication learning its routine, at the next time a usual dose would be missing. Every change goes through one lock, so an
  * alarm and a dose logged at the same moment can't undo each other.
  */
+/** What a dose logged in the app settled: reminders as they were, which were showing, and a question. */
+class Settled(val reminders: List<ReminderEntity>, val showing: Set<Long>, val asking: Boolean)
+
 class Reminders(context: Context, private val db: PanaceaDatabase, private val medications: MedicationRepository) {
     private val alarms = Alarms(context)
     private val notifier = Notifier(context)
@@ -139,7 +142,33 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
     }
 
     /** A dose was logged in the app; it settles any reminder it counts for. */
-    suspend fun doseLogged(medicationId: Long, takenAt: Long) = lock.withLock { doseLoggedLocked(medicationId, takenAt) }
+    suspend fun doseLogged(medicationId: Long, takenAt: Long): Settled = lock.withLock {
+        val asking = notifier.isAsking(medicationId)
+        val before = reminderDao.ofMedication(medicationId).filter { ReminderEngine.countsFor(it, takenAt) }
+        val showing = before.filter { notifier.isShowing(it.id) }.map { it.id }.toSet()
+        doseLoggedLocked(medicationId, takenAt)
+        Settled(before, showing, asking)
+    }
+
+    /**
+     * A dose logged in the app was undone straight after: what it settled is due again, and what it
+     * put away is shown again, unless a mute has started since.
+     */
+    suspend fun doseUndone(medicationId: Long, settled: Settled) = lock.withLock {
+        val med = medicationDao.get(medicationId) ?: return@withLock
+        val muted = mutedUntil(med) > System.currentTimeMillis()
+        settled.reminders.forEach { before ->
+            val now = reminderDao.get(before.id) ?: return@forEach
+            val back = ReminderEngine.reopened(now, before) ?: return@forEach
+            reminderDao.update(back)
+            if (!muted && back.id in settled.showing) notifier.show(back, med)
+        }
+        if (settled.asking && !muted && med.learnRoutine && reminderDao.ofMedication(med.id).none { it.enabled && it.pending }) {
+            val now = ZonedDateTime.now()
+            val times = doseDao.timesSince(med.id, now.toInstant().toEpochMilli() - Routines.WINDOW.toMillis())
+            notifier.ask(med, Routines.learn(times, now), times.maxOrNull(), now)
+        }
+    }
 
     /** Later… on the notification: shows it again at [until], unless a dose counts for it by then. */
     suspend fun snooze(reminderId: Long, until: Long) = lock.withLock {

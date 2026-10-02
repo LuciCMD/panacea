@@ -36,6 +36,16 @@ class ReminderEngineTest {
     }
 
     @Test
+    fun undoingTheDosePutsTheReminderBack() {
+        val waiting = daily.copy(pending = true, lastFiredAt = nine, timesCompleted = 3, lastCompletedAt = nine - 720 * minute)
+        val done = ReminderEngine.completed(waiting, nine + 5 * minute)
+        assertEquals(waiting, ReminderEngine.reopened(done, waiting))
+        // It fired again since, or was edited: the undo leaves it alone.
+        assertNull(ReminderEngine.reopened(done.copy(pending = true, lastFiredAt = nine + 720 * minute), waiting))
+        assertNull(ReminderEngine.reopened(done.copy(note = "With food"), waiting))
+    }
+
+    @Test
     fun stillPendingWhenItFiresAgainIsAMiss() {
         val waiting = daily.copy(pending = true, lastFiredAt = ms(10, 1, 21, 0))
         val fired = ReminderEngine.fire(waiting, nine, emptyList(), 0, nine, false)

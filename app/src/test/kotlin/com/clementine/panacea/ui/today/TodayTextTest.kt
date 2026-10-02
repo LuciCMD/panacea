@@ -75,9 +75,6 @@ class TodayTextTest {
         assertEquals("A 50 mg logged at 13:16", TodayText.logged("A", "50 mg", now, now, formats))
         assertEquals("A 50 mg logged for 11:30", TodayText.logged("A", "50 mg", at(10, 2, 11, 30), now, formats))
         assertEquals("A 50 mg logged for yesterday at 23:00", TodayText.logged("A", "50 mg", at(10, 1, 23, 0), now, formats))
-        assertEquals(
-            "A 50 mg taken at 13:16 will be removed from your history.",
-            TodayText.removeQuestion("A", "50 mg", now, now, formats),
-        )
+        assertEquals("A 50 mg removed", TodayText.removed("A", "50 mg"))
     }
 }

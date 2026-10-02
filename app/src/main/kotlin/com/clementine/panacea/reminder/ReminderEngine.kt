@@ -62,6 +62,13 @@ object ReminderEngine {
     fun completed(r: ReminderEntity, now: Long) =
         r.copy(pending = false, timesCompleted = r.timesCompleted + 1, lastCompletedAt = now)
 
+    /**
+     * The dose that settled [r] was undone: [before] as it was, due again, or null when [r] has moved
+     * on since (it fired again, or was edited), so the undo has nothing to put back.
+     */
+    fun reopened(r: ReminderEntity, before: ReminderEntity): ReminderEntity? =
+        before.takeIf { r == completed(before, r.lastCompletedAt) }
+
     /** A mute ended: whether [r], held while it lasted, should be shown now. */
     fun showOnRelease(r: ReminderEntity, now: ZonedDateTime): Boolean {
         if (!r.enabled || !r.pending) return false

@@ -116,10 +116,7 @@ object TodayText {
         }
     }
 
-    fun removeQuestion(name: String, amount: String, takenAt: ZonedDateTime, now: ZonedDateTime, f: TimeFormats): String {
-        val day = if (daysBetween(takenAt, now) == 0L) "" else "yesterday "
-        return "$name $amount taken ${day}at ${takenAt.format(f.time)} will be removed from your history."
-    }
+    fun removed(name: String, amount: String) = "$name $amount removed"
 
     private fun daysBetween(a: ZonedDateTime, b: ZonedDateTime) =
         ChronoUnit.DAYS.between(a.toLocalDate(), b.withZoneSameInstant(a.zone).toLocalDate())

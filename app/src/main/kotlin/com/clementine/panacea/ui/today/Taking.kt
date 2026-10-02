@@ -30,7 +30,6 @@ import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundEvent
 import com.clementine.panacea.ui.components.ButtonKind
-import com.clementine.panacea.ui.components.ConfirmDialog
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.SlateToast
@@ -137,34 +136,48 @@ fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAm
     }
 }
 
-/** The bar offering Undo for the dose just logged, and the question before it goes. */
+/**
+ * The bar after a dose is logged: Undo removes it in one tap, and the bar then offers Put Back, so a
+ * slip either way is one tap to mend. Removing older doses, from History, still asks first.
+ */
 @Composable
 fun UndoBar(viewModel: TodayViewModel, modifier: Modifier = Modifier) {
-    val logged by viewModel.logged.collectAsStateWithLifecycle()
+    val notice by viewModel.notice.collectAsStateWithLifecycle()
     val sounds = LocalSoundPlayer.current
-    var confirming by remember { mutableStateOf<LoggedDose?>(null) }
-
-    val current = logged
-    if (current != null && confirming == null) {
-        SlateToast(message = current.message, actionLabel = "Undo", onAction = { confirming = current }, modifier = modifier)
+    val haptics = LocalHapticFeedback.current
+    val current = notice ?: return
+    // Undo and Put Back share a place, so a quick second tap meant for the first does nothing.
+    var ready by remember(current) { mutableStateOf(false) }
+    LaunchedEffect(current) {
+        delay(ACTION_REST_MS)
+        ready = true
     }
-
-    confirming?.let { dose ->
-        ConfirmDialog(
-            title = "Remove This Dose?",
-            text = dose.removeQuestion,
-            confirmLabel = "Remove",
-            dismissLabel = "Keep It",
-            confirmKind = ButtonKind.Delete,
-            onConfirm = {
-                viewModel.undo(dose)
-                sounds.play(SoundEvent.UNDO)
-                confirming = null
+    when (current) {
+        is LoggedDose -> SlateToast(
+            message = current.message,
+            actionLabel = "Undo",
+            onAction = {
+                if (ready) {
+                    viewModel.undo(current)
+                    sounds.play(SoundEvent.UNDO)
+                }
             },
-            onDismiss = {
-                viewModel.dismiss(dose)
-                confirming = null
+            modifier = modifier,
+        )
+        is RemovedDose -> SlateToast(
+            message = current.message,
+            actionLabel = "Put Back",
+            onAction = {
+                if (ready) {
+                    viewModel.putBack(current)
+                    sounds.play(SoundEvent.TAKE)
+                    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                }
             },
+            modifier = modifier,
+            stripe = Colors.Muted,
         )
     }
 }
+
+private const val ACTION_REST_MS = 600L

@@ -1,5 +1,8 @@
 package com.clementine.panacea.ui.today
 
+import android.view.accessibility.AccessibilityManager
+import android.view.accessibility.AccessibilityManager.FLAG_CONTENT_CONTROLS
+import android.view.accessibility.AccessibilityManager.FLAG_CONTENT_TEXT
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
@@ -10,6 +13,7 @@ import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.TakenDose
 import com.clementine.panacea.reminder.Reminders
 import com.clementine.panacea.reminder.Routines
+import com.clementine.panacea.reminder.Settled
 import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationSummary
@@ -33,16 +37,28 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZonedDateTime
 
-private const val UNDO_SHOWN_MS = 10_000L
+/** How long the bar stays, before Android's "Time to take action" setting lengthens it. */
+const val DOSE_BAR_MS = 15_000L
 
-/** A dose just logged, shown in the undo bar until it times out or is dealt with. */
-data class LoggedDose(val taken: TakenDose, val message: String, val removeQuestion: String)
+/** A dose just logged or just removed, shown in a bar until it times out or is acted on. */
+sealed interface DoseNotice {
+    val taken: TakenDose
+    val message: String
+}
+
+/** Offers Undo, which removes it in one tap. */
+data class LoggedDose(override val taken: TakenDose, val settled: Settled, override val message: String) : DoseNotice
+
+/** Offers Put Back, in case Undo was the slip. */
+data class RemovedDose(override val taken: TakenDose, override val message: String) : DoseNotice
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModel(
     private val repository: MedicationRepository,
     private val reminders: Reminders,
     val formats: TimeFormats,
+    /** How long the bar stays, given [DOSE_BAR_MS]. */
+    private val barShownMs: (Long) -> Long = { it },
 ) : ViewModel() {
 
     /** Ticks at each new minute, only while the screen is watched. */
@@ -82,8 +98,8 @@ class TodayViewModel(
         viewModelScope.launch { repository.dismissImportProblems() }
     }
 
-    private val _logged = MutableStateFlow<LoggedDose?>(null)
-    val logged: StateFlow<LoggedDose?> = _logged.asStateFlow()
+    private val _notice = MutableStateFlow<DoseNotice?>(null)
+    val notice: StateFlow<DoseNotice?> = _notice.asStateFlow()
 
     /** Logs a dose; [takenAt] null means now. */
     fun take(medicationId: Long, multiplier: Double, takenAt: Long? = null) {
@@ -91,29 +107,36 @@ class TodayViewModel(
             val now = ZonedDateTime.now()
             val taken = repository.takeDose(medicationId, multiplier, takenAt ?: now.toInstant().toEpochMilli()) ?: return@launch
             // A dose settles a reminder that's showing, and keeps one coming soon quiet.
-            reminders.doseLogged(medicationId, taken.dose.takenAt)
+            val settled = reminders.doseLogged(medicationId, taken.dose.takenAt)
             val at = Instant.ofEpochMilli(taken.dose.takenAt).atZone(now.zone)
-            val amount = TodayText.amount(taken.medication, taken.dose.multiplier)
-            val logged = LoggedDose(
-                taken,
-                TodayText.logged(taken.medication.name, amount, at, now, formats),
-                TodayText.removeQuestion(taken.medication.name, amount, at, now, formats),
-            )
-            _logged.value = logged
-            // Counted here rather than on screen, so leaving the screen doesn't stop the clock.
-            delay(UNDO_SHOWN_MS)
-            _logged.compareAndSet(logged, null)
+            show(LoggedDose(taken, settled, TodayText.logged(taken.medication.name, amountOf(taken), at, now, formats)))
         }
     }
 
+    /** Removes the dose just logged, and brings back any reminder it put away. */
     fun undo(logged: LoggedDose) {
-        _logged.compareAndSet(logged, null)
-        viewModelScope.launch { repository.undoDose(logged.taken) }
+        if (!_notice.compareAndSet(logged, null)) return
+        viewModelScope.launch {
+            repository.undoDose(logged.taken)
+            reminders.doseUndone(logged.taken.medication.id, logged.settled)
+            show(RemovedDose(logged.taken, TodayText.removed(logged.taken.medication.name, amountOf(logged.taken))))
+        }
     }
 
-    fun dismiss(logged: LoggedDose) {
-        _logged.compareAndSet(logged, null)
+    /** Logs the dose just removed again, as it was. */
+    fun putBack(removed: RemovedDose) {
+        if (!_notice.compareAndSet(removed, null)) return
+        take(removed.taken.medication.id, removed.taken.dose.multiplier, removed.taken.dose.takenAt)
     }
+
+    private suspend fun show(notice: DoseNotice) {
+        _notice.value = notice
+        // Counted here rather than on screen, so leaving the screen doesn't stop the clock.
+        delay(barShownMs(DOSE_BAR_MS))
+        _notice.compareAndSet(notice, null)
+    }
+
+    private fun amountOf(taken: TakenDose) = TodayText.amount(taken.medication, taken.dose.multiplier)
 
     fun addPreset(value: Double) {
         viewModelScope.launch { repository.addPreset(value) }
@@ -132,7 +155,10 @@ class TodayViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as PanaceaApp
-                TodayViewModel(app.container.medications, app.container.reminders, timeFormats(app))
+                val a11y = app.getSystemService(AccessibilityManager::class.java)
+                TodayViewModel(app.container.medications, app.container.reminders, timeFormats(app)) { ms ->
+                    a11y.getRecommendedTimeoutMillis(ms.toInt(), FLAG_CONTENT_TEXT or FLAG_CONTENT_CONTROLS).toLong()
+                }
             }
         }
     }
