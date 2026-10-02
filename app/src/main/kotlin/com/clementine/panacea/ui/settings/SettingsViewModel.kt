@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
+import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.Settings
 import com.clementine.panacea.data.backup.BackupException
 import com.clementine.panacea.data.backup.Backups
@@ -14,6 +15,7 @@ import com.clementine.panacea.data.backup.PendingRestore
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.timeFormats
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import com.clementine.panacea.sound.SoundEvent
@@ -21,8 +23,11 @@ import com.clementine.panacea.sound.SoundLibrary
 import com.clementine.panacea.sound.SoundMode
 import com.clementine.panacea.sound.SoundSetting
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,12 +35,25 @@ import kotlinx.coroutines.launch
 data class BackupStatus(val text: String, val failed: Boolean = false)
 
 class SettingsViewModel(
+    private val medications: MedicationRepository,
     private val settings: Settings,
     private val library: SoundLibrary,
     private val backups: Backups,
     private val formats: TimeFormats,
 ) : ViewModel() {
     val theme: StateFlow<String> = settings.theme
+
+    /** Medications in Recently Removed, newest first. */
+    val removed: StateFlow<List<RemovedItem>> = medications.observeRemoved()
+        .map { list ->
+            val now = ZonedDateTime.now()
+            list.map { RemovedItem(it.id, it.name, RemovedText.status(it.removedAt ?: 0, now)) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun restore(id: Long) {
+        viewModelScope.launch { medications.restore(id) }
+    }
 
     fun sound(event: SoundEvent): StateFlow<SoundSetting> = settings.sound(event)
 
@@ -142,7 +160,7 @@ class SettingsViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as PanaceaApp).container
-                SettingsViewModel(container.settings, container.soundLibrary, container.backups, timeFormats(this[APPLICATION_KEY] as PanaceaApp))
+                SettingsViewModel(container.medications, container.settings, container.soundLibrary, container.backups, timeFormats(this[APPLICATION_KEY] as PanaceaApp))
             }
         }
     }

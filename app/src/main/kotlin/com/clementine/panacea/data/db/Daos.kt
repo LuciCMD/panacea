@@ -17,16 +17,35 @@ interface MedicationDao {
         LEFT JOIN dose l ON l.id = (
             SELECT d.id FROM dose d WHERE d.medicationId = m.id ORDER BY d.takenAt DESC, d.id DESC LIMIT 1
         )
+        WHERE m.removedAt IS NULL
         ORDER BY m.sortOrder, m.name
         """
     )
     fun observeSummaries(): Flow<List<MedicationSummary>>
 
-    @Query("SELECT * FROM medication WHERE id = :id")
+    /** A medication in use; a removed one is null here. */
+    @Query("SELECT * FROM medication WHERE id = :id AND removedAt IS NULL")
     suspend fun get(id: Long): MedicationEntity?
 
+    /** Any medication, removed or not, for restoring one. */
     @Query("SELECT * FROM medication WHERE id = :id")
+    suspend fun getAny(id: Long): MedicationEntity?
+
+    @Query("SELECT * FROM medication WHERE id = :id AND removedAt IS NULL")
     fun observe(id: Long): Flow<MedicationEntity?>
+
+    /** Every medication, removed ones too: their recent doses still count toward what's been had. */
+    @Query("SELECT * FROM medication")
+    fun observeAll(): Flow<List<MedicationEntity>>
+
+    @Query("SELECT * FROM medication WHERE removedAt IS NOT NULL ORDER BY removedAt DESC")
+    fun observeRemoved(): Flow<List<MedicationEntity>>
+
+    @Query("SELECT * FROM medication WHERE removedAt IS NOT NULL AND removedAt < :before")
+    suspend fun removedBefore(before: Long): List<MedicationEntity>
+
+    @Query("UPDATE medication SET removedAt = :at WHERE id = :id")
+    suspend fun setRemovedAt(id: Long, at: Long?)
 
     @Query("SELECT * FROM ingredient WHERE medicationId = :id ORDER BY position")
     suspend fun ingredientsOf(id: Long): List<IngredientEntity>
@@ -34,7 +53,7 @@ interface MedicationDao {
     @Query("SELECT * FROM ingredient WHERE medicationId = :id ORDER BY position")
     fun observeIngredientsOf(id: Long): Flow<List<IngredientEntity>>
 
-    @Query("SELECT id, name FROM medication")
+    @Query("SELECT id, name FROM medication WHERE removedAt IS NULL")
     suspend fun names(): List<MedicationName>
 
     @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM medication")
@@ -70,13 +89,13 @@ interface MedicationDao {
     @Query("SELECT * FROM medication")
     suspend fun all(): List<MedicationEntity>
 
-    @Query("SELECT id, name FROM medication ORDER BY sortOrder, name")
+    @Query("SELECT id, name FROM medication WHERE removedAt IS NULL ORDER BY sortOrder, name")
     fun observeNames(): Flow<List<MedicationName>>
 
-    @Query("SELECT * FROM medication WHERE learnRoutine = 1")
+    @Query("SELECT * FROM medication WHERE learnRoutine = 1 AND removedAt IS NULL")
     fun observeLearning(): Flow<List<MedicationEntity>>
 
-    @Query("SELECT * FROM medication WHERE learnRoutine = 1")
+    @Query("SELECT * FROM medication WHERE learnRoutine = 1 AND removedAt IS NULL")
     suspend fun learning(): List<MedicationEntity>
 
     /** Turning learning on starts from now, so it doesn't ask a question already past. */
@@ -124,9 +143,12 @@ interface DoseDao {
     @Query("DELETE FROM dose WHERE id = :id")
     suspend fun delete(id: Long)
 
+    @Query("SELECT * FROM dose WHERE id = :id")
+    suspend fun get(id: Long): DoseEntity?
+
     @Query(
         """
-        SELECT d.*, m.name AS name, m.type AS type FROM dose d
+        SELECT d.*, m.name AS name, m.type AS type, m.photoFront AS photo FROM dose d
         JOIN medication m ON m.id = d.medicationId
         ORDER BY d.takenAt DESC
         """
@@ -177,6 +199,7 @@ interface ReminderDao {
         """
         SELECT r.*, m.name AS medicationName, m.mutedUntil AS medicationMutedUntil FROM reminder r
         JOIN medication m ON m.id = r.medicationId
+        WHERE m.removedAt IS NULL
         ORDER BY m.sortOrder, m.name, r.id
         """
     )
@@ -188,12 +211,17 @@ interface ReminderDao {
     @Query("SELECT * FROM reminder WHERE medicationId = :id ORDER BY id")
     fun observeOf(id: Long): Flow<List<ReminderEntity>>
 
-    @Query("SELECT * FROM reminder WHERE enabled = 1")
+    @Query("SELECT r.* FROM reminder r JOIN medication m ON m.id = r.medicationId WHERE r.enabled = 1 AND m.removedAt IS NULL")
     fun observeEnabled(): Flow<List<ReminderEntity>>
 
-    @Query("SELECT * FROM reminder")
-    fun observeAll(): Flow<List<ReminderEntity>>
+    /** Reminders of medications in use: a removed medication's stay silent. */
+    @Query("SELECT r.* FROM reminder r JOIN medication m ON m.id = r.medicationId WHERE m.removedAt IS NULL")
+    fun observeActive(): Flow<List<ReminderEntity>>
 
+    @Query("SELECT r.* FROM reminder r JOIN medication m ON m.id = r.medicationId WHERE m.removedAt IS NULL")
+    suspend fun active(): List<ReminderEntity>
+
+    /** Every reminder, a removed medication's too, for a backup. */
     @Query("SELECT * FROM reminder")
     suspend fun all(): List<ReminderEntity>
 

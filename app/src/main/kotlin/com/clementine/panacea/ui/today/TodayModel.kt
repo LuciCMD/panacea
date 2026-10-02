@@ -65,16 +65,17 @@ object TodayModel {
         f: TimeFormats,
         /** The last four weeks of dose times of each medication learning its routine. */
         learningTimes: Map<Long, List<Long>> = emptyMap(),
+        /** Every medication, removed ones too, whose recent doses still count toward what's been had. */
+        allMedications: List<MedicationEntity> = summaries.map { it.medication },
     ): TodayUi {
         val ingredientsByMed = ingredients.groupBy { it.medicationId }
         val remindersByMed = reminders.filter { it.enabled }.groupBy { it.medicationId }
         val dosesByMed = doses.groupBy { it.medicationId }
-        val medications = summaries.map { it.medication }
         val nowMs = now.toInstant().toEpochMilli()
         val cards = summaries.map { s ->
             card(s, ingredientsByMed[s.medication.id].orEmpty(), remindersByMed[s.medication.id].orEmpty(),
                 dosesByMed[s.medication.id].orEmpty(), learningTimes[s.medication.id], now, f)
-                .copy(had = Intake.last24h(s.medication, medications, ingredients, doses, nowMs))
+                .copy(had = Intake.last24h(s.medication, allMedications, ingredients, doses, nowMs))
         }
         return TodayUi(
             header = TodayText.header(now, f),

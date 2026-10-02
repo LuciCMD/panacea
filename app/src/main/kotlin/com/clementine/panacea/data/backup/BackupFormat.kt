@@ -159,6 +159,7 @@ object BackupFormat {
                 photoFront = m.fileName("photoFront"),
                 photoBack = m.fileName("photoBack"),
                 routineAskedFor = m.optLong("routineAskedFor"),
+                removedAt = m.optLong("removedAt").takeIf { it > 0 },
             )
             m.objects("ingredients").forEachIndexed { position, g ->
                 val ingredientName = g.text("name")
@@ -275,6 +276,7 @@ object BackupFormat {
         .put("learnRoutine", m.learnRoutine)
         .put("mutedUntil", m.mutedUntil)
         .put("routineAskedFor", m.routineAskedFor)
+        .put("removedAt", m.removedAt ?: JSONObject.NULL)
         .put("photoFront", m.photoFront ?: JSONObject.NULL)
         .put("photoBack", m.photoBack ?: JSONObject.NULL)
 

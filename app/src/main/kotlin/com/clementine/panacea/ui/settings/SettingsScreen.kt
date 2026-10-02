@@ -68,6 +68,7 @@ import java.time.LocalDate
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
     val theme by viewModel.theme.collectAsStateWithLifecycle()
+    val removed by viewModel.removed.collectAsStateWithLifecycle()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = screenPadding(),
@@ -77,6 +78,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(factory = SettingsVi
         item(key = "theme") { ThemeCard(theme, viewModel::setTheme) }
         item(key = "sounds") { SoundsCard(viewModel) }
         item(key = "backup") { BackupCard(viewModel) }
+        if (removed.isNotEmpty()) item(key = "removed") { RecentlyRemovedCard(removed, viewModel::restore) }
         item(key = "about") { AboutCard() }
     }
 }
@@ -296,6 +298,35 @@ private val RESTORE_TYPES = arrayOf("application/zip", "application/x-zip-compre
 @Composable
 private fun ChipText(text: String, modifier: Modifier = Modifier) {
     Text(text, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
+}
+
+/** Removed medications, until they're deleted for good; each can come back as it was. */
+@Composable
+private fun RecentlyRemovedCard(removed: List<RemovedItem>, onRestore: (Long) -> Unit) {
+    SectionCard(
+        "Recently Removed",
+        info = "A removed medication waits here for 30 days with its doses and reminders, then is deleted for good. " +
+            "Restore brings it back as it was.",
+    ) {
+        Column {
+            removed.forEachIndexed { i, item ->
+                if (i > 0) HorizontalDivider(color = Colors.LineSoft)
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(item.name, style = MaterialTheme.typography.bodyLarge, color = Colors.Ink)
+                        Text(item.status, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted)
+                    }
+                    SlateButton(onClick = { onRestore(item.id) }, modifier = Modifier.semantics { contentDescription = "Restore ${item.name}" }) {
+                        Text("Restore")
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

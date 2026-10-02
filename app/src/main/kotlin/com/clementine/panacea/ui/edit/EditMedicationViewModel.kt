@@ -51,13 +51,11 @@ class EditMedicationViewModel(private val repository: MedicationRepository, val 
         }
     }
 
-    fun delete(id: Long, onDeleted: () -> Unit) {
+    /** To Recently Removed; its photos go when it's deleted for good, with the photo sweep at start-up. */
+    fun remove(id: Long, onRemoved: () -> Unit) {
         viewModelScope.launch {
-            repository.delete(id)?.let {
-                photos.delete(it.photoFront)
-                photos.delete(it.photoBack)
-            }
-            onDeleted()
+            repository.remove(id)
+            onRemoved()
         }
     }
 

@@ -23,8 +23,16 @@ class HistoryViewModel(private val repository: MedicationRepository, formats: Ti
         .map { HistoryModel.build(it, ZonedDateTime.now(), formats) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    fun remove(item: HistoryItem) {
-        viewModelScope.launch { repository.removeDose(item.id) }
+    fun remove(id: Long) {
+        viewModelScope.launch { repository.removeDose(id) }
+    }
+
+    fun changeTime(id: Long, takenAt: Long) {
+        viewModelScope.launch { repository.changeDoseTime(id, takenAt) }
+    }
+
+    fun changeAmount(id: Long, multiplier: Double) {
+        viewModelScope.launch { repository.changeDoseAmount(id, multiplier) }
     }
 
     companion object {

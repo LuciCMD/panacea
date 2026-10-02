@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.TakenDose
+import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.reminder.Reminders
 import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.reminder.Settled
@@ -80,14 +81,14 @@ class TodayViewModel(
         repository.observeSummaries(),
         repository.observeIngredients(),
         repository.observeEnabledReminders(),
-        combine(recentDoses, learningTimes, ::Pair),
+        combine(recentDoses, learningTimes, repository.observeAllMedications(), ::Triple),
         repository.observePresets(),
-    ) { summaries, ingredients, reminders, (doses, learning), presets -> Data(summaries, ingredients, reminders, doses, learning, presets) }
+    ) { summaries, ingredients, reminders, (doses, learning, all), presets -> Data(summaries, ingredients, reminders, doses, learning, presets, all) }
 
     /** Null until the database has answered, so the screen can tell "loading" from "empty". */
     val ui: StateFlow<TodayUi?> = combine(data, clock) { d, _ ->
         // The clock only says when to redraw; a dose logged mid-minute must not land in the future.
-        TodayModel.build(d.summaries, d.ingredients, d.reminders, d.doses, d.presets, ZonedDateTime.now(), formats, d.learning)
+        TodayModel.build(d.summaries, d.ingredients, d.reminders, d.doses, d.presets, ZonedDateTime.now(), formats, d.learning, d.all)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** What the 3.4 import couldn't bring over; empty when nothing, or once put away. */
@@ -149,6 +150,7 @@ class TodayViewModel(
         val doses: List<DoseEntity>,
         val learning: Map<Long, List<Long>>,
         val presets: List<Double>,
+        val all: List<MedicationEntity>,
     )
 
     companion object {

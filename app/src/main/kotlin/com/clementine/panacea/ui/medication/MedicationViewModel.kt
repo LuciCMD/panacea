@@ -51,6 +51,14 @@ class MedicationViewModel(
         viewModelScope.launch { repository.removeDose(id) }
     }
 
+    fun changeDoseTime(id: Long, takenAt: Long) {
+        viewModelScope.launch { repository.changeDoseTime(id, takenAt) }
+    }
+
+    fun changeDoseAmount(id: Long, multiplier: Double) {
+        viewModelScope.launch { repository.changeDoseAmount(id, multiplier) }
+    }
+
     fun setReminderEnabled(id: Long, enabled: Boolean) {
         viewModelScope.launch { repository.setReminderEnabled(id, enabled) }
     }

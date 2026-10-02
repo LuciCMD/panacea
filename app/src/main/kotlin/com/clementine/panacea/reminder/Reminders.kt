@@ -39,7 +39,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
     /** Keeps the alarms in step with the reminder table for as long as the app runs. */
     suspend fun watch() {
         var known = emptySet<Long>()
-        reminderDao.observeAll().collect { list ->
+        reminderDao.observeActive().collect { list ->
             lock.withLock {
                 armAll(list)
                 val ids = list.mapTo(HashSet()) { it.id }
@@ -81,7 +81,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
      * came due while none could fire, and ends mutes that ran out meanwhile.
      */
     suspend fun resync() = lock.withLock {
-        val list = reminderDao.all()
+        val list = reminderDao.active()
         armAll(list)
         val now = ZonedDateTime.now()
         list.forEach { r -> ReminderEngine.missedWhileAway(r, now)?.let { fireLocked(r.id, it.toInstant().toEpochMilli(), snoozed = false) } }
@@ -99,7 +99,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
     suspend fun replaceData(apply: suspend () -> Unit) {
         try {
             lock.withLock {
-                reminderDao.all().forEach { alarms.cancel(it.id) }
+                reminderDao.active().forEach { alarms.cancel(it.id) }
                 medicationDao.all().forEach {
                     alarms.cancelAsk(it.id)
                     alarms.cancelAskAgain(it.id)
@@ -226,7 +226,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
     suspend fun mute(medicationId: Long?, until: Long) = lock.withLock {
         val targets = if (medicationId == null) {
             metaDao.put(MetaEntity(MetaKeys.MUTE_ALL_UNTIL, until.toString()))
-            reminderDao.all()
+            reminderDao.active()
         } else {
             medicationDao.setMutedUntil(medicationId, until)
             reminderDao.ofMedication(medicationId)
@@ -316,7 +316,7 @@ class Reminders(context: Context, private val db: PanaceaDatabase, private val m
     private suspend fun releaseLocked(medicationId: Long?) {
         val now = ZonedDateTime.now()
         val nowMs = now.toInstant().toEpochMilli()
-        val list = if (medicationId == null) reminderDao.all() else reminderDao.ofMedication(medicationId)
+        val list = if (medicationId == null) reminderDao.active() else reminderDao.ofMedication(medicationId)
         list.filter { ReminderEngine.showOnRelease(it, now) }.forEach { r ->
             val med = medicationDao.get(r.medicationId) ?: return@forEach
             if (mutedUntil(med) > nowMs) return@forEach

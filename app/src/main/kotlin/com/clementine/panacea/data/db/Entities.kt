@@ -36,7 +36,15 @@ data class MedicationEntity(
     /** When the latest question a learned reminder dealt with came due (epoch ms); none at or before it is asked. Added in version 3. */
     @ColumnInfo(defaultValue = "0")
     val routineAskedFor: Long = 0,
+    /**
+     * When it was removed (epoch ms): it waits in Recently Removed, hidden and silent with its doses
+     * kept, until it's restored or [KEEP_REMOVED_MS] have passed. Null while in use. Added in version 5.
+     */
+    val removedAt: Long? = null,
 )
+
+/** How long a removed medication can be restored, before it's deleted for good. */
+const val KEEP_REMOVED_MS = 30L * 24 * 60 * 60_000
 
 @Entity(
     tableName = "ingredient",
@@ -143,6 +151,8 @@ data class DoseRow(
     @Embedded val dose: DoseEntity,
     val name: String,
     val type: String,
+    /** The medication's front photo, if any. */
+    val photo: String? = null,
 )
 
 data class ReminderRow(

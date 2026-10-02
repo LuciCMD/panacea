@@ -5,6 +5,7 @@ import com.clementine.panacea.data.db.DoseEntity
 import com.clementine.panacea.data.db.DoseRow
 import com.clementine.panacea.data.db.DoseTime
 import com.clementine.panacea.data.db.IngredientEntity
+import com.clementine.panacea.data.db.KEEP_REMOVED_MS
 import com.clementine.panacea.data.db.MedicationCounts
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.data.db.MedicationName
@@ -75,6 +76,16 @@ class MedicationRepository(private val db: PanaceaDatabase) {
     /** Removes one dose from the history; the remembered amount stays as it is. */
     suspend fun removeDose(id: Long) = doses.delete(id)
 
+    /** Moves a logged dose to [takenAt]; it was logged at the wrong time. */
+    suspend fun changeDoseTime(id: Long, takenAt: Long) = db.withTransaction {
+        doses.get(id)?.let { doses.update(listOf(it.copy(takenAt = takenAt))) }
+    }
+
+    /** A logged dose becomes [multiplier] of what it was logged at; it was logged as the wrong amount. */
+    suspend fun changeDoseAmount(id: Long, multiplier: Double) = db.withTransaction {
+        doses.get(id)?.let { doses.update(listOf(rescaled(it, Amounts.round(multiplier)))) }
+    }
+
     fun observePresets(): Flow<List<Double>> =
         db.metaDao().observe(MetaKeys.AMOUNT_PRESETS).map(Amounts::parsePresets)
 
@@ -142,11 +153,26 @@ class MedicationRepository(private val db: PanaceaDatabase) {
         id to previous
     }
 
-    /** Deletes the medication with its ingredients, doses and reminders. Returns the row it was. */
-    suspend fun delete(id: Long): MedicationEntity? = db.withTransaction {
-        val med = medications.get(id)
-        medications.delete(id)
-        med
+    /** Moves a medication to Recently Removed: hidden, its reminders silent, its doses kept. */
+    suspend fun remove(id: Long, now: Long = System.currentTimeMillis()) = medications.setRemovedAt(id, now)
+
+    /**
+     * Brings a removed medication back where it was in the list. If another has taken its name since,
+     * it comes back as "Name (Restored)".
+     */
+    suspend fun restore(id: Long) = db.withTransaction {
+        val med = medications.getAny(id) ?: return@withTransaction
+        val taken = medications.names().any { it.name.trim().equals(med.name.trim(), ignoreCase = true) }
+        medications.update(med.copy(removedAt = null, name = if (taken) "${med.name} (Restored)" else med.name))
+    }
+
+    fun observeRemoved(): Flow<List<MedicationEntity>> = medications.observeRemoved()
+
+    fun observeAllMedications(): Flow<List<MedicationEntity>> = medications.observeAll()
+
+    /** Deletes for good what was removed more than 30 days before [now], with its doses and reminders. */
+    suspend fun deleteRemoved(now: Long = System.currentTimeMillis()) = db.withTransaction {
+        medications.removedBefore(now - KEEP_REMOVED_MS).forEach { medications.delete(it.id) }
     }
 
     /** Puts the medications in the order of [ids]; any not named keep their place after them. */

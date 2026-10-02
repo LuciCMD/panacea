@@ -141,9 +141,8 @@ object Drafts {
             c.doses.takeIf { it > 0 }?.let { counted(it, "logged dose") },
             c.reminders.takeIf { it > 0 }?.let { counted(it, "reminder") },
         )
-        if (parts.isEmpty()) return "It has no logged doses or reminders yet."
-        val verb = if (parts.size == 1 && (c.doses + c.reminders) == 1) "goes" else "go"
-        return "Its ${parts.joinToString(" and ")} $verb with it. This can't be undone."
+        val with = if (parts.isEmpty()) "" else ", with its ${parts.joinToString(" and ")},"
+        return "It moves to Recently Removed in Settings$with and is deleted for good after 30 days. Until then you can restore it."
     }
 
     fun toIngredients(d: MedicationDraft, medicationId: Long): List<IngredientEntity> =

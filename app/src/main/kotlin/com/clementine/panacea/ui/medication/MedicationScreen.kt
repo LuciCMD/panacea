@@ -9,24 +9,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.ui.semantics.Role
-import com.clementine.panacea.ui.components.ButtonKind
-import com.clementine.panacea.ui.components.ConfirmDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -51,8 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.data.db.MedicationEntity
-import com.clementine.panacea.sound.LocalSoundPlayer
-import com.clementine.panacea.sound.SoundEvent
+import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
@@ -63,8 +58,8 @@ import com.clementine.panacea.ui.components.textIcon
 import com.clementine.panacea.ui.edit.PhotoViewer
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.edit.PillSide
-import com.clementine.panacea.ui.history.HistoryDay
-import com.clementine.panacea.ui.history.HistoryItem
+import com.clementine.panacea.ui.history.DayCard
+import com.clementine.panacea.ui.history.DoseSheet
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.reminders.NotificationsOffCard
 import com.clementine.panacea.ui.reminders.ReminderRow
@@ -101,14 +96,14 @@ fun MedicationScreen(
     val state by flow.collectAsStateWithLifecycle(MedicationState.Loading)
     val todayUi by today.ui.collectAsStateWithLifecycle()
     val take = rememberTake(today)
-    val sounds = LocalSoundPlayer.current
     val notificationsAllowed = rememberNotificationsAllowed()
     // Learning is turned on whatever the answer; the card below says if notifications are off.
     val askThenLearn = rememberAskForNotifications(settingsIfRefused = false) { viewModel.setLearnRoutine(id, true) }
 
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     var viewing by rememberSaveable { mutableStateOf<PillSide?>(null) }
-    var removing by remember { mutableStateOf<HistoryItem?>(null) }
+    // An id, so the sheet shows the dose as it is after a change.
+    var opened by rememberSaveable { mutableStateOf<Long?>(null) }
     var days by rememberSaveable { mutableIntStateOf(FIRST_DAYS) }
 
     val ui = when (val s = state) {
@@ -181,7 +176,7 @@ fun MedicationScreen(
                 item(key = "history-none") { Quiet("Doses you log show up here.") }
             }
             items(ui.history.take(days), key = { "day-${it.doses.first().id}" }) { day ->
-                DayCard(day) { removing = it }
+                DayCard(day, showMedication = false) { opened = it.id }
             }
             if (ui.history.size > days) {
                 item(key = "more") {
@@ -211,19 +206,13 @@ fun MedicationScreen(
         )
     }
     viewing?.let { PhotoViewer(med.name, med.photoFront, med.photoBack, it) { viewing = null } }
-    removing?.let { item ->
-        ConfirmDialog(
-            title = "Remove This Dose?",
-            text = item.removeQuestion,
-            confirmLabel = "Remove",
-            dismissLabel = "Keep It",
-            confirmKind = ButtonKind.Delete,
-            onConfirm = {
-                viewModel.removeDose(item.id)
-                sounds.play(SoundEvent.UNDO)
-                removing = null
-            },
-            onDismiss = { removing = null },
+    opened?.let { id -> ui.history.firstNotNullOfOrNull { day -> day.doses.firstOrNull { it.id == id } } }?.let { item ->
+        DoseSheet(
+            item,
+            onChangeTime = { viewModel.changeDoseTime(item.id, it) },
+            onChangeAmount = { viewModel.changeDoseAmount(item.id, it) },
+            onRemove = { viewModel.removeDose(item.id) },
+            onDismiss = { opened = null },
         )
     }
 }
@@ -391,36 +380,4 @@ private fun SectionLabel(text: String) {
 @Composable
 private fun Quiet(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted, modifier = Modifier.padding(start = 4.dp))
-}
-
-@Composable
-private fun DayCard(day: HistoryDay, onRemove: (HistoryItem) -> Unit) {
-    val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            day.title,
-            style = MaterialTheme.typography.labelMedium,
-            color = Colors.Muted,
-            modifier = Modifier.padding(start = 4.dp),
-        )
-        SlateCard(Modifier.fillMaxWidth()) {
-            Column {
-                day.doses.forEachIndexed { i, item ->
-                    if (i > 0) HorizontalDivider(color = Colors.LineSoft, modifier = Modifier.padding(start = 14.dp))
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .clickable(role = Role.Button, onClickLabel = "Remove this dose") { onRemove(item) }
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(item.time, style = body, color = Colors.Ink, modifier = Modifier.widthIn(min = 64.dp))
-                        Text(item.amount, style = body, color = Colors.Muted, modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-    }
 }

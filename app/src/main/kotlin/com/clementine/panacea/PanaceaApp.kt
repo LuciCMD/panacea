@@ -31,6 +31,7 @@ class PanaceaApp : Application() {
                 ImportOutcome.AlreadyDone -> Unit
             }
             container.started.complete(Unit)
+            container.medications.deleteRemoved()
             container.photos.sweep(container.medications.photoFiles())
             // Catches up on anything missed while the app was stopped.
             container.reminders.resync()

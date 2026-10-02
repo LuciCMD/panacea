@@ -20,7 +20,7 @@ class BackupFormatTest {
     private val melatonin = MedicationEntity(
         id = 7, name = "Melatonin", dose = 3.0, doseUnit = "mg", weight = 0.25, weightUnit = "g", category = "OTC",
         type = "EDIBLE", sortOrder = 1, lastMultiplier = 1.5, learnRoutine = true, mutedUntil = 99, photoFront = "a.jpg",
-        photoBack = null, routineAskedFor = 1234,
+        photoBack = null, routineAskedFor = 1234, removedAt = 4321,
     )
     private val ibuprofen = MedicationEntity(id = 3, name = "Ibuprofen", dose = 200.0, doseUnit = "mg", category = "OTC", type = "ORAL_TABLET", sortOrder = 0)
 

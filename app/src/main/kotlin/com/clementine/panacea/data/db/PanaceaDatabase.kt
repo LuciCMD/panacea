@@ -18,12 +18,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ReminderEntity::class,
         MetaEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // pill photos
         AutoMigration(from = 2, to = 3), // learned reminders
         AutoMigration(from = 3, to = 4, spec = TakenIngredients::class), // ingredients kept with each dose
+        AutoMigration(from = 4, to = 5), // recently removed
     ],
 )
 @TypeConverters(Converters::class)

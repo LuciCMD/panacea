@@ -102,7 +102,7 @@ object MedicationModel {
                 Fact(it.name, if (it.amount > 0) "${formatAmount(it.amount)} ${it.unit}" else "")
             },
             totals = totals(med, doses, now),
-            history = HistoryModel.build(doses.map { DoseRow(it, med.name, med.type) }, now, f),
+            history = HistoryModel.build(doses.map { DoseRow(it, med.name, med.type, med.photoFront) }, now, f, oneMedication = true),
             reminders = reminders.map { reminderCard(it, med.name, now, f, med.mutedUntil) },
             muted = if (med.mutedUntil > now.toInstant().toEpochMilli()) ReminderText.mutedUntil(med.mutedUntil, now, f) else null,
             routine = routine(med, doses, now, f),

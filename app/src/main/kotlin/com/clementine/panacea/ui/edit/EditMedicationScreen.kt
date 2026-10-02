@@ -242,7 +242,7 @@ fun EditMedicationScreen(
             onConfirm = {
                 removing = null
                 viewModel.discardPhotos(d, original)
-                viewModel.delete(d.id) { onRemoved(d.id) }
+                viewModel.remove(d.id) { onRemoved(d.id) }
             },
             onDismiss = { removing = null },
         )

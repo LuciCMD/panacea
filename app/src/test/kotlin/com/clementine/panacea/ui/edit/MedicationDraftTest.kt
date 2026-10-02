@@ -75,8 +75,14 @@ class MedicationDraftTest {
 
     @Test
     fun removeQuestionSaysWhatGoes() {
-        assertEquals("It has no logged doses or reminders yet.", Drafts.removeQuestion(MedicationCounts(0, 0)))
-        assertEquals("Its 1 logged dose goes with it. This can't be undone.", Drafts.removeQuestion(MedicationCounts(1, 0)))
-        assertEquals("Its 42 logged doses and 1 reminder go with it. This can't be undone.", Drafts.removeQuestion(MedicationCounts(42, 1)))
+        assertEquals(
+            "It moves to Recently Removed in Settings and is deleted for good after 30 days. Until then you can restore it.",
+            Drafts.removeQuestion(MedicationCounts(0, 0)),
+        )
+        assertEquals(
+            "It moves to Recently Removed in Settings, with its 42 logged doses and 1 reminder, and is deleted for good after 30 days. " +
+                "Until then you can restore it.",
+            Drafts.removeQuestion(MedicationCounts(42, 1)),
+        )
     }
 }

@@ -7,6 +7,17 @@ import com.clementine.panacea.data.db.TakenIngredient
 import kotlin.math.abs
 import kotlin.math.max
 
+/** [d] as if [multiplier] had been taken, at the dose, weight and ingredients it was logged with. */
+fun rescaled(d: DoseEntity, multiplier: Double): DoseEntity {
+    val f = multiplier / d.multiplier
+    return d.copy(
+        multiplier = multiplier,
+        amount = d.amount * f,
+        weight = d.weight?.let { it * f },
+        ingredients = d.ingredients.map { it.copy(amount = it.amount * f) },
+    )
+}
+
 /**
  * A medication's dose, pill weight or ingredients going from [old] to [new]. Doses logged at the old
  * value were either right (the prescription or the pill changed) or wrong (it was entered wrong), and
