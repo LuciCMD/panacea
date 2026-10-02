@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
@@ -136,6 +137,7 @@ fun <T> SlateDropdown(
         ) {
             Row(
                 Modifier
+                    .clearAndSetSemantics { }
                     .height(48.dp)
                     .drawBehind {
                         if (open) {

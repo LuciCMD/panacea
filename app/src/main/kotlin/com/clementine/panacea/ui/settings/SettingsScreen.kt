@@ -104,8 +104,7 @@ private fun ThemeTile(key: String, selected: Boolean, modifier: Modifier, onClic
     Column(
         modifier
             .clip(RoundedCornerShape(12.dp))
-            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
-            .semantics { contentDescription = label },
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(
@@ -125,7 +124,12 @@ private fun ThemeTile(key: String, selected: Boolean, modifier: Modifier, onClic
                 Swatch(Themes.fromKey(key)?.palette ?: Themes.DEFAULT.palette, Modifier.weight(1f))
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Inset from the tile's rounded corners, which would otherwise clip the name's first and last letters.
+        Row(
+            Modifier.padding(start = 6.dp, end = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             if (selected) Icon(Glyphs.Check, contentDescription = null, tint = Colors.Accent, modifier = Modifier.size(textIcon(16.dp)))
             Text(
                 label,
@@ -188,16 +192,18 @@ private fun SoundsCard(viewModel: SettingsViewModel) {
                     SlateButton(
                         onClick = { player.play(event, setting) },
                         enabled = setting.effective != SoundMode.NONE,
-                        modifier = Modifier.semantics { contentDescription = "Play the sound for ${event.label.lowercase()}" },
+                        modifier = Modifier.semantics { contentDescription = "Play, ${event.label.lowercase()}" },
                     ) {
                         Icon(Glyphs.Play, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text("Play", style = MaterialTheme.typography.labelLarge)
                     }
                 }
+                // Both events offer Built-In and None, so each chip says which sound it's for.
+                val forEvent = { choice: String -> Modifier.semantics { contentDescription = "$choice, ${event.label.lowercase()}" } }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val mode = setting.effective
-                    SlateChip(mode == SoundMode.BUILT_IN, { viewModel.setMode(event, SoundMode.BUILT_IN) }) { ChipText("Built-In") }
-                    SlateChip(mode == SoundMode.NONE, { viewModel.setMode(event, SoundMode.NONE) }) { ChipText("None") }
+                    SlateChip(mode == SoundMode.BUILT_IN, { viewModel.setMode(event, SoundMode.BUILT_IN) }, forEvent("Built-In")) { ChipText("Built-In") }
+                    SlateChip(mode == SoundMode.NONE, { viewModel.setMode(event, SoundMode.NONE) }, forEvent("None")) { ChipText("None") }
                     val custom = setting.custom
                     if (custom != null) {
                         SlateChip(mode == SoundMode.CUSTOM, { viewModel.setMode(event, SoundMode.CUSTOM) }) {
@@ -205,7 +211,7 @@ private fun SoundsCard(viewModel: SettingsViewModel) {
                             ChipText(custom.name, Modifier.widthIn(max = 180.dp))
                         }
                     }
-                    SlateChip(false, { pick(event) }) {
+                    SlateChip(false, { pick(event) }, role = Role.Button) {
                         Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(textIcon(16.dp)))
                         ChipText(if (adding == event) "Adding…" else if (custom == null) "Choose a File" else "Another File")
                     }

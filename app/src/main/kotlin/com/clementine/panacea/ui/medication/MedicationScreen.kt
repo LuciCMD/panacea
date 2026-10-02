@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.ui.semantics.Role
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.ConfirmDialog
 import androidx.compose.material3.MaterialTheme
@@ -242,8 +243,8 @@ private fun Header(name: String, subtitle: String, onBack: () -> Unit, onEdit: (
             )
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
         }
-        SlateButton(onClick = onEdit, modifier = Modifier.padding(start = 8.dp)) {
-            Icon(Glyphs.Pencil, contentDescription = null, modifier = Modifier.size(18.dp))
+        SlateButton(onClick = onEdit, modifier = Modifier.padding(start = 8.dp).semantics { contentDescription = "Edit $name" }) {
+            Icon(Glyphs.Pencil, contentDescription = null, modifier = Modifier.size(textIcon(18.dp)))
             Text("Edit")
         }
     }
@@ -275,7 +276,7 @@ private fun PhotosCard(med: MedicationEntity, onView: (PillSide) -> Unit, onEdit
                             null,
                             tile
                                 .background(Colors.Field)
-                                .clickable(onClickLabel = "View the ${side.label.lowercase()} up close") { onView(side) }
+                                .clickable(role = Role.Button, onClickLabel = "View the ${side.label.lowercase()} up close") { onView(side) }
                                 .semantics { contentDescription = "${side.label} of ${med.name}" },
                             px = 640,
                         )
@@ -283,10 +284,10 @@ private fun PhotosCard(med: MedicationEntity, onView: (PillSide) -> Unit, onEdit
                         Box(
                             tile
                                 .background(Colors.Field)
-                                .clickable(onClickLabel = "Add a photo of the ${side.label.lowercase()}", onClick = onEdit),
+                                .clickable(role = Role.Button, onClickLabel = "Add a photo of the ${side.label.lowercase()}", onClick = onEdit),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text("No Photo", style = MaterialTheme.typography.bodyMedium, color = Colors.Faint)
+                            Text("No Photo", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
                         }
                     }
                     Text(side.label, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
@@ -320,7 +321,7 @@ private fun FactRow(fact: Fact) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(fact.label, style = body, color = Colors.Muted, modifier = Modifier.weight(1f))
-        Text(fact.value, style = body, color = if (fact.value == "Not set") Colors.Faint else Colors.Ink, textAlign = TextAlign.End)
+        Text(fact.value, style = body, color = if (fact.value == "Not set") Colors.Muted else Colors.Ink, textAlign = TextAlign.End)
     }
 }
 
@@ -389,7 +390,7 @@ private fun SectionLabel(text: String) {
 
 @Composable
 private fun Quiet(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Faint, modifier = Modifier.padding(start = 4.dp))
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted, modifier = Modifier.padding(start = 4.dp))
 }
 
 @Composable
@@ -410,7 +411,7 @@ private fun DayCard(day: HistoryDay, onRemove: (HistoryItem) -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
-                            .clickable(onClickLabel = "Remove this dose") { onRemove(item) }
+                            .clickable(role = Role.Button, onClickLabel = "Remove this dose") { onRemove(item) }
                             .padding(horizontal = 14.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically,

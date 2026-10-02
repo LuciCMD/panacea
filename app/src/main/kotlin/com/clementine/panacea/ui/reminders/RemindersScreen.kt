@@ -252,7 +252,7 @@ fun RemindersScreen(
                 } else {
                     "Add a medication first, then set up its reminders here."
                 }
-                Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Faint)
+                Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
             }
         }
         items(state.cards, key = { it.id }) { card ->

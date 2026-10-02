@@ -166,7 +166,7 @@ fun TakeSheet(
                                     Modifier
                                         .size(72.dp)
                                         .clip(RoundedCornerShape(10.dp))
-                                        .clickable(onClickLabel = "Look closer") { viewing = side }
+                                        .clickable(role = Role.Button, onClickLabel = "Look closer") { viewing = side }
                                         .semantics { contentDescription = "${side.label} of ${med.name}" },
                                     px = 216,
                                 )
@@ -174,7 +174,7 @@ fun TakeSheet(
                             }
                         }
                     }
-                    Text("Tap a photo to check it up close.", style = MaterialTheme.typography.bodyMedium, color = Colors.Faint, modifier = Modifier.weight(1f))
+                    Text("Tap a photo to check it up close.", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted, modifier = Modifier.weight(1f))
                 }
             }
 
@@ -183,7 +183,7 @@ fun TakeSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                RoundButton(Glyphs.Minus, "Less", enabled = multiplier > Amounts.MIN) { multiplier = Amounts.less(multiplier) }
+                RoundButton(Glyphs.Minus, "Smaller Amount", enabled = multiplier > Amounts.MIN) { multiplier = Amounts.less(multiplier) }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         TodayText.multiplier(multiplier),
@@ -200,7 +200,7 @@ fun TakeSheet(
                         color = Colors.Muted,
                     )
                 }
-                RoundButton(Glyphs.Plus, "More", enabled = multiplier < Amounts.MAX) { multiplier = Amounts.more(multiplier) }
+                RoundButton(Glyphs.Plus, "Larger Amount", enabled = multiplier < Amounts.MAX) { multiplier = Amounts.more(multiplier) }
             }
 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -217,6 +217,7 @@ fun TakeSheet(
                     SlateChip(
                         selected = false,
                         onClick = { onSavePreset(multiplier) },
+                        role = Role.Button,
                         modifier = Modifier.semantics { contentDescription = "Save ${MedicationType.fromKey(med.type).pieces(multiplier)} as a Preset" },
                     ) {
                         Icon(Glyphs.Plus, contentDescription = null, modifier = Modifier.size(18.dp))

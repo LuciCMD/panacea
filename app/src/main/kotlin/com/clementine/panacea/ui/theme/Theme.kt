@@ -2,7 +2,10 @@ package com.clementine.panacea.ui.theme
 
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.RippleAlpha
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -140,8 +143,13 @@ private val PanaceaShapes = Shapes(
 fun PanaceaTheme(palette: Palette = Themes.SLATE.palette, content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalPalette provides palette) {
         MaterialTheme(colorScheme = palette.scheme(), typography = PanaceaType, shapes = PanaceaShapes) {
-            // Washes and an accent focus ring instead of Material's ripple, for every plain clickable.
-            CompositionLocalProvider(LocalIndication provides SlateIndication(), content = content)
+            // Washes and an accent focus ring instead of Material's ripple, for every plain clickable;
+            // Material's own components keep their ripple, in the same ink and strength as the washes.
+            CompositionLocalProvider(
+                LocalIndication provides SlateIndication(),
+                LocalRippleConfiguration provides RippleConfiguration(palette.ink, RippleAlpha(0.12f, 0.12f, 0.06f, 0.12f)),
+                content = content,
+            )
         }
     }
 }

@@ -128,7 +128,14 @@ const val DISABLED_ALPHA = 0.4f
 
 /** A pill that can be picked; the picked one is washed in the accent. */
 @Composable
-fun SlateChip(selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+fun SlateChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** A chip that does something rather than picks something says it's a button. */
+    role: Role = Role.RadioButton,
+    content: @Composable RowScope.() -> Unit,
+) {
     val shape = RoundedCornerShape(18.dp)
     CompositionLocalProvider(LocalContentColor provides if (selected) Colors.Accent else Colors.Muted) {
         Row(
@@ -137,7 +144,7 @@ fun SlateChip(selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
                 .clip(shape)
                 .background(if (selected) Colors.AccentWash else Color.Transparent)
                 .then(if (selected) Modifier else Modifier.border(1.dp, Colors.LineSoft, shape))
-                .selectable(selected = selected, interactionSource = null, indication = SlateIndication(shape), onClick = onClick)
+                .selectable(selected = selected, interactionSource = null, indication = SlateIndication(shape), role = role, onClick = onClick)
                 .heightIn(min = 36.dp)
                 .padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),

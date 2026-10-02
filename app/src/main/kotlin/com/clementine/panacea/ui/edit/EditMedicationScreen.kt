@@ -149,7 +149,7 @@ fun EditMedicationScreen(
         item(key = "header") {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
                 SlateIconButton(onClick = close, modifier = Modifier.padding(end = 4.dp)) {
-                    Icon(Glyphs.Close, contentDescription = "Close without saving", tint = Colors.Ink)
+                    Icon(Glyphs.Close, contentDescription = "Close Without Saving", tint = Colors.Ink)
                 }
                 Text(
                     if (d.isNew) "Add Medication" else "Edit Medication",
@@ -218,7 +218,7 @@ fun EditMedicationScreen(
             title = "Change Past Doses Too?",
             text = question,
             confirmLabel = "Fix Past Doses Too",
-            dismissLabel = "Only From Now On",
+            dismissLabel = "Only from Now On",
             onConfirm = {
                 pastQuestion = null
                 viewModel.save(d, fixPast = true) { onDone() }
@@ -267,17 +267,17 @@ private fun BasicsCard(d: MedicationDraft, problems: DraftProblems, update: (Med
             FieldLabel("Dose")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SlateTextField(d.dose, { update(d.copy(dose = it)) }, Modifier.weight(1f), placeholder = "50", error = problems.dose, accessibleLabel = "Dose", keyboardOptions = decimal)
-                SlateDropdown(d.doseUnit, (DoseUnits + d.doseUnit).distinct(), { it }, { update(d.copy(doseUnit = it)) }, "Dose unit")
+                SlateDropdown(d.doseUnit, (DoseUnits + d.doseUnit).distinct(), { it }, { update(d.copy(doseUnit = it)) }, "Dose Unit")
             }
             Hint("The active amount in one $noun, as on the label.")
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FieldLabel("Pill Weight")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SlateTextField(d.weight, { update(d.copy(weight = it)) }, Modifier.weight(1f), placeholder = "0.25", error = problems.weight, accessibleLabel = "Pill weight", keyboardOptions = decimal)
+                SlateTextField(d.weight, { update(d.copy(weight = it)) }, Modifier.weight(1f), placeholder = "0.25", error = problems.weight, accessibleLabel = "Pill Weight", keyboardOptions = decimal)
                 SlateDropdown(
                     WeightUnit.fromKey(d.weightUnit), WeightUnit.entries, { it.key },
-                    { update(d.copy(weightUnit = it.key)) }, "Weight unit",
+                    { update(d.copy(weightUnit = it.key)) }, "Weight Unit",
                 )
             }
             Hint("What one $noun weighs on a scale. Leave it empty if you don't know.")
@@ -287,7 +287,7 @@ private fun BasicsCard(d: MedicationDraft, problems: DraftProblems, update: (Med
 
 @Composable
 private fun Hint(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Faint)
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
 }
 
 @Composable
@@ -320,7 +320,7 @@ private fun TypeCard(d: MedicationDraft, update: (MedicationDraft) -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { t ->
                     TypeTile(
-                        label = t?.label ?: "More",
+                        label = t?.label ?: "More Types",
                         icon = t?.let(TypeIcons::of) ?: Glyphs.More,
                         selected = t != null && t == d.type,
                         modifier = Modifier.weight(1f),
@@ -436,7 +436,7 @@ private fun PhotoSlot(
                 listOf(
                     "View" to onView,
                     "Retake Photo" to onTake,
-                    "Choose From Photos" to onChoose,
+                    "Choose from Photos" to onChoose,
                     "Remove Photo" to onRemove,
                 ).forEach { (label, action) ->
                     DropdownMenuItem(text = { Text(label, color = Colors.Ink) }, onClick = {
@@ -449,7 +449,7 @@ private fun PhotoSlot(
         Text(side.label, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
         if (photo == null) {
             SlateButton(onClick = onChoose, kind = ButtonKind.Text, modifier = Modifier.semantics { contentDescription = "Choose a photo of the ${side.label.lowercase()}" }) {
-                Text("Choose From Photos", style = MaterialTheme.typography.bodyMedium)
+                Text("Choose from Photos", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -469,7 +469,7 @@ private fun IngredientsCard(d: MedicationDraft, problems: DraftProblems, update:
                         ing.name, { set(ing.copy(name = it)) }, Modifier.weight(1f),
                         placeholder = "Name",
                         error = problems.ingredients[i]?.takeIf { ing.name.isBlank() },
-                        accessibleLabel = "Ingredient ${i + 1} name",
+                        accessibleLabel = "Ingredient ${i + 1} Name",
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                     )
                     SlateIconButton(onClick = { update(d.copy(ingredients = d.ingredients.filterIndexed { j, _ -> j != i })) }) {
@@ -481,10 +481,10 @@ private fun IngredientsCard(d: MedicationDraft, problems: DraftProblems, update:
                         ing.amount, { set(ing.copy(amount = it)) }, Modifier.weight(1f),
                         placeholder = "Amount",
                         error = problems.ingredients[i]?.takeIf { ing.name.isNotBlank() },
-                        accessibleLabel = "Ingredient ${i + 1} amount",
+                        accessibleLabel = "Ingredient ${i + 1} Amount",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                     )
-                    SlateDropdown(ing.unit, (DoseUnits + ing.unit).distinct(), { it }, { set(ing.copy(unit = it)) }, "Ingredient ${i + 1} unit")
+                    SlateDropdown(ing.unit, (DoseUnits + ing.unit).distinct(), { it }, { set(ing.copy(unit = it)) }, "Ingredient ${i + 1} Unit")
                 }
             }
         }

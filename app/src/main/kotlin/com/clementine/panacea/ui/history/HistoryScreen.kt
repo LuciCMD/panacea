@@ -1,5 +1,6 @@
 package com.clementine.panacea.ui.history
 
+import androidx.compose.ui.semantics.Role
 import com.clementine.panacea.ui.counted
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,7 +58,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = viewModel(factory = HistoryViewM
         }
         if (list != null && list.isEmpty()) {
             item(key = "empty") {
-                Text("Doses you log show up here.", style = MaterialTheme.typography.bodyMedium, color = Colors.Faint)
+                Text("Doses you log show up here.", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
             }
         }
         items(list.orEmpty(), key = { it.doses.first().id }) { day ->
@@ -103,7 +104,7 @@ private fun DoseRow(item: HistoryItem, onRemove: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClickLabel = "Remove this dose", onClick = onRemove)
+            .clickable(role = Role.Button, onClickLabel = "Remove this dose", onClick = onRemove)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),

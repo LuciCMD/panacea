@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -45,10 +47,11 @@ fun InfoTip(about: String, text: String, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
     Box(
         modifier
-            // Small on screen, growing with the text; Compose widens the touch area to 48dp around it.
+            // A full 48dp target; the icon inside stays small and grows with the text.
+            .minimumInteractiveComponentSize()
             .size(textIcon(28.dp))
             .clip(CircleShape)
-            .clickable(onClickLabel = "Explain") { open = !open }
+            .clickable(role = Role.Button, onClickLabel = "Explain") { open = !open }
             .semantics { contentDescription = "About $about" },
         contentAlignment = Alignment.Center,
     ) {

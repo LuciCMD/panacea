@@ -341,7 +341,7 @@ private fun NoCamera(asked: Boolean, onAsk: () -> Unit, onChoose: () -> Unit) {
         }
         SlateButton(onClick = onChoose, kind = ButtonKind.Primary) {
             Icon(Glyphs.Image, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text("Choose From Photos")
+            Text("Choose from Photos")
         }
     }
 }

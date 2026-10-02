@@ -44,7 +44,7 @@ fun RoutineCard(routine: RoutineUi, onToggle: (Boolean) -> Unit) {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(routine.summary, style = body, color = Colors.Muted)
                 if (routine.bands.isNotEmpty()) DayLine(routine)
-                routine.basis?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = Colors.Faint) }
+                routine.basis?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = Colors.Muted) }
             }
         }
     }
@@ -76,6 +76,6 @@ private fun DayLine(routine: RoutineUi) {
                 drawRect(tick, Offset((t * size.width - w / 2).coerceIn(0f, size.width - w), mid - h / 2), Size(w, h))
             }
         }
-        AxisLabels(routine.axis, MaterialTheme.typography.bodySmall.merge(Numbers), Colors.Faint)
+        AxisLabels(routine.axis, MaterialTheme.typography.bodySmall.merge(Numbers), Colors.Muted)
     }
 }

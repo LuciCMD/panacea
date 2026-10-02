@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
+import androidx.compose.ui.semantics.Role
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.ConfirmDialog
 import androidx.compose.material3.MaterialTheme
@@ -127,7 +128,7 @@ fun EditReminderScreen(
         item(key = "header") {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
                 SlateIconButton(onClick = close, modifier = Modifier.padding(end = 4.dp)) {
-                    Icon(Glyphs.Close, contentDescription = "Close without saving", tint = Colors.Ink)
+                    Icon(Glyphs.Close, contentDescription = "Close Without Saving", tint = Colors.Ink)
                 }
                 Text(
                     if (d.isNew) "Add Reminder" else "Edit Reminder",
@@ -145,7 +146,7 @@ fun EditReminderScreen(
                     meds.map { it.id },
                     { names[it] ?: "Pick a Medication" },
                     { update(d.copy(medicationId = it)) },
-                    "Medication, ${names[d.medicationId] ?: "none picked"}",
+                    "Medication",
                     Modifier.fillMaxWidth(),
                 )
                 problems.medication?.let { Problem(it) }
@@ -170,7 +171,7 @@ fun EditReminderScreen(
                     ReminderDrafts.EARLY_CHOICES,
                     { ReminderDrafts.earlyLabel(it, d) },
                     { update(d.copy(early = it)) },
-                    "Early doses, ${ReminderDrafts.earlyLabel(d.early, d)}",
+                    "Early Doses",
                     Modifier.fillMaxWidth(),
                 )
             }
@@ -278,7 +279,7 @@ private fun RepeatCard(d: ReminderDraft, problems: ReminderProblems, f: TimeForm
                 FieldLabel("Day of the Month")
                 SlateDropdown(
                     d.dayOfMonth, (1..31).toList(), { "The ${ReminderText.ordinal(it)}" },
-                    { update(d.copy(dayOfMonth = it)) }, "Day of the month, the ${ReminderText.ordinal(d.dayOfMonth)}",
+                    { update(d.copy(dayOfMonth = it)) }, "Day of the Month",
                 )
                 if (d.dayOfMonth > 28) Hint("In shorter months it comes on the last day.")
             }
@@ -288,7 +289,7 @@ private fun RepeatCard(d: ReminderDraft, problems: ReminderProblems, f: TimeForm
                 FieldLabel("How Often")
                 SlateDropdown(
                     d.intervalHours, ReminderDrafts.INTERVALS, ReminderDrafts::interval,
-                    { update(d.copy(intervalHours = it)) }, "How often, ${ReminderDrafts.interval(d.intervalHours).lowercase()}",
+                    { update(d.copy(intervalHours = it)) }, "How Often",
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -348,7 +349,7 @@ private fun TimePill(minutes: Int, f: TimeFormats, onChange: () -> Unit, onRemov
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
-                    .clickable(onClickLabel = "Change $time", onClick = onChange)
+                    .clickable(role = Role.Button, onClickLabel = "Change $time", onClick = onChange)
                     .heightIn(min = 48.dp)
                     .padding(start = 16.dp, end = if (onRemove == null) 16.dp else 2.dp),
                 contentAlignment = Alignment.Center,

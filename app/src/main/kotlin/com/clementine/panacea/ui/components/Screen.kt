@@ -50,7 +50,8 @@ fun ScreenHeader(
 ) {
     Row(modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // No gap: the ⓘ's 48dp target already leaves room around its icon.
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     title,
                     style = MaterialTheme.typography.headlineMedium,
@@ -86,7 +87,7 @@ fun SectionCard(
                     color = Colors.Ink,
                     modifier = Modifier.semantics { heading() },
                 )
-                hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = if (warning) Colors.Muted else Colors.Faint) }
+                hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted) }
             }
             content()
         }

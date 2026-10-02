@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -151,12 +152,12 @@ private fun DayStripCard(strip: DayStrip) {
     val description = if (strip.dots.isEmpty()) "No doses logged today" else "Logged today: " + strip.dots.joinToString { it.label }
     SlateCard(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            // The label row is the ⓘ's 48dp tall, which brings its own space above and below.
+            Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Doses Today", style = small, color = Colors.Muted)
-                InfoTip(about = "Doses Today", text = TodayText.STRIP, modifier = Modifier.padding(start = 2.dp))
+                InfoTip(about = "Doses Today", text = TodayText.STRIP)
                 Spacer(Modifier.weight(1f))
                 Text(TodayText.dosesToday(strip.count), style = small, color = Colors.Ink)
             }
@@ -180,7 +181,7 @@ private fun DayStripCard(strip: DayStrip) {
                 }
                 drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
             }
-            AxisLabels(strip.axis, MaterialTheme.typography.bodySmall.merge(Numbers), Colors.Faint, Modifier.clearAndSetSemantics { })
+            AxisLabels(strip.axis, MaterialTheme.typography.bodySmall.merge(Numbers), Colors.Muted, Modifier.padding(top = 8.dp).clearAndSetSemantics { })
         }
     }
 }
@@ -256,7 +257,7 @@ private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> 
             Row(
                 Modifier
                     .clip(MaterialTheme.shapes.small)
-                    .clickable(onClickLabel = "Open ${med.name}", onClick = onOpen),
+                    .clickable(role = Role.Button, onClickLabel = "Open ${med.name}", onClick = onOpen),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {

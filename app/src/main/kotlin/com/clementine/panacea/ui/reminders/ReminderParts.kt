@@ -179,7 +179,7 @@ fun ReminderRow(card: ReminderCard, onToggle: (Boolean) -> Unit, onOpen: () -> U
             Column(
                 Modifier
                     .weight(1f)
-                    .clickable(onClickLabel = "Edit this reminder", onClick = onOpen)
+                    .clickable(role = Role.Button, onClickLabel = "Edit this reminder", onClick = onOpen)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
@@ -194,7 +194,8 @@ fun ReminderRow(card: ReminderCard, onToggle: (Boolean) -> Unit, onOpen: () -> U
                 card.note?.let { Text(it, style = body, color = Colors.Muted) }
                 Text(card.next, style = body, color = if (card.muted) Colors.Warn else Colors.Muted)
             }
-            val label = if (showMedication) "${card.medication} reminder" else "This reminder"
+            // Two reminders for one medication differ only by when, so the switch says both.
+            val label = if (showMedication) "${card.medication} Reminder, ${card.schedule}" else "Reminder, ${card.schedule}"
             SlateSwitch(
                 checked = card.enabled,
                 onCheckedChange = onToggle,
@@ -213,7 +214,7 @@ fun LearnedRow(card: LearnedCard, onStop: () -> Unit, onOpen: () -> Unit) {
             Column(
                 Modifier
                     .weight(1f)
-                    .clickable(onClickLabel = "Open ${card.medication}", onClick = onOpen)
+                    .clickable(role = Role.Button, onClickLabel = "Open ${card.medication}", onClick = onOpen)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
@@ -234,7 +235,7 @@ fun LearnedRow(card: LearnedCard, onStop: () -> Unit, onOpen: () -> Unit) {
             SlateSwitch(
                 checked = true,
                 onCheckedChange = { if (!it) onStop() },
-                modifier = Modifier.semantics { contentDescription = "${card.medication} learned reminder" },
+                modifier = Modifier.semantics { contentDescription = "Learn ${card.medication}'s Routine" },
             )
         }
     }
