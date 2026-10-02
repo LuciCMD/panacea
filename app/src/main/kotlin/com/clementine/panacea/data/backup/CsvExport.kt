@@ -26,7 +26,7 @@ object CsvExport {
         val totals = HashMap<Triple<Long, LocalDate, String>, Double>()
         val out = StringBuilder()
         // Excel needs the byte order mark to read UTF-8 names correctly.
-        out.append('﻿').append(HEADER.joinToString(",")).append("\r\n")
+        out.append(Char(0xFEFF)).append(HEADER.joinToString(",")).append("\r\n")
         for (d in doses.sortedBy { it.takenAt }) {
             val med = byId[d.medicationId] ?: continue
             val at = Instant.ofEpochMilli(d.takenAt).atZone(zone)

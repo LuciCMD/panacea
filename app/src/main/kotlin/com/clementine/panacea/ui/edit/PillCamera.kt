@@ -237,7 +237,7 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: () 
     }
     DisposableEffect(Unit) { onDispose { camera?.cameraControl?.enableTorch(false) } }
 
-    BoxWithConstraints(Modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
+    Box(Modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
         request?.let { CameraXViewfinder(surfaceRequest = it, modifier = Modifier.fillMaxSize()) }
         if (failed) {
             Text(

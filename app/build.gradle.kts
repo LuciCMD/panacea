@@ -22,6 +22,10 @@ android {
 
     buildTypes {
         release {
+            // 3.x went out signed with the debug key, and Android only updates an app signed with the
+            // same key; another key would mean uninstalling, which deletes everything. Not debuggable,
+            // so adb can't read the data of a release install.
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

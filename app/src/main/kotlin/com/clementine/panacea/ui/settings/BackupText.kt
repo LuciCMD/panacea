@@ -1,5 +1,6 @@
 package com.clementine.panacea.ui.settings
 
+import com.clementine.panacea.ui.counted
 import com.clementine.panacea.data.backup.Written
 import com.clementine.panacea.ui.reminders.ReminderText.natural
 import java.time.Instant
@@ -75,5 +76,5 @@ object BackupText {
         return if (problems == 1) "1 item couldn't be read and $left." else "$problems items couldn't be read and $left."
     }
 
-    private fun count(n: Int, noun: String) = if (n == 1) "1 $noun" else "$n ${noun}s"
+    private fun count(n: Int, noun: String) = counted(n, noun)
 }

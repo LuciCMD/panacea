@@ -1,5 +1,6 @@
 package com.clementine.panacea.ui.reminders
 
+import com.clementine.panacea.ui.counted
 import com.clementine.panacea.reminder.Routine
 import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.ui.TimeFormats
@@ -97,7 +98,7 @@ object RoutineText {
         else -> "${m / 60} h ${m % 60} min"
     }
 
-    private fun plural(n: Int, noun: String) = if (n == 1) "1 $noun" else "$n ${noun}s"
+    private fun plural(n: Int, noun: String) = counted(n, noun)
 
     private fun clock(minute: Int, f: TimeFormats): String {
         val m = Math.floorMod(minute, 24 * 60)

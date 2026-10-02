@@ -1,5 +1,6 @@
 package com.clementine.panacea.ui.edit
 
+import com.clementine.panacea.ui.counted
 import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationCounts
 import com.clementine.panacea.data.db.MedicationEntity
@@ -112,8 +113,8 @@ object Drafts {
     /** What removing a medication takes with it, for the confirm. */
     fun removeQuestion(c: MedicationCounts): String {
         val parts = listOfNotNull(
-            c.doses.takeIf { it > 0 }?.let { if (it == 1) "1 logged dose" else "$it logged doses" },
-            c.reminders.takeIf { it > 0 }?.let { if (it == 1) "1 reminder" else "$it reminders" },
+            c.doses.takeIf { it > 0 }?.let { counted(it, "logged dose") },
+            c.reminders.takeIf { it > 0 }?.let { counted(it, "reminder") },
         )
         if (parts.isEmpty()) return "It has no logged doses or reminders yet."
         val verb = if (parts.size == 1 && (c.doses + c.reminders) == 1) "goes" else "go"

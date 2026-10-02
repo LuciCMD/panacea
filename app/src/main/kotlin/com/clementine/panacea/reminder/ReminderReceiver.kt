@@ -1,5 +1,6 @@
 package com.clementine.panacea.reminder
 
+import android.app.AlarmManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -54,6 +55,8 @@ class ReminderReceiver : BroadcastReceiver() {
 /** Boot, an app update and clock changes all leave alarms missing or wrong; set them again. */
 class SystemEventsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Exported for the system's broadcasts; anything else that reaches it is ignored.
+        if (intent.action !in ACTIONS) return
         val container = (context.applicationContext as PanaceaApp).container
         val done = goAsync()
         container.appScope.launch {
@@ -64,5 +67,15 @@ class SystemEventsReceiver : BroadcastReceiver() {
                 done.finish()
             }
         }
+    }
+
+    private companion object {
+        val ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED,
+        )
     }
 }

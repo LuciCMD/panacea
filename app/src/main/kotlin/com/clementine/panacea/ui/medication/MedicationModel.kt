@@ -19,6 +19,7 @@ import com.clementine.panacea.ui.reminders.ReminderText
 import com.clementine.panacea.ui.reminders.RoutineText
 import com.clementine.panacea.ui.reminders.reminderCard
 import com.clementine.panacea.ui.today.TodayModel
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZonedDateTime
 
@@ -152,7 +153,7 @@ object MedicationModel {
             val weights = inPeriod.mapNotNull { weightOf(it, med, unit) }
             TotalRow(
                 label = label,
-                doses = inPeriod.size.toString(),
+                doses = NumberFormat.getIntegerInstance().format(inPeriod.size),
                 amount = amounts(inPeriod, med.doseUnit),
                 weight = if (weights.isEmpty()) TotalRow.NONE else "${formatAmount(weights.sum())} ${unit.key}",
             )

@@ -1,5 +1,6 @@
 package com.clementine.panacea.ui.history
 
+import com.clementine.panacea.ui.counted
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +54,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = viewModel(factory = HistoryViewM
         val list = days
         val count = list?.sumOf { it.doses.size } ?: 0
         item(key = "header") {
-            ScreenHeader("History", if (count == 0) null else if (count == 1) "1 dose logged" else "$count doses logged")
+            ScreenHeader("History", if (count == 0) null else "${counted(count, "dose")} logged")
         }
         if (list != null && list.isEmpty()) {
             item(key = "empty") {
