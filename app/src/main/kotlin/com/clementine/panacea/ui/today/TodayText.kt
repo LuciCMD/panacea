@@ -133,7 +133,8 @@ object TodayText {
 
     /** The day strip's ⓘ. */
     const val STRIP =
-        "Each dot is a dose logged today, placed at the time it was taken. The upright line is now."
+        "Each dot is a dose logged today, at the time it was taken; tap one to see what it was. " +
+            "A number means that many doses close together. The upright line is now."
 
     fun header(now: ZonedDateTime, f: TimeFormats) = "${now.format(f.longDate)} · ${now.format(f.time)}"
 

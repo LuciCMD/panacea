@@ -155,9 +155,26 @@ class TodayModelTest {
         assertFalse(sertraline.dueNow)
 
         assertEquals(2, ui.strip.count)
-        assertEquals(listOf("Sertraline at 9:04", "Ibuprofen at 10:00"), ui.strip.dots.map { it.label })
+        assertEquals(listOf("Sertraline 50 mg at 9:04", "Ibuprofen 200 mg at 10:00"), ui.strip.dots.map { it.label })
         assertEquals((13 * 60 + 16) / 1440f, ui.strip.nowFraction, 0.0001f)
         assertEquals(listOf("0:00", "6:00", "12:00", "18:00", "24:00"), ui.strip.axis)
+    }
+
+    @Test
+    fun closeDosesShareAMarkAndATapReachesItsNeighbours() {
+        // A 1440 px strip: one px a minute. Dots merge within 16 px of a group's first.
+        fun at(h: Int, m: Int) = (h * 60 + m) / 1440f
+        val groups = StripLayout.group(listOf(at(9, 0), at(9, 2), at(9, 10), at(9, 20), at(12, 0)), 1440f, 16f)
+        assertEquals(listOf(listOf(0, 1, 2), listOf(3), listOf(4)), groups.map { it.dots })
+        assertEquals((540 + 542 + 550) / 3f, groups[0].x, 0.01f)
+        // Measured from a group's first dot, so a steady run doesn't chain into one long group.
+        assertEquals(listOf(listOf(0, 1), listOf(2)), StripLayout.group(listOf(at(9, 0), at(9, 10), at(9, 20)), 1440f, 16f).map { it.dots })
+        // In time order, whatever order they came in.
+        assertEquals(listOf(listOf(1, 0)), StripLayout.group(listOf(at(9, 5), at(9, 0)), 1440f, 16f).map { it.dots })
+
+        assertEquals(listOf(groups[0], groups[1]), StripLayout.hit(groups, 555f, 24f))
+        assertEquals(listOf(groups[2]), StripLayout.hit(groups, 730f, 24f))
+        assertTrue(StripLayout.hit(groups, 650f, 24f).isEmpty())
     }
 
     @Test

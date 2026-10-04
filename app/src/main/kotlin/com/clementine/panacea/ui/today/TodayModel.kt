@@ -45,7 +45,33 @@ data class CardState(
 /** Today's doses on a midnight-to-midnight line, with [axis] labels at 0, 6, 12, 18 and 24 h. */
 data class DayStrip(val count: Int, val dots: List<StripDot>, val nowFraction: Float, val axis: List<String>)
 
-data class StripDot(val fraction: Float, val label: String)
+data class StripDot(val fraction: Float, val time: String, val name: String, val amount: String) {
+    /** "Sertraline 50 mg at 9:04", for TalkBack. */
+    val label get() = "$name $amount at $time"
+}
+
+/** Dots drawn as one, at [x] px: those within a dot's width of the first, so close doses don't hide each other. */
+data class DotGroup(val dots: List<Int>, val x: Float)
+
+/** Where the strip's dots go at a given width, and which a tap reaches. Pure, so it can be tested. */
+object StripLayout {
+    /**
+     * Dots, in time order, from a group's first up to [merge] px on, share one mark. Measured from the
+     * first rather than chained, so a run of hourly doses never becomes one long smear.
+     */
+    fun group(fractions: List<Float>, width: Float, merge: Float): List<DotGroup> {
+        val groups = mutableListOf<MutableList<Int>>()
+        fractions.indices.sortedBy { fractions[it] }.forEach { i ->
+            val last = groups.lastOrNull()
+            if (last != null && (fractions[i] - fractions[last.first()]) * width <= merge) last += i else groups += mutableListOf(i)
+        }
+        return groups.map { g -> DotGroup(g, g.map { fractions[it] * width }.average().toFloat()) }
+    }
+
+    /** Every group within [reach] px of a tap at [x]: a finger is wider than a dot, so near ones come too. */
+    fun hit(groups: List<DotGroup>, x: Float, reach: Float): List<DotGroup> =
+        groups.filter { kotlin.math.abs(it.x - x) <= reach }
+}
 
 /** Builds the Today screen from the data, at a given moment. Pure, so it can be tested. */
 object TodayModel {
@@ -216,11 +242,13 @@ object TodayModel {
         val startMs = dayStart.toInstant().toEpochMilli()
         val length = (dayEnd.toInstant().toEpochMilli() - startMs).toFloat()
         val nowMs = now.toInstant().toEpochMilli()
-        val names = summaries.associate { it.medication.id to it.medication.name }
+        val meds = summaries.associate { it.medication.id to it.medication }
         val today = doses.filter { it.takenAt in startMs..nowMs }.sortedBy { it.takenAt }
         val dots = today.map {
             val time = Instant.ofEpochMilli(it.takenAt).atZone(now.zone).format(f.time)
-            StripDot((it.takenAt - startMs) / length, "${names[it.medicationId] ?: "Removed medication"} at $time")
+            val med = meds[it.medicationId]
+            val amount = TodayText.doseAmount(it.amount, it.unit, it.multiplier, MedicationType.fromKey(med?.type))
+            StripDot((it.takenAt - startMs) / length, time, med?.name ?: "Removed medication", amount)
         }
         return DayStrip(today.size, dots, (nowMs - startMs) / length, axis(f))
     }
