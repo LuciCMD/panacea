@@ -8,10 +8,10 @@ Sources, all public domain or CC0, fetched here at build time so the app never g
 - openFDA's NDC directory: US products with their strengths, dose forms, and Rx or OTC status
 - RxNorm's prescribable subset: which brand names are real brands rather than store labels
 - Wikidata: international nonproprietary names (paracetamol for acetaminophen)
-- Wikidata again: each ingredient's formula, mass and SMILES, keyed by PubChem id; RDKit draws the
-  SMILES in 2D (pip install rdkit)
-- PubChem: IUPAC names, when it isn't throttling (a burst of lookups got this machine blocked for over
-  half an hour, so it's asked only in batches and skipped while it says 429)
+- PubChem: ids for names Wikidata doesn't know, then formula, molar mass, IUPAC name and SMILES,
+  through pubchem.py, which keeps to PubChem's request limits and backs off when it's busy
+- Wikidata again: formula and SMILES where PubChem has a gap
+- RDKit (pip install rdkit) lays each SMILES out in 2D
 
 Downloads are cached under build/catalog, so a rerun only fetches what's missing. Writes
 app/src/main/assets/catalog/medications.gzjsonl and chemistry.gzjsonl: gzipped JSON lines, not
@@ -19,6 +19,9 @@ named .gz, since Android's packaging strips that ending from assets
 """
 import gzip, io, json, os, re, sys, time, urllib.parse, urllib.request, zipfile
 from collections import Counter, defaultdict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pubchem import PubChem
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CACHE = os.path.join(ROOT, 'build', 'catalog')
@@ -355,45 +358,78 @@ def subscript_free(formula):
     return formula.translate(str.maketrans('₀₁₂₃₄₅₆₇₈₉', '0123456789')).replace(' ', '')
 
 
-def chemistry(cids):
-    """
-    Formula, mass, name and structure for each PubChem id. Wikidata holds the first three and the
-    SMILES, keyed by the same id, without PubChem's throttling; RDKit lays the SMILES out in 2D
-    """
-    from rdkit import Chem
-    from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
+def pubchem_cids(names, pc):
+    """PubChem ids by name for what Wikidata didn't have, one polite request each, cached"""
+    path = os.path.join(CACHE, 'cids.json')
+    cids = json.load(open(path)) if os.path.exists(path) else {}
+    todo = [n for n in names if n not in cids]
+    for i, n in enumerate(todo):
+        cids[n] = pc.cid_for_name(n)
+        json.dump(cids, open(path, 'w'))
+        if i % 25 == 0:
+            print(f'PubChem names {i}/{len(todo)}', flush=True)
+    return cids
+
+
+def pubchem_properties(cids, pc):
+    path = os.path.join(CACHE, 'pubchem_props.json')
+    props = json.load(open(path)) if os.path.exists(path) else {}
+    todo = [c for c in cids if str(c) not in props]
+    # Saved every hundred, so a stopped run picks up where it was
+    for i in range(0, len(todo), 100):
+        batch = todo[i:i + 100]
+        got = pc.properties(batch)
+        for c in batch:
+            props[str(c)] = got.get(c) or {}
+        json.dump(props, open(path, 'w'))
+        print(f'PubChem properties {min(i + 100, len(todo))}/{len(todo)}', flush=True)
+    return props
+
+
+def wikidata_chemistry(cids):
+    """Wikidata's formula, label and SMILES by PubChem id: the fallback where PubChem has a gap"""
     path = os.path.join(CACHE, 'chem_wd.json')
     chem = json.load(open(path)) if os.path.exists(path) else {}
     todo = [c for c in cids if str(c) not in chem]
     for i in range(0, len(todo), 150):
         batch = todo[i:i + 150]
         values = ' '.join(json.dumps(str(c)) for c in batch)
-        rows = sparql(f"""SELECT ?cid ?label ?formula ?mass ?smiles ?iso WHERE {{ VALUES ?cid {{ {values} }} ?item wdt:P662 ?cid .
+        rows = sparql(f"""SELECT ?cid ?label ?formula ?smiles ?iso WHERE {{ VALUES ?cid {{ {values} }} ?item wdt:P662 ?cid .
             OPTIONAL {{ ?item rdfs:label ?label FILTER(LANG(?label) = "en") }} OPTIONAL {{ ?item wdt:P274 ?formula }}
-            OPTIONAL {{ ?item wdt:P2067 ?mass }} OPTIONAL {{ ?item wdt:P233 ?smiles }} OPTIONAL {{ ?item wdt:P2017 ?iso }} }}""")
+            OPTIONAL {{ ?item wdt:P233 ?smiles }} OPTIONAL {{ ?item wdt:P2017 ?iso }} }}""")
         for r in rows:
-            c = r['cid']['value']
-            e = chem.setdefault(c, {})
-            for key, field in (('title', 'label'), ('formula', 'formula'), ('mass', 'mass'), ('smiles', 'smiles'), ('iso', 'iso')):
+            e = chem.setdefault(r['cid']['value'], {})
+            for key, field in (('title', 'label'), ('formula', 'formula'), ('smiles', 'smiles'), ('iso', 'iso')):
                 if field in r and key not in e:
                     e[key] = r[field]['value']
         for c in batch:
             chem.setdefault(str(c), {})
         json.dump(chem, open(path, 'w'))
-        print(f'chemistry {min(i + 150, len(todo))}/{len(todo)}', flush=True)
+    return chem
 
+
+def chemistry(cids, pc):
+    """
+    Formula, molar mass, systematic name and a 2D drawing for each PubChem id: PubChem's own
+    record first, Wikidata's where PubChem has none; RDKit lays the SMILES out and weighs it
+    """
+    from rdkit import Chem
+    from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
+    props = pubchem_properties(cids, pc)
+    wd = wikidata_chemistry(cids)
     out = {}
-    for c, e in chem.items():
-        smiles = e.get('smiles') or e.get('iso')
+    for c in map(str, cids):
+        p, w = props.get(c) or {}, wd.get(c) or {}
+        smiles = p.get('SMILES') or w.get('iso') or w.get('smiles')
         mol = Chem.MolFromSmiles(smiles) if smiles else None
-        formula = subscript_free(e['formula']) if e.get('formula') else None
+        formula = p.get('MolecularFormula') or (subscript_free(w['formula']) if w.get('formula') else None)
         if mol is not None:
             formula = formula or rdMolDescriptors.CalcMolFormula(mol)
         if not formula:
             continue
-        rec = {'title': title((e.get('title') or '').strip()), 'formula': formula, 'iupac': None}
-        # Molar mass from the atoms' average weights; Wikidata's mass is the monoisotopic one, a little lower
-        rec['weight'] = round(Descriptors.MolWt(mol), 2) if mol is not None else 0
+        weight = float(p['MolecularWeight']) if p.get('MolecularWeight') else (Descriptors.MolWt(mol) if mol is not None else 0)
+        rec = {'title': title((w.get('title') or p.get('Title') or '').strip()), 'formula': formula,
+               'weight': round(weight, 2), 'iupac': p.get('IUPACName')}
         if mol is not None:
             Chem.Kekulize(mol, clearAromaticFlags=True)
             AllChem.Compute2DCoords(mol)
@@ -404,28 +440,6 @@ def chemistry(cids):
             rec['bonds'] = [[b.GetBeginAtomIdx(), b.GetEndAtomIdx(), int(b.GetBondTypeAsDouble())] for b in mol.GetBonds()]
         out[c] = rec
     return out
-
-
-def iupac_names(chem):
-    """PubChem's systematic names, a hundred ids a request; skipped, not waited for, while PubChem throttles"""
-    path = os.path.join(CACHE, 'iupac.json')
-    names = json.load(open(path)) if os.path.exists(path) else {}
-    todo = [c for c in chem if c not in names]
-    for i in range(0, len(todo), 100):
-        ids = ','.join(todo[i:i + 100])
-        try:
-            req = urllib.request.Request(f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{ids}/property/IUPACName/JSON',
-                                         headers={'User-Agent': AGENT})
-            with urllib.request.urlopen(req, timeout=60) as r:
-                for p in json.loads(r.read())['PropertyTable']['Properties']:
-                    names[str(p['CID'])] = p.get('IUPACName')
-        except Exception as e:
-            print('no IUPAC names this run:', e)
-            break
-        json.dump(names, open(path, 'w'))
-        time.sleep(1.0)
-    for c, rec in chem.items():
-        rec['iupac'] = names.get(c)
 
 
 # ---------------------------------------------------------------- main
@@ -458,11 +472,15 @@ def main():
 
     ingredients = sorted({i for e in entries for i in e['ingredients']})
     print(len(entries), 'entries,', len(ingredients), 'ingredients')
+    pc = PubChem(AGENT, log=lambda m: print(m, flush=True))
     by_label = cids_by_name([i for i in ingredients if i not in known])
-    cid = {i: known.get(i) or by_label.get(i) for i in ingredients}
-    print(sum(1 for c in cid.values() if c), 'with a PubChem id')
-    chem = chemistry(sorted({c for c in cid.values() if c}))
-    iupac_names(chem)
+    # The ids already known first, a hundred to a request; name lookups are one each, and PubChem's
+    # name service is the one it turns away first when busy
+    pubchem_properties(sorted({c for c in list(known.values()) + list(by_label.values()) if c}), pc)
+    by_pubchem = pubchem_cids([i for i in ingredients if not (known.get(i) or by_label.get(i))], pc)
+    cid = {i: known.get(i) or by_label.get(i) or by_pubchem.get(i) for i in ingredients}
+    print(sum(1 for c in cid.values() if c), 'of', len(ingredients), 'with a PubChem id', flush=True)
+    chem = chemistry(sorted({c for c in cid.values() if c}), pc)
 
     with gzip.open(os.path.join(OUT, 'medications.gzjsonl'), 'wt', encoding='utf-8') as f:
         for e in sorted(entries, key=lambda e: (-e['n'], e['name'])):
