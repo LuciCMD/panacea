@@ -38,6 +38,7 @@ import com.clementine.panacea.reminder.Schedule
 import com.clementine.panacea.ui.Prompt
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.components.EmptyCard
+import com.clementine.panacea.ui.components.Loader
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SlateButton
 import com.clementine.panacea.ui.components.screenPadding
@@ -47,9 +48,11 @@ import com.clementine.panacea.ui.timeFormats
 import com.clementine.panacea.ui.today.TodayText
 import java.time.Instant
 import java.time.ZonedDateTime
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -142,7 +145,7 @@ class RemindersViewModel(private val repository: MedicationRepository, private v
             muteAllText = if (muteAll > nowMs) ReminderText.mutedUntil(muteAll, now, formats) else null,
             hasMedications = meds.isNotEmpty(),
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val names: StateFlow<Map<Long, String>?> = repository.observeNames()
         .map { list -> list.associate { it.id to it.name } }
@@ -212,7 +215,7 @@ fun RemindersScreen(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     var muting by rememberSaveable { mutableStateOf(false) }
-    val state = ui ?: return
+    val state = ui ?: return Loader()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

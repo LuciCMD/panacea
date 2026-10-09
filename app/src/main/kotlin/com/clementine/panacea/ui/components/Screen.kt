@@ -51,21 +51,26 @@ fun ScreenHeader(
     info: String? = null,
     action: @Composable (() -> Unit)? = null,
 ) {
-    Row(modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            // No gap: the ⓘ's 48dp target already leaves room around its icon.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Colors.Ink,
-                    modifier = Modifier.semantics { heading() },
-                )
-                info?.let { InfoTip(about = title, text = it) }
+    val open = rememberInfoOpen()
+    Column(modifier.fillMaxWidth().padding(bottom = 2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // No gap: the ⓘ's 48dp target already leaves room around its icon
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Colors.Ink,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    info?.let { InfoTip(about = title, open = open) }
+                }
+                subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted) }
             }
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted) }
+            action?.invoke()
         }
-        action?.invoke()
+        // Under the whole header, so it has the full width rather than what the action leaves
+        info?.let { InfoBox(it, open, Modifier.padding(top = 10.dp)) }
     }
 }
 
@@ -82,6 +87,7 @@ fun SectionCard(
     info: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val open = rememberInfoOpen()
     SlateCard(modifier.fillMaxWidth(), border = if (warning) Colors.Warn else null) {
         // The ⓘ's 48dp row is taller than the title, so the card's top padding gives way to keep the title in place.
         Column(
@@ -96,8 +102,9 @@ fun SectionCard(
                         color = Colors.Ink,
                         modifier = Modifier.semantics { heading() },
                     )
-                    info?.let { InfoTip(about = title, text = it) }
+                    info?.let { InfoTip(about = title, open = open) }
                 }
+                info?.let { InfoBox(it, open) }
                 hint?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Colors.Muted) }
             }
             content()

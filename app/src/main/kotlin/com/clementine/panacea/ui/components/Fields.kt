@@ -1,7 +1,7 @@
 package com.clementine.panacea.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -46,9 +46,13 @@ import com.clementine.panacea.ui.theme.Colors
 /** A field label: Title Case, above the field. */
 @Composable
 fun FieldLabel(text: String, modifier: Modifier = Modifier, info: String? = null) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = Colors.Ink)
-        info?.let { InfoTip(about = text, text = it) }
+    val open = rememberInfoOpen()
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = Colors.Ink)
+            info?.let { InfoTip(about = text, open = open) }
+        }
+        info?.let { InfoBox(it, open, Modifier.padding(bottom = 6.dp)) }
     }
 }
 

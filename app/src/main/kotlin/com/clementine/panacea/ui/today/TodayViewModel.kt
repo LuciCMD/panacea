@@ -11,17 +11,20 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.TakenDose
+import com.clementine.panacea.data.db.DoseEntity
+import com.clementine.panacea.data.db.IngredientEntity
 import com.clementine.panacea.data.db.MedicationEntity
+import com.clementine.panacea.data.db.MedicationSummary
+import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.reminder.Reminders
 import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.reminder.Settled
-import com.clementine.panacea.data.db.DoseEntity
-import com.clementine.panacea.data.db.IngredientEntity
-import com.clementine.panacea.data.db.MedicationSummary
-import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.minuteTicks
 import com.clementine.panacea.ui.timeFormats
+import java.time.Instant
+import java.time.ZonedDateTime
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,12 +34,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZonedDateTime
 
 /** How long the bar stays, before Android's "Time to take action" setting lengthens it. */
 const val DOSE_BAR_MS = 15_000L
@@ -89,7 +91,7 @@ class TodayViewModel(
     val ui: StateFlow<TodayUi?> = combine(data, clock) { d, _ ->
         // The clock only says when to redraw; a dose logged mid-minute must not land in the future.
         TodayModel.build(d.summaries, d.ingredients, d.reminders, d.doses, d.presets, ZonedDateTime.now(), formats, d.learning, d.all)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** What the 3.4 import couldn't bring over; empty when nothing, or once put away. */
     val importProblems: StateFlow<List<String>> =

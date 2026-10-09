@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clementine.panacea.ui.components.EmptyCard
+import com.clementine.panacea.ui.components.Loader
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.screenPadding
 import com.clementine.panacea.ui.counted
@@ -23,6 +24,7 @@ import com.clementine.panacea.ui.icons.Glyphs
 @Composable
 fun HistoryScreen(onGoToday: () -> Unit, viewModel: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory)) {
     val days by viewModel.days.collectAsStateWithLifecycle()
+    val list = days ?: return Loader()
     // An id, so the sheet shows the dose as it is after a change.
     var opened by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -31,12 +33,11 @@ fun HistoryScreen(onGoToday: () -> Unit, viewModel: HistoryViewModel = viewModel
         contentPadding = screenPadding(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        val list = days
-        val count = list?.sumOf { it.doses.size } ?: 0
+        val count = list.sumOf { it.doses.size }
         item(key = "header") {
             ScreenHeader("History", if (count == 0) null else "${counted(count, "dose")} logged")
         }
-        if (list != null && list.isEmpty()) {
+        if (list.isEmpty()) {
             item(key = "empty") {
                 EmptyCard(
                     "Nothing Logged Yet",
@@ -47,12 +48,12 @@ fun HistoryScreen(onGoToday: () -> Unit, viewModel: HistoryViewModel = viewModel
                 )
             }
         }
-        items(list.orEmpty(), key = { it.doses.first().id }) { day ->
+        items(list, key = { it.doses.first().id }) { day ->
             DayCard(day, showMedication = true) { opened = it.id }
         }
     }
 
-    opened?.let { id -> days?.firstNotNullOfOrNull { day -> day.doses.firstOrNull { it.id == id } } }?.let { item ->
+    opened?.let { id -> list.firstNotNullOfOrNull { day -> day.doses.firstOrNull { it.id == id } } }?.let { item ->
         DoseSheet(
             item,
             onChangeTime = { viewModel.changeTime(item.id, it) },

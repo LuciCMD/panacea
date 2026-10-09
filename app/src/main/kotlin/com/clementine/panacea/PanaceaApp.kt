@@ -7,6 +7,7 @@ import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.PhotoStore
 import com.clementine.panacea.data.Settings
 import com.clementine.panacea.data.backup.Backups
+import com.clementine.panacea.data.catalog.Catalog
 import com.clementine.panacea.data.db.PanaceaDatabase
 import com.clementine.panacea.data.legacy.ImportOutcome
 import com.clementine.panacea.data.legacy.Legacy34Importer
@@ -61,6 +62,7 @@ class AppContainer(context: Context) {
     val legacyImporter = Legacy34Importer(context, database)
     val medications = MedicationRepository(database)
     val settings = Settings(context)
+    val catalog = Catalog(context)
     val soundLibrary = SoundLibrary(context, settings)
     val photos = PhotoStore(context)
     val reminders = Reminders(context, database, medications)

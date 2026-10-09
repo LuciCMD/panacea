@@ -86,7 +86,8 @@ object BackupFormat {
                 sounds.put(key, JSONObject()
                     .put("mode", setting.mode.key)
                     .put("file", setting.custom?.file ?: JSONObject.NULL)
-                    .put("name", setting.custom?.name ?: JSONObject.NULL))
+                    .put("name", setting.custom?.name ?: JSONObject.NULL)
+                    .put("volume", setting.volume.toDouble()))
             }
             root.put("settings", JSONObject().put("theme", s.theme ?: JSONObject.NULL).put("sounds", sounds))
         }
@@ -234,7 +235,9 @@ object BackupFormat {
                 sounds = sounds?.keys()?.asSequence()?.toList().orEmpty().mapNotNull { key ->
                     val o = sounds?.optJSONObject(key) ?: return@mapNotNull null
                     val file = o.fileName("file")
-                    key to SoundSetting(SoundMode.fromKey(o.text("mode")), file?.let { CustomSound(it, o.text("name") ?: it) })
+                    // Backups from before the volume slider have none: full volume, as they played
+                    val volume = o.optDouble("volume", 1.0).toFloat().coerceIn(0f, 1f)
+                    key to SoundSetting(SoundMode.fromKey(o.text("mode")), file?.let { CustomSound(it, o.text("name") ?: it) }, volume)
                 }.toMap(),
             )
         }

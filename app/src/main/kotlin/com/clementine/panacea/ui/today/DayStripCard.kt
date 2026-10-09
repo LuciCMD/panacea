@@ -49,9 +49,11 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.clementine.panacea.ui.components.AxisLabels
+import com.clementine.panacea.ui.components.InfoBox
 import com.clementine.panacea.ui.components.InfoTip
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SlateCard
+import com.clementine.panacea.ui.components.rememberInfoOpen
 import com.clementine.panacea.ui.theme.Colors
 
 /** Doses within this of a group's first share one mark, with their count in it. */
@@ -74,6 +76,7 @@ fun DayStripCard(strip: DayStrip) {
     }
     // The groups a tap picked; cleared when the doses or the width change underneath them.
     var picked by remember(groups) { mutableStateOf<List<DotGroup>>(emptyList()) }
+    val info = rememberInfoOpen()
     SlateCard(Modifier.fillMaxWidth()) {
         Column(
             // The label row is the ⓘ's 48dp tall, which brings its own space above and below.
@@ -81,10 +84,11 @@ fun DayStripCard(strip: DayStrip) {
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Doses Today", style = small, color = Colors.Muted)
-                InfoTip(about = "Doses Today", text = TodayText.STRIP)
+                InfoTip(about = "Doses Today", open = info)
                 Spacer(Modifier.weight(1f))
                 Text(TodayText.dosesToday(strip.count), style = small, color = Colors.Ink)
             }
+            InfoBox(TodayText.STRIP, info, Modifier.padding(bottom = 10.dp))
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -135,6 +139,8 @@ private fun StripLine(strip: DayStrip, groups: List<DotGroup>, picked: List<DotG
         val corner = CornerRadius(line / 2)
         drawRoundRect(field, Offset(0f, y - line / 2), Size(size.width, line), corner)
         drawRoundRect(lineColor, Offset(0f, y - line / 2), Size(nowX, line), corner)
+        // Under the dots, so a dose just logged doesn't have its count struck through
+        drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
         groups.forEach { g ->
             val center = Offset(g.x, y)
             val many = g.dots.size > 1
@@ -148,7 +154,6 @@ private fun StripLine(strip: DayStrip, groups: List<DotGroup>, picked: List<DotG
                 drawText(text, topLeft = center - Offset(text.size.width / 2f, text.size.height / 2f))
             }
         }
-        drawRoundRect(ink, Offset(nowX - line / 2, 0f), Size(line, size.height), corner)
     }
 }
 

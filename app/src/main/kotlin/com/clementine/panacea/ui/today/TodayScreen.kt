@@ -1,7 +1,6 @@
 package com.clementine.panacea.ui.today
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,19 +26,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clementine.panacea.PanaceaApp
+import com.clementine.panacea.data.ListLayout
 import com.clementine.panacea.model.Category
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.EmptyCard
-import com.clementine.panacea.ui.components.Numbers
+import com.clementine.panacea.ui.components.Loader
 import com.clementine.panacea.ui.components.ProgressRing
 import com.clementine.panacea.ui.components.ScreenHeader
 import com.clementine.panacea.ui.components.SectionCard
@@ -64,8 +64,11 @@ fun TodayScreen(
     val take = rememberTake(viewModel)
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var sheetFor by rememberSaveable { mutableStateOf<Long?>(null) }
+    val settings = (LocalContext.current.applicationContext as PanaceaApp).container.settings
+    val layout by settings.listLayout.collectAsStateWithLifecycle()
 
     Box(Modifier.fillMaxSize().background(Colors.Ground)) {
+        if (ui == null) Loader()
         ui?.let { state ->
             val categories = state.categories
             val shown = Category.entries.firstOrNull { it.key == filter && it in categories }
@@ -114,13 +117,20 @@ fun TodayScreen(
                     item(key = "filters") { Filters(categories, shown) { filter = it?.key } }
                 }
                 val cards = state.cards.filter { shown == null || it.category == shown }
-                items(cards, key = { it.medication.id }) { card ->
-                    MedicationCard(
-                        card,
-                        onTake = { take(card.medication.id, card.medication.lastMultiplier, null) },
-                        onAmount = { sheetFor = card.medication.id },
-                        onOpen = { onOpen(card.medication.id) },
-                    )
+                val onTake = { card: CardState -> take(card.medication.id, card.medication.lastMultiplier, null) }
+                val onAmount = { card: CardState -> sheetFor = card.medication.id }
+                val onOpenCard = { card: CardState -> onOpen(card.medication.id) }
+                if (layout == ListLayout.CARDS) {
+                    items(cards, key = { it.medication.id }) { card ->
+                        SlateCard(Modifier.fillMaxWidth()) { MedicationBody(card, { onTake(card) }, { onAmount(card) }, { onOpenCard(card) }) }
+                    }
+                } else {
+                    listSections(cards, layout).forEach { section ->
+                        section.label?.let { label -> item(key = "label:$label") { ListLabel(label, warn = label == "Missed") } }
+                        item(key = "group:${section.label}") {
+                            MedicationGroup(section.cards, compact = layout != ListLayout.GROUPED, onTake, onAmount, onOpenCard)
+                        }
+                    }
                 }
             }
 
@@ -179,36 +189,6 @@ fun CardRing(card: CardState) {
             PillPhoto(med.photoFront, null, Modifier.size(40.dp).clip(CircleShape), px = 160)
         } else {
             Icon(TypeIcons.of(card.type), contentDescription = null, tint = Colors.Ink)
-        }
-    }
-}
-
-@Composable
-private fun MedicationCard(card: CardState, onTake: () -> Unit, onAmount: () -> Unit, onOpen: () -> Unit) {
-    val med = card.medication
-    SlateCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable(role = Role.Button, onClickLabel = "Open ${med.name}", onClick = onOpen),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                CardRing(card)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(
-                        med.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Colors.Ink,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    Text(card.doseLine, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted)
-                }
-                Icon(Glyphs.ChevronRight, contentDescription = null, tint = Colors.Faint)
-            }
-            StatusLines(card)
-            TakeButtons(med, card.dueNow, onTake, onAmount)
         }
     }
 }

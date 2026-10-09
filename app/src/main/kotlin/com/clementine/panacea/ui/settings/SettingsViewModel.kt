@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.clementine.panacea.PanaceaApp
+import com.clementine.panacea.data.ListLayout
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.data.Settings
 import com.clementine.panacea.data.backup.BackupException
@@ -68,10 +69,18 @@ class SettingsViewModel(
 
     fun setTheme(key: String) = settings.setTheme(key)
 
+    val listLayout: StateFlow<ListLayout> = settings.listLayout
+
+    fun setListLayout(layout: ListLayout) = settings.setListLayout(layout)
+
     fun setMode(event: SoundEvent, mode: SoundMode) {
         val current = settings.sound(event).value
         settings.setSound(event, current.copy(mode = mode))
         _problems.update { it - event }
+    }
+
+    fun setVolume(event: SoundEvent, volume: Float) {
+        settings.setSound(event, settings.sound(event).value.copy(volume = volume))
     }
 
     fun addSound(event: SoundEvent, uri: Uri, onAdded: (SoundSetting) -> Unit) {

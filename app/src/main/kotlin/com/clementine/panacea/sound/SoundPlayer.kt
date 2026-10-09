@@ -20,11 +20,14 @@ class SoundPlayer(private val context: Context, private val settings: Settings, 
     fun play(event: SoundEvent, setting: SoundSetting) {
         if (setting.effective == SoundMode.NONE) return
         val player = player(event, setting) ?: player(event, SoundSetting(SoundMode.BUILT_IN, null)) ?: return
+        player.setVolume(setting.gain, setting.gain)
         if (player.isPlaying) player.seekTo(0) else player.start()
     }
 
     private fun player(event: SoundEvent, setting: SoundSetting): MediaPlayer? {
-        players[event]?.let { (cached, player) -> if (cached == setting) return player }
+        // Volume is set on each play, so changing it doesn't rebuild the player
+        val source = setting.copy(volume = 1f)
+        players[event]?.let { (cached, player) -> if (cached == source) return player }
         release(event)
         return try {
             val player = MediaPlayer().apply {
@@ -38,7 +41,7 @@ class SoundPlayer(private val context: Context, private val settings: Settings, 
                 setOnCompletionListener { it.seekTo(0) }
                 prepare()
             }
-            players[event] = setting to player
+            players[event] = source to player
             player
         } catch (e: Exception) {
             Log.w("Panacea", "Can't play the ${event.key} sound", e)

@@ -37,7 +37,7 @@ import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import kotlinx.coroutines.delay
 
-private const val TAKE_LOCK_MS = 3_000L
+internal const val TAKE_LOCK_MS = 3_000L
 
 /** Logs a dose with its sound and a tap of feedback; takenAt null means now. */
 @Composable

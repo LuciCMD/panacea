@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -46,8 +48,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clementine.panacea.PanaceaApp
+import com.clementine.panacea.data.catalog.Chemistry
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.ui.components.ButtonKind
+import com.clementine.panacea.ui.components.Loader
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
@@ -107,7 +112,7 @@ fun MedicationScreen(
     var days by rememberSaveable { mutableIntStateOf(FIRST_DAYS) }
 
     val ui = when (val s = state) {
-        MedicationState.Loading -> return
+        MedicationState.Loading -> return Loader()
         MedicationState.Gone -> {
             LaunchedEffect(Unit) { onBack() }
             return
@@ -115,6 +120,10 @@ fun MedicationScreen(
         is MedicationState.Ready -> s.ui
     }
     val med = ui.medication
+    val catalog = (LocalContext.current.applicationContext as PanaceaApp).container.catalog
+    val compounds by produceState(emptyList<Chemistry>(), med.name, ui.ingredients) {
+        value = catalog.compoundsOf(listOf(med.name) + ui.ingredients.map { it.label })
+    }
     val card = todayUi?.cards?.firstOrNull { it.medication.id == id }
 
     Box(Modifier.fillMaxSize().background(Colors.Ground)) {
@@ -149,6 +158,7 @@ fun MedicationScreen(
             }
             item(key = "details") { DetailsCard(ui, onAddPhotos = onEdit.takeIf { med.photoFront == null && med.photoBack == null }) }
             ui.totals?.let { totals -> item(key = "totals") { TotalsCard(totals, card?.had.orEmpty().filter { it.name != null }) } }
+            if (compounds.isNotEmpty()) item(key = "chemistry") { ChemistryCard(compounds) }
 
             item(key = "reminders") { SectionLabel("Reminders") }
             ui.muted?.let { text -> item(key = "muted") { MutedCard(text) { viewModel.unmute(med.id) } } }

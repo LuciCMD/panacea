@@ -129,7 +129,7 @@ class Notifier(private val context: Context) {
 
         /** Learned questions are told apart from reminders by this tag, as ids may collide. */
         private const val LEARNED_TAG = "learned"
-        private const val ACCENT = 0xFFB39DF0.toInt()
+        private const val ACCENT = 0xFFF5A05A.toInt()
 
         /** Imported 3.4 ids are any 32-bit number, so ids are folded rather than cut. */
         fun notificationId(reminderId: Long): Int = reminderId.hashCode()

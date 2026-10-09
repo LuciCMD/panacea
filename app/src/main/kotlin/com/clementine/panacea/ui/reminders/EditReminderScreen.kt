@@ -45,6 +45,7 @@ import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.components.ButtonKind
 import com.clementine.panacea.ui.components.ConfirmDialog
 import com.clementine.panacea.ui.components.FieldLabel
+import com.clementine.panacea.ui.components.Loader
 import com.clementine.panacea.ui.components.Numbers
 import com.clementine.panacea.ui.components.SectionCard
 import com.clementine.panacea.ui.components.SlateButton
@@ -96,8 +97,8 @@ fun EditReminderScreen(
         }
     }
     val medications by viewModel.medications.collectAsStateWithLifecycle()
-    val d = draft ?: return
-    val meds = medications ?: return
+    val d = draft ?: return Loader()
+    val meds = medications ?: return Loader()
     // With one medication there's nothing to pick.
     LaunchedEffect(meds) {
         if (d.medicationId == 0L && meds.size == 1) draft = d.copy(medicationId = meds.single().id)

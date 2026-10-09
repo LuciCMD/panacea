@@ -2,6 +2,9 @@ package com.clementine.panacea.ui.edit
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.platform.LocalContext
+import com.clementine.panacea.PanaceaApp
+import com.clementine.panacea.ui.components.Loader
 import com.clementine.panacea.ui.theme.SlateIndication
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -91,22 +94,33 @@ private val MoreTypes = MedicationType.entries - CommonTypes.toSet() - Medicatio
 fun EditMedicationScreen(
     id: Long?,
     onDone: () -> Unit,
+    /** A new medication from the catalog: its entry, and which of its forms */
+    entry: Int? = null,
+    form: Int? = null,
+    /** A new medication's name as typed when searching */
+    name: String? = null,
     onRemoved: (Long) -> Unit = { onDone() },
     /** After a new medication is added and a reminder for it is wanted. */
     onAddReminder: (Long) -> Unit = { onDone() },
     viewModel: EditMedicationViewModel = viewModel(factory = EditMedicationViewModel.Factory),
 ) {
     val saver = EditMedicationViewModel.DraftSaver
-    var draft by rememberSaveable(stateSaver = saver) { mutableStateOf(if (id == null) MedicationDraft() else null) }
-    var original by rememberSaveable(stateSaver = saver) { mutableStateOf(if (id == null) MedicationDraft() else null) }
-    LaunchedEffect(id) {
-        if (id != null && draft == null) {
-            val loaded = viewModel.load(id) ?: return@LaunchedEffect onDone()
-            draft = loaded
-            original = loaded
-        }
+    val fresh = id == null && entry == null
+    var draft by rememberSaveable(stateSaver = saver) { mutableStateOf(if (fresh) MedicationDraft(name = name.orEmpty()) else null) }
+    // What was filled in for the user doesn't count as a change to throw away
+    var original by rememberSaveable(stateSaver = saver) { mutableStateOf(if (fresh) MedicationDraft(name = name.orEmpty()) else null) }
+    val catalog = (LocalContext.current.applicationContext as PanaceaApp).container.catalog
+    LaunchedEffect(id, entry) {
+        if (draft != null) return@LaunchedEffect
+        val loaded = when {
+            id != null -> viewModel.load(id)
+            entry != null -> catalog.entry(entry)?.let { e -> catalogDraft(e, form?.let(e.forms::getOrNull)) } ?: MedicationDraft()
+            else -> null
+        } ?: return@LaunchedEffect onDone()
+        draft = loaded
+        original = loaded
     }
-    val d = draft ?: return
+    val d = draft ?: return Loader()
     val update = { change: MedicationDraft -> draft = change }
 
     var tried by rememberSaveable { mutableStateOf(false) }

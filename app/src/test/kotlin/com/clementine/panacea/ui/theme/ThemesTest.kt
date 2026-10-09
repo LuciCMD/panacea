@@ -1,6 +1,7 @@
 package com.clementine.panacea.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import com.clementine.panacea.data.Settings
 import com.clementine.panacea.resolveTheme
 import org.junit.Assert.assertEquals
@@ -8,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
 
-/** Every theme must read at least as well as Slate does (see the Slate theme's contrast table). */
+/** Every theme must read at least as well as the house theme does, by its contrast table */
 class ThemesTest {
 
     private fun luminance(c: Color): Double {
@@ -38,6 +39,8 @@ class ThemesTest {
             check(t, "faint icon on field", p.faint, p.field, 3.0)
             check(t, "text on accent", p.onAccent, p.accent, 4.5)
             check(t, "accent on surface", p.accent, p.surface, 4.5)
+            // Tonal Take, selected chips and menu rows: the accent on its own wash, over whatever is behind
+            for (bg in listOf(p.ground, p.surface, p.raised)) check(t, "accent on its wash", p.accent, p.accentWash.compositeOver(bg), 4.5)
             check(t, "warn on surface", p.warn, p.surface, 4.5)
             check(t, "good on surface", p.good, p.surface, 3.0)
             check(t, "text on the delete button", p.onAccent, p.bad, 4.5)

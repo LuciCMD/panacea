@@ -20,7 +20,11 @@ enum class SoundMode(val key: String) {
 /** A sound file the user picked, copied into the app's own storage as [file]. */
 data class CustomSound(val file: String, val name: String)
 
-data class SoundSetting(val mode: SoundMode, val custom: CustomSound?) {
+/** [volume] is the slider's 0 to 1, within the phone's own volume */
+data class SoundSetting(val mode: SoundMode, val custom: CustomSound?, val volume: Float = 1f) {
     /** What actually plays: a custom choice whose file is gone falls back to the built-in sound. */
     val effective: SoundMode get() = if (mode == SoundMode.CUSTOM && custom == null) SoundMode.BUILT_IN else mode
+
+    /** What the player is given; squared, since ears hear loudness on a curve and halfway should sound like half */
+    val gain: Float get() = volume * volume
 }

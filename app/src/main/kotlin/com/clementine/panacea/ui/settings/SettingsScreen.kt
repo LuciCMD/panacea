@@ -16,35 +16,42 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.clementine.panacea.data.ListLayout
 import com.clementine.panacea.data.Settings
 import com.clementine.panacea.sound.LocalSoundPlayer
 import com.clementine.panacea.sound.SoundEvent
@@ -64,10 +71,12 @@ import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.theme.Palette
 import com.clementine.panacea.ui.theme.Themes
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
     val theme by viewModel.theme.collectAsStateWithLifecycle()
+    val listLayout by viewModel.listLayout.collectAsStateWithLifecycle()
     val removed by viewModel.removed.collectAsStateWithLifecycle()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -76,6 +85,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel(factory = SettingsVi
     ) {
         item(key = "header") { ScreenHeader("Settings") }
         item(key = "theme") { ThemeCard(theme, viewModel::setTheme) }
+        item(key = "layout") { LayoutCard(listLayout, viewModel::setListLayout) }
         item(key = "sounds") { SoundsCard(viewModel) }
         item(key = "backup") { BackupCard(viewModel) }
         if (removed.isNotEmpty()) item(key = "removed") { RecentlyRemovedCard(removed, viewModel::restore) }
@@ -93,6 +103,21 @@ private fun ThemeCard(current: String, onPick: (String) -> Unit) {
                     pair.forEach { key -> ThemeTile(key, key == current, Modifier.weight(1f)) { onPick(key) } }
                     if (pair.size == 1) Box(Modifier.weight(1f))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LayoutCard(current: ListLayout, onPick: (ListLayout) -> Unit) {
+    SectionCard(
+        "Medication List",
+        info = "How Today shows your medications. Grouped and Compact put each category in one card, and Compact " +
+            "fits more on screen by moving the amount to a long press on Take. When Due sorts them by what needs you first.",
+    ) {
+        FlowRow(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ListLayout.entries.forEach { layout ->
+                SlateChip(layout == current, { onPick(layout) }, role = Role.RadioButton) { ChipText(layout.label) }
             }
         }
     }
@@ -218,9 +243,41 @@ private fun SoundsCard(viewModel: SettingsViewModel) {
                         ChipText(if (adding == event) "Adding…" else if (custom == null) "Choose a File" else "Another File")
                     }
                 }
+                if (setting.effective != SoundMode.NONE) {
+                    VolumeSlider(event, setting.volume) { viewModel.setVolume(event, it); player.play(event, setting.copy(volume = it)) }
+                }
                 problems[event]?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Colors.Bad) }
             }
         }
+    }
+}
+
+/** Plays the sound at the new level once the thumb is let go, rather than on every step of a drag */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VolumeSlider(event: SoundEvent, volume: Float, onSet: (Float) -> Unit) {
+    var dragging by remember(volume) { mutableFloatStateOf(volume) }
+    val percent = "${(dragging * 100).roundToInt()}%"
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Volume", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
+        Slider(
+            value = dragging,
+            onValueChange = { dragging = it },
+            onValueChangeFinished = { onSet(dragging) },
+            // Material's thick track and upright thumb are heavier than anything else on Slate
+            thumb = { Box(Modifier.size(20.dp).background(Colors.Accent, CircleShape)) },
+            track = { state ->
+                Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(Colors.Field)) {
+                    Box(Modifier.fillMaxWidth(state.value).fillMaxHeight().background(Colors.Accent))
+                }
+            },
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp)
+                .semantics { contentDescription = "Volume, ${event.label.lowercase()}" },
+        )
+        // Wide enough for "100%", so the slider doesn't shift as the number grows
+        Text(percent, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Ink, textAlign = TextAlign.End, modifier = Modifier.width(44.dp))
     }
 }
 

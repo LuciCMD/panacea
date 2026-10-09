@@ -1,102 +1,92 @@
 package com.clementine.panacea.ui.components
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupPositionProvider
-import androidx.compose.ui.window.PopupProperties
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 
-/**
- * A small ⓘ after a label. A tap shows [text] at once beside the icon, never over it, until a tap
- * anywhere else or Back. The icon is faint, and accent while its text is open.
- */
+/** Whether an entry's ⓘ box is open; kept across rotation, and each entry has its own */
 @Composable
-fun InfoTip(about: String, text: String, modifier: Modifier = Modifier) {
-    var open by remember { mutableStateOf(false) }
+fun rememberInfoOpen(): MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }
+
+/** A small ⓘ after a label; a tap opens or closes its [InfoBox] under the label's row */
+@Composable
+fun InfoTip(about: String, open: MutableState<Boolean>, modifier: Modifier = Modifier) {
     Box(
         modifier
-            // A full 48dp target; the icon inside stays small and grows with the text.
+            // A full 48dp target; the icon inside stays small and grows with the text
             .minimumInteractiveComponentSize()
             .size(textIcon(28.dp))
             .clip(CircleShape)
-            .clickable(role = Role.Button, onClickLabel = "Explain") { open = !open }
-            .semantics { contentDescription = "About $about" },
+            .clickable(role = Role.Button, onClickLabel = if (open.value) "Close" else "Explain") { open.value = !open.value }
+            .semantics {
+                contentDescription = "About $about"
+                stateDescription = if (open.value) "Open" else "Closed"
+            },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Glyphs.Info, contentDescription = null, tint = if (open) Colors.Accent else Colors.Faint, modifier = Modifier.size(textIcon(18.dp)))
-        if (open) {
-            val density = LocalDensity.current
-            val beside = remember(density) { with(density) { Beside(gap = 12.dp.roundToPx(), margin = 16.dp.roundToPx()) } }
-            Popup(popupPositionProvider = beside, onDismissRequest = { open = false }, properties = PopupProperties(focusable = true)) {
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Colors.Surface,
-                    contentColor = Colors.Ink,
-                    border = BorderStroke(1.dp, Colors.Line),
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.widthIn(max = 300.dp),
-                ) {
-                    Text(
-                        text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier
-                            .padding(horizontal = 14.dp, vertical = 12.dp)
-                            .semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                }
-            }
-        }
+        Icon(Glyphs.Info, contentDescription = null, tint = if (open.value) Colors.Accent else Colors.Faint, modifier = Modifier.size(textIcon(18.dp)))
     }
 }
 
-/** Beside the anchor on whichever side has room; on a narrow screen, below it (or above, near the bottom). */
-private class Beside(private val gap: Int, private val margin: Int) : PopupPositionProvider {
-    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset {
-        val w = popupContentSize.width
-        val h = popupContentSize.height
-        val right = anchorBounds.right + gap
-        val left = anchorBounds.left - gap - w
-        val middle = (anchorBounds.top + anchorBounds.height / 2 - h / 2).coerceIn(margin, maxOf(margin, windowSize.height - h - margin))
-        return when {
-            right + w <= windowSize.width - margin -> IntOffset(right, middle)
-            left >= margin -> IntOffset(left, middle)
-            else -> {
-                val x = (anchorBounds.center.x - w / 2).coerceIn(margin, maxOf(margin, windowSize.width - w - margin))
-                val below = anchorBounds.bottom + gap
-                IntOffset(x, if (below + h <= windowSize.height - margin) below else anchorBounds.top - gap - h)
-            }
+/**
+ * What an ⓘ explains, in a quiet raised panel with an accent bar on its left, pushing what's below
+ * it down; capped at 600dp so a line stays readable on a tablet
+ */
+@Composable
+fun InfoBox(text: String, open: MutableState<Boolean>, modifier: Modifier = Modifier) {
+    AnimatedVisibility(open.value, enter = expandVertically(tween(160)), exit = shrinkVertically(tween(120))) {
+        Row(
+            modifier
+                .widthIn(max = 600.dp)
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Colors.Raised),
+        ) {
+            Box(Modifier.width(3.dp).fillMaxHeight().background(Colors.Accent))
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Colors.Muted,
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+            )
         }
     }
 }

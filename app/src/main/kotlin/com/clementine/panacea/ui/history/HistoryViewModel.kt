@@ -9,18 +9,22 @@ import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.data.MedicationRepository
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.timeFormats
+import java.time.ZonedDateTime
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.ZonedDateTime
 
 class HistoryViewModel(private val repository: MedicationRepository, formats: TimeFormats) : ViewModel() {
 
     /** Null until the database has answered. */
     val days: StateFlow<List<HistoryDay>?> = repository.observeHistory()
         .map { HistoryModel.build(it, ZonedDateTime.now(), formats) }
+        // Every dose ever logged; built on the main thread it froze the tab while opening
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun remove(id: Long) {

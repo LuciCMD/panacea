@@ -1,5 +1,6 @@
 package com.clementine.panacea.ui
 
+import android.net.Uri
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -58,6 +59,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.clementine.panacea.PanaceaApp
 import com.clementine.panacea.ui.edit.EditMedicationScreen
+import com.clementine.panacea.ui.edit.FindMedicationScreen
 import com.clementine.panacea.ui.history.HistoryScreen
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.medication.MedicationScreen
@@ -104,9 +106,17 @@ sealed interface Route {
         override val id get() = "rearrange"
     }
 
-    /** Add a medication (null) or edit one. */
-    data class EditMedication(val medicationId: Long?) : Route {
-        override val id get() = "edit:${medicationId ?: "new"}"
+    /** Find a medication to add in the catalog, or go on with one's own */
+    data object FindMedication : Route {
+        override val id get() = "find"
+    }
+
+    /**
+     * Add a medication (null) or edit one; a new one starts from the catalog's [entry] and its
+     * [form], or with the [name] typed when searching
+     */
+    data class EditMedication(val medicationId: Long?, val entry: Int? = null, val form: Int? = null, val name: String? = null) : Route {
+        override val id get() = medicationId?.let { "edit:$it" } ?: "edit:new:${entry ?: ""}:${form ?: ""}:${Uri.encode(name.orEmpty())}"
     }
 
     companion object {
@@ -114,7 +124,11 @@ sealed interface Route {
             id.startsWith("tab:") -> Tab.entries.firstOrNull { it.name == id.removePrefix("tab:") }?.let(::Top)
             id.startsWith("med:") -> id.removePrefix("med:").toLongOrNull()?.let(::Medication)
             id.startsWith("reminder:") -> id.split(':').let { EditReminder(it.getOrNull(1)?.toLongOrNull(), it.getOrNull(2)?.toLongOrNull()) }
+            id.startsWith("edit:new:") -> id.split(':', limit = 5).let {
+                EditMedication(null, it.getOrNull(2)?.toIntOrNull(), it.getOrNull(3)?.toIntOrNull(), it.getOrNull(4)?.let(Uri::decode)?.ifEmpty { null })
+            }
             id.startsWith("edit:") -> EditMedication(id.removePrefix("edit:").toLongOrNull())
+            id == FindMedication.id -> FindMedication
             id == Rearrange.id -> Rearrange
             else -> null
         }
@@ -227,13 +241,13 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
                         when (route) {
                             is Route.Top -> when (route.tab) {
                                 Tab.TODAY -> TodayScreen(
-                                    onAdd = { backStack.add(Route.EditMedication(null)) },
+                                    onAdd = { backStack.add(Route.FindMedication) },
                                     onOpen = { backStack.add(Route.Medication(it)) },
                                     onRearrange = { backStack.add(Route.Rearrange) },
                                 )
                                 Tab.REMINDERS -> RemindersScreen(
                                     onAdd = { backStack.add(Route.EditReminder(null)) },
-                                    onAddMedication = { backStack.add(Route.EditMedication(null)) },
+                                    onAddMedication = { backStack.add(Route.FindMedication) },
                                     onOpen = { backStack.add(Route.EditReminder(it)) },
                                     onOpenMedication = { backStack.add(Route.Medication(it)) },
                                 )
@@ -249,8 +263,23 @@ fun PanaceaShell(request: AppRequest? = null, onHandled: () -> Unit = {}) {
                             )
                             Route.Rearrange -> RearrangeScreen(onBack = { backStack.remove(Route.Rearrange) })
                             is Route.EditReminder -> EditReminderScreen(route.reminderId, route.medicationId, onDone = { backStack.remove(route) })
+                            // The form takes the search's place, so Back from it goes where adding began
+                            Route.FindMedication -> FindMedicationScreen(
+                                onPick = { entry, form ->
+                                    backStack.remove(Route.FindMedication)
+                                    backStack.add(Route.EditMedication(null, entry, form))
+                                },
+                                onCustom = { name ->
+                                    backStack.remove(Route.FindMedication)
+                                    backStack.add(Route.EditMedication(null, name = name.ifEmpty { null }))
+                                },
+                                onBack = { backStack.remove(Route.FindMedication) },
+                            )
                             is Route.EditMedication -> EditMedicationScreen(
                                 route.medicationId,
+                                entry = route.entry,
+                                form = route.form,
+                                name = route.name,
                                 onDone = { pop() },
                                 // The reminder takes the form's place, so saving it comes back to where the medication was added from.
                                 onAddReminder = { id ->
