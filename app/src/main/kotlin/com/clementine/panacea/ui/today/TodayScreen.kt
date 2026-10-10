@@ -117,7 +117,7 @@ fun TodayScreen(
                     item(key = "filters") { Filters(categories, shown) { filter = it?.key } }
                 }
                 val cards = state.cards.filter { shown == null || it.category == shown }
-                val onTake = { card: CardState -> take(card.medication.id, card.medication.lastMultiplier, null) }
+                val onTake = { card: CardState -> take(card.medication.id, card.medication.lastMultiplier, null, false) }
                 val onAmount = { card: CardState -> sheetFor = card.medication.id }
                 val onOpenCard = { card: CardState -> onOpen(card.medication.id) }
                 if (layout == ListLayout.CARDS) {
@@ -139,7 +139,7 @@ fun TodayScreen(
                     card = card,
                     presets = state.presets,
                     formats = viewModel.formats,
-                    onTake = { multiplier, takenAt -> take(card.medication.id, multiplier, takenAt) },
+                    onTake = { multiplier, takenAt, withPhoto -> take(card.medication.id, multiplier, takenAt, withPhoto) },
                     onSavePreset = viewModel::addPreset,
                     onDismiss = { sheetFor = null },
                 )
@@ -154,6 +154,7 @@ fun TodayScreen(
                 .fillMaxWidth(),
         )
     }
+    DosePhotoCamera(viewModel)
 }
 
 @Composable

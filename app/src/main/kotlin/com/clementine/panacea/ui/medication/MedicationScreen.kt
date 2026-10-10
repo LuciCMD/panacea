@@ -80,6 +80,7 @@ import com.clementine.panacea.ui.today.TodayText
 import com.clementine.panacea.ui.today.TodayViewModel
 import com.clementine.panacea.ui.today.UndoBar
 import com.clementine.panacea.ui.today.keepPhrases
+import com.clementine.panacea.ui.today.DosePhotoCamera
 import com.clementine.panacea.ui.today.rememberTake
 
 /** Days of history shown at first, and how many more each tap on Show Earlier Days adds. */
@@ -146,7 +147,7 @@ fun MedicationScreen(
                             TakeButtons(
                                 med,
                                 dueNow = card.dueNow,
-                                onTake = { take(med.id, med.lastMultiplier, null) },
+                                onTake = { take(med.id, med.lastMultiplier, null, false) },
                                 onAmount = { sheetOpen = true },
                             )
                         }
@@ -206,13 +207,14 @@ fun MedicationScreen(
                 .fillMaxWidth(),
         )
     }
+    DosePhotoCamera(today)
 
     if (sheetOpen && card != null) {
         TakeSheet(
             card = card,
             presets = todayUi?.presets.orEmpty(),
             formats = today.formats,
-            onTake = { multiplier, takenAt -> take(med.id, multiplier, takenAt) },
+            onTake = { multiplier, takenAt, withPhoto -> take(med.id, multiplier, takenAt, withPhoto) },
             onSavePreset = today::addPreset,
             onDismiss = { sheetOpen = false },
         )
@@ -223,6 +225,7 @@ fun MedicationScreen(
             item,
             onChangeTime = { viewModel.changeDoseTime(item.id, it) },
             onChangeAmount = { viewModel.changeDoseAmount(item.id, it) },
+            onPhoto = { name, at -> viewModel.setDosePhoto(item.id, name, at) },
             onRemove = { viewModel.removeDose(item.id) },
             onDismiss = { opened = null },
         )

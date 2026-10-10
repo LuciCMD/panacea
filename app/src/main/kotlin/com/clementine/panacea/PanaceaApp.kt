@@ -60,11 +60,11 @@ class AppContainer(context: Context) {
     val started = CompletableDeferred<Unit>()
     val database: PanaceaDatabase = PanaceaDatabase.build(context)
     val legacyImporter = Legacy34Importer(context, database)
-    val medications = MedicationRepository(database)
+    val photos = PhotoStore(context)
+    val medications = MedicationRepository(database, photos)
     val settings = Settings(context)
     val catalog = Catalog(context)
     val soundLibrary = SoundLibrary(context, settings)
-    val photos = PhotoStore(context)
     val reminders = Reminders(context, database, medications)
     val backups = Backups(context, database, photos, settings, soundLibrary, reminders)
 }

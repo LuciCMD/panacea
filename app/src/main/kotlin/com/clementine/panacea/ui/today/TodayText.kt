@@ -5,6 +5,7 @@ import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.WeightUnit
 import com.clementine.panacea.model.formatAmount
+import com.clementine.panacea.reminder.Routine
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.counted
 import java.time.Instant
@@ -125,6 +126,13 @@ object TodayText {
 
     /** The due line of a medication learning its routine before it has one. */
     const val LEARNING = "Learning when you usually take it"
+
+    /** The due line of a learning medication with no next dose to name: still learning, no pattern, or done for the day */
+    fun unlearned(routine: Routine?): String = when {
+        routine is Routine.Irregular -> "No steady pattern yet"
+        routine is Routine.Rhythm && routine.resting -> "Today's ${routine.perDay} are taken · next after you sleep"
+        else -> LEARNING
+    }
 
     /** Today's ⓘ: how to read a card. */
     const val HOW_TO_READ =

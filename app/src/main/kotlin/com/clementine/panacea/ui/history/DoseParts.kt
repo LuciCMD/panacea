@@ -47,6 +47,7 @@ import com.clementine.panacea.ui.components.SlateCard
 import com.clementine.panacea.ui.components.SlateSheet
 import com.clementine.panacea.ui.components.TimeDialog
 import com.clementine.panacea.ui.components.textIcon
+import com.clementine.panacea.ui.edit.DoseCamera
 import com.clementine.panacea.ui.edit.PillPhoto
 import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.icons.TypeIcons
@@ -100,6 +101,9 @@ private fun DoseRow(item: HistoryItem, showMedication: Boolean, onOpen: () -> Un
                 Text(item.amount, style = MaterialTheme.typography.bodyLarge.merge(Numbers), color = Colors.Ink)
             }
         }
+        if (item.stamp != null) {
+            Icon(Glyphs.Camera, contentDescription = "Has a photo", tint = Colors.Muted, modifier = Modifier.size(textIcon(18.dp)))
+        }
         Text(item.time, style = body, color = Colors.Muted)
     }
 }
@@ -117,8 +121,8 @@ private fun DoseBadge(item: HistoryItem, size: Dp) {
 }
 
 /**
- * A logged dose up close: what was taken and when, with Change Time and Change Amount for a dose
- * logged wrong, and Remove Dose, which asks first.
+ * A logged dose up close: what was taken and when, its photo if it has one, with Change Time and
+ * Change Amount for a dose logged wrong, and Remove Dose, which asks first.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,12 +130,18 @@ fun DoseSheet(
     item: HistoryItem,
     onChangeTime: (Long) -> Unit,
     onChangeAmount: (Double) -> Unit,
+    /** A new photo and when it was taken, or nulls to remove it */
+    onPhoto: (String?, Long?) -> Unit,
     onRemove: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var picking by remember { mutableStateOf(false) }
     var amounting by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf(false) }
+    var shooting by remember { mutableStateOf(false) }
+    var viewing by remember { mutableStateOf(false) }
+    var unphotographing by remember { mutableStateOf(false) }
+    val photo = item.dose.proof
     val sounds = LocalSoundPlayer.current
 
     SlateSheet(onDismiss = onDismiss) {
@@ -146,7 +156,22 @@ fun DoseSheet(
             Text(item.amount, style = MaterialTheme.typography.bodyLarge.merge(Numbers), color = Colors.Ink)
             item.ingredients?.let { Text(it, style = MaterialTheme.typography.bodyMedium.merge(Numbers), color = Colors.Muted) }
         }
+        if (photo != null && item.stamp != null) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Polaroid(photo, item.stamp, item.caption, 220.dp, Modifier.padding(vertical = 8.dp), onClick = { viewing = true })
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    SlateButton(onClick = { shooting = true }, kind = ButtonKind.Text) { Text("Retake Photo") }
+                    SlateButton(onClick = { unphotographing = true }, kind = ButtonKind.Text) { Text("Remove Photo") }
+                }
+            }
+        }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (photo == null) {
+                SlateButton(onClick = { shooting = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Glyphs.Camera, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
+                    Text("Add Photo", style = MaterialTheme.typography.labelLarge)
+                }
+            }
             SlateButton(onClick = { picking = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Glyphs.Clock, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
                 Text("Change Time", style = MaterialTheme.typography.labelLarge)
@@ -188,6 +213,26 @@ fun DoseSheet(
                 onDismiss = { picking = false },
             )
         }
+    }
+    if (shooting) {
+        DoseCamera(onPhoto = { name, at -> onPhoto(name, at) }, onClose = { shooting = false })
+    }
+    if (viewing && photo != null && item.stamp != null) {
+        PolaroidViewer(photo, item.stamp, item.caption) { viewing = false }
+    }
+    if (unphotographing) {
+        ConfirmDialog(
+            title = "Remove This Photo?",
+            text = "The photo is deleted from the phone. The dose stays logged.",
+            confirmLabel = "Remove",
+            dismissLabel = "Keep It",
+            confirmKind = ButtonKind.Delete,
+            onConfirm = {
+                onPhoto(null, null)
+                unphotographing = false
+            },
+            onDismiss = { unphotographing = false },
+        )
     }
     if (amounting) {
         AmountDialog(item, onSave = { onChangeAmount(it); amounting = false }, onDismiss = { amounting = false })

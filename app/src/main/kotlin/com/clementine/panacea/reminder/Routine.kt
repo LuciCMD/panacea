@@ -9,6 +9,7 @@ import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -41,6 +42,27 @@ sealed interface Routine {
         val lastLogged: Long,
         override val doses: Int,
     ) : Routine
+
+    /**
+     * Taken a few times each waking day, a steady time apart, whenever the day starts: for a sleep
+     * that moves, the clock says little but the gaps still hold
+     */
+    data class Rhythm(
+        val perDay: Int,
+        val gapMinutes: Int,
+        val spread: Int,
+        /** The usual break between waking days */
+        val breakMinutes: Int,
+        /** Null when the break varies too much to ask after it */
+        val breakSpread: Int?,
+        /** Doses since the last break, the last one included */
+        val since: Int,
+        val lastStart: Long,
+        val lastLogged: Long,
+        override val doses: Int,
+    ) : Routine {
+        val resting get() = since >= perDay
+    }
 }
 
 /**
@@ -52,9 +74,10 @@ data class Ask(val expected: Long, val ask: Long, val coverFrom: Long) {
 }
 
 /**
- * Learns when a medication is taken from its doses. Two models are tried and the steadier one wins:
- * times of day (doses clustered on a 24-hour clock) and a steady gap (the typical time between doses).
- * Recent doses weigh more, so a changed routine is picked up within a week or two.
+ * Learns when a medication is taken from its doses. Three models are tried and the steadiest wins:
+ * times of day (doses clustered on a 24-hour clock), a steady gap (the typical time between doses),
+ * and a daily rhythm (so many doses a waking day, a steady gap apart, with a longer break between
+ * days wherever it falls). Recent doses weigh more, so a changed routine is picked up within a week or two.
  */
 object Routines {
     const val MIN_DOSES = 5
@@ -83,11 +106,19 @@ object Routines {
     /** Fit is judged on doses from this many days back (or the last few, if fewer). */
     private const val FIT_DAYS = 7L
 
-    /** Above this average error neither model is trusted. */
+    /** Above this average error no model is trusted, unless its gap allows more (see [allowed]) */
     private const val MAX_ERROR_MIN = 60
+    private const val MAX_LOOSE_ERROR_MIN = 150
 
-    /** Times of day reads more naturally, so it wins unless the gap fits clearly better. */
-    private const val PREFER_TIMES_MIN = 5
+    /** Times of day reads most naturally, then a steady gap; a later model must fit clearly better */
+    private const val PREFER_GAP_MIN = 5
+    private const val PREFER_RHYTHM_MIN = 10
+
+    /** A break between waking days is at least this many times the usual gap */
+    private const val MIN_BREAK_RATIO = 1.25
+
+    /** How far apart, in within-group spreads, gaps and breaks must sit to be two groups and not one */
+    private const val MIN_SEPARATION = 3.0
 
     private const val MIN_SPREAD_MIN = 10
     private const val MIN_MARGIN_MIN = 20
@@ -112,17 +143,18 @@ object Routines {
             now.toLocalDate().minusDays(FIT_DAYS).atStartOfDay(now.zone).toInstant().toEpochMilli(),
             sittings[sittings.size - MIN_DOSES].start,
         )
-        val clock = timesOfDay(sittings, fitFrom, now)
-        val gap = steadyGap(sittings, fitFrom, times.last())
-        val best = when {
-            clock == null -> gap?.first
-            gap == null -> clock.first
-            clock.second <= gap.second + PREFER_TIMES_MIN -> clock.first
-            else -> gap.first
-        }
-        val error = listOfNotNull(clock, gap).firstOrNull { it.first == best }?.second ?: Double.MAX_VALUE
-        return if (best != null && error <= MAX_ERROR_MIN) best else Routine.Irregular(sittings.size)
+        val clock = timesOfDay(sittings, fitFrom, now)?.takeIf { it.second <= MAX_ERROR_MIN }
+        val gap = steadyGap(sittings, fitFrom, times.last())?.takeIf { it.second <= allowed(it.first.gapMinutes, 10) }
+        val rhythm = rhythm(sittings, fitFrom, times.last())
+        return listOfNotNull<Pair<Routine, Double>>(
+            clock,
+            gap?.let { it.first to it.second + PREFER_GAP_MIN },
+            rhythm?.let { it.first to it.second + PREFER_RHYTHM_MIN },
+        ).minByOrNull { it.second }?.first ?: Routine.Irregular(sittings.size)
     }
+
+    /** Error allowed for a model that waits [gap] minutes: 60, or a [share]th of a long gap, up to 150 */
+    private fun allowed(gap: Int, share: Int) = (gap / share).coerceIn(MAX_ERROR_MIN, MAX_LOOSE_ERROR_MIN)
 
     private fun sittings(times: List<Long>, now: ZonedDateTime): List<Sitting> {
         val out = ArrayList<Sitting>()
@@ -196,6 +228,84 @@ object Routines {
         return Routine.SteadyGap(round5(gap), spread, sittings.last().start, lastLogged, sittings.size) to error
     }
 
+    /**
+     * The model and its average error within a waking day in minutes, or null if the gaps don't fall
+     * into short ones and a daily break. The break is the split of the gaps into two groups that keeps
+     * each tightest (Otsu's method), on log minutes so 5 h against 13 h weighs like 1 h against 2.6 h
+     */
+    private fun rhythm(sittings: List<Sitting>, fitFrom: Long, lastLogged: Long): Pair<Routine.Rhythm, Double>? {
+        val pairs = sittings.zipWithNext()
+        val gaps = pairs.map { (a, b) -> (b.start - a.start) / MINUTE_MS.toDouble() to b.weight }.sortedBy { it.first }
+        if (gaps.size < 4) return null
+        val logs = gaps.map { ln(it.first.coerceAtLeast(1.0)) to it.second }
+
+        /** Weighted mean and sum of squared deviations */
+        fun stats(part: List<Pair<Double, Double>>): Pair<Double, Double> {
+            val mean = part.sumOf { it.first * it.second } / part.sumOf { it.second }
+            return mean to part.sumOf { it.second * (it.first - mean).pow(2) }
+        }
+        var split = -1
+        var tightest = Double.MAX_VALUE
+        for (k in 2..logs.size - 2) {
+            val within = stats(logs.subList(0, k)).second + stats(logs.subList(k, logs.size)).second
+            if (within < tightest) {
+                tightest = within
+                split = k
+            }
+        }
+        if (split < 0) return null
+        val apart = stats(logs.subList(split, logs.size)).first - stats(logs.subList(0, split)).first
+        val pooled = sqrt(tightest / logs.sumOf { it.second })
+        if (apart < ln(MIN_BREAK_RATIO) || apart < MIN_SEPARATION * pooled) return null
+        val threshold = sqrt(gaps[split - 1].first * gaps[split].first)
+
+        // About one break a day, or it isn't sleep
+        val days = (sittings.last().start - sittings.first().start) / (DAY_MIN * MINUTE_MS.toDouble())
+        if (days < 1 || (gaps.size - split) / days !in 0.6..1.6) return null
+
+        // Each sitting's place in its waking day, from 1
+        val place = IntArray(sittings.size)
+        for (i in sittings.indices) {
+            place[i] = if (i == 0 || sittings[i].start - sittings[i - 1].start >= threshold * MINUTE_MS) 1 else place[i - 1] + 1
+        }
+        // The first and last waking days may be cut short, so they count only when they're all there is
+        val ends = sittings.indices.filter { it == sittings.lastIndex || place[it + 1] == 1 }
+        val whole = ends.drop(1).dropLast(1).ifEmpty { ends }
+        val perDay = weightedMedian(whole.map { place[it] to sittings[it].weight })
+        if (perDay < 2) return null
+
+        val gap = weightedMedian(gaps.subList(0, split).map { it.first.roundToInt() to it.second })
+        val breakGap = weightedMedian(gaps.subList(split, gaps.size).map { it.first.roundToInt() to it.second })
+        if (gap < MIN_GAP_MIN) return null
+
+        // Judged as it would have guessed: the break after a day's last dose, the gap before it
+        val within = ArrayList<Pair<Int, Double>>()
+        val across = ArrayList<Pair<Int, Double>>()
+        pairs.forEachIndexed { i, (a, b) ->
+            if (b.start < fitFrom) return@forEachIndexed
+            val actual = ((b.start - a.start) / MINUTE_MS).toInt()
+            if (place[i] < perDay) within += abs(actual - gap) to b.weight else across += abs(actual - breakGap) to b.weight
+        }
+        if (within.size < 2) return null
+        fun error(d: List<Pair<Int, Double>>) = d.sumOf { (e, w) -> w * e.coerceAtMost(ERROR_CAP_MIN) } / d.sumOf { it.second }
+        val error = error(within)
+        if (error > allowed(gap, 3)) return null
+        val breakSpread = across.takeIf { it.size >= 2 && error(it) <= allowed(breakGap, 5) }
+            ?.let { round5(weightedMedian(it)).coerceAtLeast(MIN_SPREAD_MIN) }
+
+        return Routine.Rhythm(
+            perDay = perDay,
+            gapMinutes = round5(gap),
+            spread = round5(weightedMedian(within)).coerceAtLeast(MIN_SPREAD_MIN),
+            breakMinutes = round5(breakGap),
+            breakSpread = breakSpread,
+            since = place.last(),
+            lastStart = sittings.last().start,
+            lastLogged = lastLogged,
+            doses = sittings.size,
+        ) to error
+    }
+
     /** How long after the usual time it asks: twice the usual spread, within limits. */
     fun margin(spread: Int) = round5(spread * 2).coerceIn(MIN_MARGIN_MIN, MAX_MARGIN_MIN)
 
@@ -225,6 +335,15 @@ object Routines {
         is Routine.SteadyGap -> {
             val expected = routine.lastStart + routine.gapMinutes * MINUTE_MS
             listOf(Ask(expected, expected + margin(routine.spread) * MINUTE_MS, routine.lastLogged + 1))
+        }
+        is Routine.Rhythm -> {
+            val (wait, spread) = if (routine.resting) routine.breakMinutes to routine.breakSpread else routine.gapMinutes to routine.spread
+            if (spread == null) {
+                emptyList()
+            } else {
+                val expected = routine.lastStart + wait * MINUTE_MS
+                listOf(Ask(expected, expected + margin(spread) * MINUTE_MS, routine.lastLogged + 1))
+            }
         }
         else -> emptyList()
     }

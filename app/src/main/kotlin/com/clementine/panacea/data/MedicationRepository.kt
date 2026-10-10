@@ -30,7 +30,7 @@ data class TakenDose(
     val previousMultiplier: Double,
 )
 
-class MedicationRepository(private val db: PanaceaDatabase) {
+class MedicationRepository(private val db: PanaceaDatabase, private val photos: PhotoStore) {
     private val medications = db.medicationDao()
     private val doses = db.doseDao()
 
@@ -76,8 +76,16 @@ class MedicationRepository(private val db: PanaceaDatabase) {
 
     fun observeLearningTimes(since: Long): Flow<List<DoseTime>> = doses.observeLearningTimes(since)
 
-    /** Removes one dose from the history; the remembered amount stays as it is. */
-    suspend fun removeDose(id: Long) = doses.delete(id)
+    /** Removes one dose from the history, and its photo; the remembered amount stays as it is. */
+    suspend fun removeDose(id: Long) {
+        db.withTransaction { doses.get(id)?.proof.also { doses.delete(id) } }.let(photos::delete)
+    }
+
+    /** Gives a dose its photo, taken at [at], or none; the one it had goes */
+    suspend fun setDoseProof(id: Long, proof: String?, at: Long?) {
+        val old = db.withTransaction { doses.get(id)?.proof.also { doses.setProof(id, proof, at) } }
+        if (old != proof) photos.delete(old)
+    }
 
     /** Moves a logged dose to [takenAt]; it was logged at the wrong time. */
     suspend fun changeDoseTime(id: Long, takenAt: Long) = db.withTransaction {
@@ -111,9 +119,14 @@ class MedicationRepository(private val db: PanaceaDatabase) {
         TakenDose(dose.copy(id = id), med, med.lastMultiplier)
     }
 
-    suspend fun undoDose(taken: TakenDose) = db.withTransaction {
-        doses.delete(taken.dose.id)
-        medications.restoreLastMultiplier(taken.medication.id, taken.dose.multiplier, taken.previousMultiplier)
+    suspend fun undoDose(taken: TakenDose) {
+        val proof = db.withTransaction {
+            doses.get(taken.dose.id)?.proof.also {
+                doses.delete(taken.dose.id)
+                medications.restoreLastMultiplier(taken.medication.id, taken.dose.multiplier, taken.previousMultiplier)
+            }
+        }
+        photos.delete(proof)
     }
 
     suspend fun medication(id: Long): Pair<MedicationEntity, List<IngredientEntity>>? {
@@ -125,7 +138,8 @@ class MedicationRepository(private val db: PanaceaDatabase) {
 
     suspend fun counts(id: Long): MedicationCounts = medications.counts(id)
 
-    suspend fun photoFiles(): List<String> = medications.photoFiles()
+    /** Every photo in use: the pills' and the doses' */
+    suspend fun photoFiles(): List<String> = medications.photoFiles() + doses.proofFiles()
 
     /** How many of the medication's doses were logged at a value [change] changes (dose, weight or ingredients). */
     suspend fun dosesAffected(id: Long, change: DoseChange): Int = doses.of(id).count(change::affects)

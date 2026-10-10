@@ -64,7 +64,7 @@ fun TakeSheet(
     card: CardState,
     presets: List<Double>,
     formats: TimeFormats,
-    onTake: (multiplier: Double, takenAt: Long?) -> Unit,
+    onTake: (multiplier: Double, takenAt: Long?, withPhoto: Boolean) -> Unit,
     onSavePreset: (Double) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -190,16 +190,23 @@ fun TakeSheet(
             Text("This amount is kept for next time.", style = MaterialTheme.typography.bodyMedium, color = Colors.Muted)
         }
 
-        SlateButton(
-            onClick = {
-                onTake(multiplier, takenAt)
-                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
-            },
-            kind = ButtonKind.Primary,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-        ) {
-            Icon(Glyphs.Check, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
-            Text("Take ${TodayText.amount(med, multiplier)}", style = MaterialTheme.typography.labelLarge.merge(Numbers))
+        val take = { withPhoto: Boolean ->
+            onTake(multiplier, takenAt, withPhoto)
+            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SlateButton(
+                onClick = { take(false) },
+                kind = ButtonKind.Primary,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            ) {
+                Icon(Glyphs.Check, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
+                Text("Take ${TodayText.amount(med, multiplier)}", style = MaterialTheme.typography.labelLarge.merge(Numbers))
+            }
+            SlateButton(onClick = { take(true) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Glyphs.Camera, contentDescription = null, modifier = Modifier.size(textIcon(20.dp)))
+                Text("Take With Photo", style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 

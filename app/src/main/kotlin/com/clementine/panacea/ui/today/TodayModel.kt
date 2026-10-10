@@ -8,6 +8,7 @@ import com.clementine.panacea.data.db.ReminderEntity
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.model.Category
 import com.clementine.panacea.model.MedicationType
+import com.clementine.panacea.reminder.Routine
 import com.clementine.panacea.reminder.Routines
 import com.clementine.panacea.reminder.Schedule
 import java.time.Duration
@@ -130,8 +131,9 @@ object TodayModel {
         s.lastTakenAt?.takeIf { it <= nowMs }?.let { lastTaken += " · " + TodayText.ago(it, now) }
 
         // Fixed reminders say when it's due; without any, a learned routine says when it usually is.
-        if (reminders.isEmpty() && med.learnRoutine && learningTimes != null) {
-            learned(learningTimes, s.lastTakenAt, med.routineAskedFor, now)?.let { l ->
+        val routine = if (reminders.isEmpty() && med.learnRoutine && learningTimes != null) Routines.learn(learningTimes, now) else null
+        if (routine != null && learningTimes != null) {
+            learned(learningTimes, s.lastTakenAt, med.routineAskedFor, now, routine)?.let { l ->
                 return CardState(
                     medication = med,
                     type = MedicationType.fromKey(med.type),
@@ -154,8 +156,8 @@ object TodayModel {
             lastTakenLine = lastTaken,
             dueLine = due.overdueAt?.let { TodayText.overdue(it, now, f) }
                 ?: due.next?.let { TodayText.next(it, now, f) }
-                // Learning, but too few doses yet to know a routine: say so, rather than nothing.
-                ?: TodayText.LEARNING.takeIf { med.learnRoutine && reminders.isEmpty() },
+                // Learning, but nothing to go by yet: say why, rather than nothing
+                ?: TodayText.unlearned(routine).takeIf { med.learnRoutine && reminders.isEmpty() },
             overdue = due.overdueAt != null,
             dueNow = due.overdueAt != null || due.soon,
             progress = if (due.overdueAt != null) 1f else due.progress,
@@ -204,9 +206,14 @@ object TodayModel {
      * answered yet (only ones asked since learning was turned on, [askedFor]), or else the next usual
      * dose not already taken. Null while there's no routine to go by.
      */
-    fun learned(doseTimes: List<Long>, lastTakenAt: Long?, askedFor: Long, now: ZonedDateTime): Learned? {
+    fun learned(
+        doseTimes: List<Long>,
+        lastTakenAt: Long?,
+        askedFor: Long,
+        now: ZonedDateTime,
+        routine: Routine = Routines.learn(doseTimes, now),
+    ): Learned? {
         val nowMs = now.toInstant().toEpochMilli()
-        val routine = Routines.learn(doseTimes, now)
         fun at(ms: Long) = Instant.ofEpochMilli(ms).atZone(now.zone)
 
         Routines.latestAsk(routine, now)

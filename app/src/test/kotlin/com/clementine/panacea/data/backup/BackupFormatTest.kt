@@ -33,7 +33,7 @@ class BackupFormatTest {
                 medicationId = 7, takenAt = 1000, multiplier = 1.5, amount = 4.5, unit = "mg", weight = 0.375, weightUnit = "g",
                 ingredients = listOf(TakenIngredient("Vitamin B6", 1.5, "mg")),
             ),
-            DoseEntity(medicationId = 3, takenAt = 2000, multiplier = 2.0, amount = 400.0, unit = "mg"),
+            DoseEntity(medicationId = 3, takenAt = 2000, multiplier = 2.0, amount = 400.0, unit = "mg", proof = "dose.jpg", proofAt = 2100),
         ),
         reminders = listOf(
             ReminderEntity(
@@ -61,7 +61,7 @@ class BackupFormatTest {
         assertEquals(5000L, back.exportedAt)
         assertFalse(back.legacy)
         assertTrue(back.problems.isEmpty())
-        assertEquals(setOf("a.jpg"), back.photos)
+        assertEquals(setOf("a.jpg", "dose.jpg"), back.photos)
         assertEquals(setOf("take-1.mp3"), back.sounds)
     }
 

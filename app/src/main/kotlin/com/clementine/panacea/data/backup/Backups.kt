@@ -117,14 +117,13 @@ class Backups(
             val now = System.currentTimeMillis()
             val data = BackupFormat.forRestore(pending.data, now).let { d ->
                 // A photo that didn't come with the backup would only show as missing.
-                d.copy(medications = d.medications.map { m ->
-                    m.copy(
-                        photoFront = m.photoFront?.takeIf { File(pending.staged, BackupFormat.PHOTOS + it).isFile },
-                        photoBack = m.photoBack?.takeIf { File(pending.staged, BackupFormat.PHOTOS + it).isFile },
-                    )
-                })
+                fun came(name: String?) = name?.takeIf { File(pending.staged, BackupFormat.PHOTOS + it).isFile }
+                d.copy(
+                    medications = d.medications.map { m -> m.copy(photoFront = came(m.photoFront), photoBack = came(m.photoBack)) },
+                    doses = d.doses.map { o -> if (came(o.proof) != null) o else o.copy(proof = null, proofAt = null) },
+                )
             }
-            val oldPhotos = db.medicationDao().photoFiles().toSet()
+            val oldPhotos = (db.medicationDao().photoFiles() + db.doseDao().proofFiles()).toSet()
 
             // Files first: if the database step fails, the new files are only unused, and swept later.
             data.photos.forEach { File(pending.staged, BackupFormat.PHOTOS + it).copyTo(photos.fileOf(it), overwrite = true) }

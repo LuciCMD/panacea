@@ -94,6 +94,10 @@ data class DoseEntity(
      */
     @ColumnInfo(defaultValue = "")
     val ingredients: List<TakenIngredient> = emptyList(),
+    /** A photo of the dose being taken, by file name in the photo store */
+    val proof: String? = null,
+    /** When that photo was taken (epoch ms), which its timestamp shows; not the dose's time */
+    val proofAt: Long? = null,
 )
 
 /** An ingredient as taken in one dose: [amount] is already scaled by the dose's multiplier. */

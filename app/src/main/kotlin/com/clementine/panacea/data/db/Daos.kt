@@ -146,6 +146,12 @@ interface DoseDao {
     @Query("SELECT * FROM dose WHERE id = :id")
     suspend fun get(id: Long): DoseEntity?
 
+    @Query("UPDATE dose SET proof = :proof, proofAt = :at WHERE id = :id")
+    suspend fun setProof(id: Long, proof: String?, at: Long?)
+
+    @Query("SELECT proof FROM dose WHERE proof IS NOT NULL")
+    suspend fun proofFiles(): List<String>
+
     @Query(
         """
         SELECT d.*, m.name AS name, m.type AS type, m.photoFront AS photo FROM dose d

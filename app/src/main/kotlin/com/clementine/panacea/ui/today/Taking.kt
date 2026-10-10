@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.clementine.panacea.ui.edit.DoseCamera
 import com.clementine.panacea.data.db.MedicationEntity
 import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.sound.LocalSoundPlayer
@@ -39,17 +40,26 @@ import kotlinx.coroutines.delay
 
 internal const val TAKE_LOCK_MS = 3_000L
 
-/** Logs a dose with its sound and a tap of feedback; takenAt null means now. */
+/** Logs a dose with its sound and a tap of feedback; takenAt null means now; withPhoto opens the camera for it */
 @Composable
-fun rememberTake(viewModel: TodayViewModel): (medicationId: Long, multiplier: Double, takenAt: Long?) -> Unit {
+fun rememberTake(viewModel: TodayViewModel): (medicationId: Long, multiplier: Double, takenAt: Long?, withPhoto: Boolean) -> Unit {
     val sounds = LocalSoundPlayer.current
     val haptics = LocalHapticFeedback.current
     return remember(viewModel, sounds, haptics) {
-        { medicationId, multiplier, takenAt ->
-            viewModel.take(medicationId, multiplier, takenAt)
+        { medicationId, multiplier, takenAt, withPhoto ->
+            viewModel.take(medicationId, multiplier, takenAt, withPhoto)
             sounds.play(SoundEvent.TAKE)
             haptics.performHapticFeedback(HapticFeedbackType.Confirm)
         }
+    }
+}
+
+/** The camera for a dose just taken with Take With Photo; the dose stays logged if it's closed */
+@Composable
+fun DosePhotoCamera(viewModel: TodayViewModel) {
+    val doseId by viewModel.photoFor.collectAsStateWithLifecycle()
+    doseId?.let { id ->
+        DoseCamera(onPhoto = { name, at -> viewModel.setPhoto(id, name, at) }, onClose = viewModel::closeCamera)
     }
 }
 

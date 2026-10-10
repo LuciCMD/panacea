@@ -36,6 +36,24 @@ class RoutineTextTest {
     }
 
     @Test
+    fun aDailyRhythmReadsPlainly() {
+        val rhythm = Routine.Rhythm(3, 330, 25, 810, 40, since = 1, ms(10, 2, 9, 0), ms(10, 2, 9, 0), doses = 21)
+        assertEquals(
+            "You usually take it 3 times a day, about 5½ hours apart, give or take 25 minutes, whenever your day starts. " +
+                "Between days there's a longer break of about 14 hours. If nothing is logged by 15:20, Panacea asks whether you took it.",
+            RoutineText.summary(rhythm, on = true, nextAsk = at(10, 2, 15, 20), now, formats),
+        )
+        assertEquals(
+            "Usually 3 times a day, about 5½ hours apart" to "Asks again after the next dose",
+            RoutineText.card(rhythm.copy(since = 3, breakSpread = null), null, now, formats),
+        )
+        assertEquals("Daily rhythm · learned from 21 doses", RoutineText.basis(rhythm))
+        assertEquals("half an hour", RoutineText.hours(25))
+        assertEquals("1 hour", RoutineText.hours(70))
+        assertEquals("12 hours", RoutineText.hours(12 * 60 + 10))
+    }
+
+    @Test
     fun beforeAndWithoutAPattern() {
         assertEquals(
             "Still learning: 3 of 5 doses so far, on 2 days. It needs 5 doses over at least 3 days in the last 4 weeks.",

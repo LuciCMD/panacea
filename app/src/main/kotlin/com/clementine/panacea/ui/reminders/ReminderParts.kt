@@ -336,7 +336,7 @@ fun TookEarlierDialog(prompt: Prompt, onClose: () -> Unit) {
         // It logs the usual amount, so it says which.
         confirmLabel = "Log ${TodayText.amount(med, med.lastMultiplier)}",
         onPick = { at ->
-            take(med.id, med.lastMultiplier, at.toInstant().toEpochMilli())
+            take(med.id, med.lastMultiplier, at.toInstant().toEpochMilli(), false)
             // Even a time too early to count for the reminder answers it.
             reminders.dealtWith(prompt)
             onClose()

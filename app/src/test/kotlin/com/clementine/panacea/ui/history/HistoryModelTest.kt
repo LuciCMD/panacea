@@ -61,6 +61,15 @@ class HistoryModelTest {
     }
 
     @Test
+    fun aPhotographedDoseIsStampedWithWhenThePhotoWasTaken() {
+        val shot = row(1, ms(10, 2, 9, 0), 400.0, 2.0).let { it.copy(dose = it.dose.copy(proof = "p.jpg", proofAt = ms(10, 2, 9, 3))) }
+        val (photographed, plain) = HistoryModel.build(listOf(shot, row(2, ms(10, 2, 8, 0))), now, formats).single().doses
+        assertEquals("10/2/26 9:03", photographed.stamp)
+        assertEquals("Ibuprofen 400 mg", photographed.caption)
+        assertEquals(null, plain.stamp)
+    }
+
+    @Test
     fun aDoseRescalesAtWhatItWasLoggedWith() {
         val d = row(1, 0, 400.0, 2.0, 0.62).dose.copy(ingredients = listOf(TakenIngredient("Caffeine", 130.0, "mg")))
         val half = rescaled(d, 1.0)

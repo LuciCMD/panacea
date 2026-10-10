@@ -58,6 +58,7 @@ fun HistoryScreen(onGoToday: () -> Unit, viewModel: HistoryViewModel = viewModel
             item,
             onChangeTime = { viewModel.changeTime(item.id, it) },
             onChangeAmount = { viewModel.changeAmount(item.id, it) },
+            onPhoto = { name, at -> viewModel.setPhoto(item.id, name, at) },
             onRemove = { viewModel.remove(item.id) },
             onDismiss = { opened = null },
         )

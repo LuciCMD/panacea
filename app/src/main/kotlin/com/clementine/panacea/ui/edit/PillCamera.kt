@@ -67,6 +67,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.clementine.panacea.ui.components.ButtonKind
@@ -83,17 +85,60 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 
+/** One photo the camera asks for: of what, how, and whether it can be skipped */
+data class Shot(val title: String, val hint: String, val optional: Boolean = false)
+
 /**
  * Photographs the pill one side at a time, like an ID check: a square guide to fill, a look at the
  * result, then the next side. The back can be skipped, since many pills are blank there.
  */
 @Composable
 fun PillCamera(sides: List<PillSide>, onPhoto: (PillSide, String) -> Unit, onClose: () -> Unit) {
+    val hint = "Fill the square with the pill. A plain, light surface works best."
+    SquareCamera(
+        shots = sides.map { Shot(it.title, hint, optional = it == PillSide.BACK && sides.size > 1) },
+        fromGallery = true,
+        small = false,
+        onPhoto = { i, name, _ -> onPhoto(sides[i], name) },
+        onClose = onClose,
+    )
+}
+
+/**
+ * A photo of a dose being taken, full screen over whatever is open. Only from the camera, so the
+ * time on its print is when it was taken
+ */
+@Composable
+fun DoseCamera(onPhoto: (name: String, shotAt: Long) -> Unit, onClose: () -> Unit) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        SquareCamera(
+            shots = listOf(Shot("Photo of the Dose", "Fill the square with the dose: in your hand, in your mouth, or used up.")),
+            fromGallery = false,
+            small = true,
+            onPhoto = { _, name, shotAt -> onPhoto(name, shotAt ?: System.currentTimeMillis()) },
+            onClose = onClose,
+        )
+    }
+}
+
+/**
+ * Takes [shots] in turn through a square guide, each looked over before it's used. [onPhoto] gets the
+ * stored file and the moment the shutter fired (null for one picked from the gallery)
+ */
+@Composable
+private fun SquareCamera(
+    shots: List<Shot>,
+    fromGallery: Boolean,
+    small: Boolean,
+    onPhoto: (index: Int, name: String, shotAt: Long?) -> Unit,
+    onClose: () -> Unit,
+) {
     val context = LocalContext.current
     val store = LocalPhotoStore.current
     val scope = rememberCoroutineScope()
     var step by rememberSaveable { mutableIntStateOf(0) }
     var review by rememberSaveable { mutableStateOf<String?>(null) }
+    var shotAt by rememberSaveable { mutableStateOf<Long?>(null) }
     var busy by remember { mutableStateOf(false) }
     var problem by remember { mutableStateOf<String?>(null) }
     var granted by remember {
@@ -106,9 +151,9 @@ fun PillCamera(sides: List<PillSide>, onPhoto: (PillSide, String) -> Unit, onClo
     }
     LaunchedEffect(Unit) { if (!granted && !asked) askCamera.launch(Manifest.permission.CAMERA) }
 
-    val side = sides[step.coerceAtMost(sides.lastIndex)]
+    val shot = shots[step.coerceAtMost(shots.lastIndex)]
     val next = {
-        if (step < sides.lastIndex) {
+        if (step < shots.lastIndex) {
             step++
             review = null
         } else {
@@ -119,6 +164,7 @@ fun PillCamera(sides: List<PillSide>, onPhoto: (PillSide, String) -> Unit, onClo
         if (uri != null) scope.launch {
             busy = true
             review = store.import(uri)
+            shotAt = null
             problem = if (review == null) "That picture couldn't be opened." else null
             busy = false
         }
@@ -136,23 +182,25 @@ fun PillCamera(sides: List<PillSide>, onPhoto: (PillSide, String) -> Unit, onClo
             shown != null -> ReviewPhoto(shown)
             granted -> Viewfinder(
                 onCapture = { capture, viewSize ->
+                    val at = System.currentTimeMillis()
                     scope.launch {
                         busy = true
                         problem = null
                         try {
                             val bitmap = withContext(Dispatchers.Default) { capture.shoot(context).upright() }
                             val crop = PhotoCrop.guide(bitmap.width, bitmap.height, viewSize.width, viewSize.height)
-                            review = store.save(Bitmap.createBitmap(bitmap, crop.left, crop.top, crop.size, crop.size))
+                            review = store.save(Bitmap.createBitmap(bitmap, crop.left, crop.top, crop.size, crop.size), small)
+                            shotAt = at
                         } catch (e: ImageCaptureException) {
                             problem = "The photo didn't come out. Try again."
                         }
                         busy = false
                     }
                 },
-                onChoose = choose,
+                onChoose = choose.takeIf { fromGallery },
                 busy = busy,
             )
-            else -> NoCamera(asked, onAsk = { askCamera.launch(Manifest.permission.CAMERA) }, onChoose = choose)
+            else -> NoCamera(asked, onAsk = { askCamera.launch(Manifest.permission.CAMERA) }, onChoose = choose.takeIf { fromGallery })
         }
 
         // What to photograph, over the top of everything.
@@ -163,18 +211,18 @@ fun PillCamera(sides: List<PillSide>, onPhoto: (PillSide, String) -> Unit, onClo
                     onClose()
                 }) { Icon(Glyphs.Close, contentDescription = "Close the camera", tint = Overlay.Ink) }
                 Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                    Text(side.title, style = MaterialTheme.typography.titleLarge, color = Overlay.Ink)
-                    if (sides.size > 1) {
-                        Text("Step ${step + 1} of ${sides.size}", style = MaterialTheme.typography.bodyMedium, color = Overlay.Soft)
+                    Text(shot.title, style = MaterialTheme.typography.titleLarge, color = Overlay.Ink)
+                    if (shots.size > 1) {
+                        Text("Step ${step + 1} of ${shots.size}", style = MaterialTheme.typography.bodyMedium, color = Overlay.Soft)
                     }
                 }
-                if (side == PillSide.BACK && sides.size > 1 && review == null) {
+                if (shot.optional && review == null) {
                     SlateButton(onClick = onClose, kind = ButtonKind.Text) { Text("Skip", color = Overlay.Ink) }
                 }
             }
             if (review == null && granted) {
                 Text(
-                    "Fill the square with the pill. A plain, light surface works best.",
+                    shot.hint,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Overlay.Soft,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
@@ -196,16 +244,16 @@ fun PillCamera(sides: List<PillSide>, onPhoto: (PillSide, String) -> Unit, onClo
                     review = null
                 }) { Text("Retake") }
                 SlateButton(onClick = {
-                    onPhoto(side, shown)
+                    onPhoto(step, shown, shotAt)
                     next()
-                }, kind = ButtonKind.Primary) { Text(if (step < sides.lastIndex) "Use Photo, Next Side" else "Use Photo") }
+                }, kind = ButtonKind.Primary) { Text(if (step < shots.lastIndex) "Use Photo, Next Side" else "Use Photo") }
             }
         }
     }
 }
 
 @Composable
-private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: () -> Unit, busy: Boolean) {
+private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (() -> Unit)?, busy: Boolean) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     var request by remember { mutableStateOf<SurfaceRequest?>(null) }
@@ -256,8 +304,12 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: () 
                 .padding(horizontal = 24.dp, vertical = 28.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SlateIconButton(onClick = onChoose, modifier = Modifier.size(56.dp)) {
-                Icon(Glyphs.Image, contentDescription = "Choose from your photos", tint = Overlay.Ink)
+            if (onChoose != null) {
+                SlateIconButton(onClick = onChoose, modifier = Modifier.size(56.dp)) {
+                    Icon(Glyphs.Image, contentDescription = "Choose from your photos", tint = Overlay.Ink)
+                }
+            } else {
+                Spacer(Modifier.size(56.dp))
             }
             Spacer(Modifier.weight(1f))
             Surface(
@@ -325,7 +377,7 @@ private fun ReviewPhoto(name: String) {
 }
 
 @Composable
-private fun NoCamera(asked: Boolean, onAsk: () -> Unit, onChoose: () -> Unit) {
+private fun NoCamera(asked: Boolean, onAsk: () -> Unit, onChoose: (() -> Unit)?) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
@@ -333,15 +385,18 @@ private fun NoCamera(asked: Boolean, onAsk: () -> Unit, onChoose: () -> Unit) {
     ) {
         if (asked) {
             Text(
-                "Panacea needs the camera to photograph your pill. You can pick a photo you already have instead.",
+                if (onChoose != null) "Panacea needs the camera to photograph your pill. You can pick a photo you already have instead."
+                else "Panacea needs the camera to photograph the dose.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Overlay.Ink,
             )
-            SlateButton(onClick = onAsk) { Text("Allow the Camera") }
+            SlateButton(onClick = onAsk, kind = if (onChoose == null) ButtonKind.Primary else ButtonKind.Plain) { Text("Allow the Camera") }
         }
-        SlateButton(onClick = onChoose, kind = ButtonKind.Primary) {
-            Icon(Glyphs.Image, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text("Choose from Photos")
+        if (onChoose != null) {
+            SlateButton(onClick = onChoose, kind = ButtonKind.Primary) {
+                Icon(Glyphs.Image, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text("Choose from Photos")
+            }
         }
     }
 }

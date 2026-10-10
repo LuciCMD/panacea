@@ -39,6 +39,10 @@ class HistoryViewModel(private val repository: MedicationRepository, formats: Ti
         viewModelScope.launch { repository.changeDoseAmount(id, multiplier) }
     }
 
+    fun setPhoto(id: Long, name: String?, at: Long?) {
+        viewModelScope.launch { repository.setDoseProof(id, name, at) }
+    }
+
     companion object {
         val Factory = viewModelFactory {
             initializer {

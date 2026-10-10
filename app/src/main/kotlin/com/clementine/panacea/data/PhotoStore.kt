@@ -25,8 +25,10 @@ class PhotoStore(private val context: Context) {
 
     fun fileOf(name: String) = File(dir, name)
 
-    /** Saves a photo the camera took, already upright and cropped. */
-    suspend fun save(bitmap: Bitmap): String = withContext(Dispatchers.IO) { write(bitmap) }
+    /** Saves a photo the camera took, already upright and cropped; [small] for a dose's, which are many */
+    suspend fun save(bitmap: Bitmap, small: Boolean = false): String = withContext(Dispatchers.IO) {
+        if (small) write(bitmap, SMALL_SIDE, SMALL_QUALITY) else write(bitmap)
+    }
 
     /** Copies a picture picked from the phone's photos. Null if it can't be read as an image. */
     suspend fun import(uri: Uri): String? = withContext(Dispatchers.IO) {
@@ -68,7 +70,7 @@ class PhotoStore(private val context: Context) {
     }
 
     /**
-     * Deletes photos no medication uses. Only ones older than a day, so a photo taken for a medication
+     * Deletes photos no medication or dose uses. Only ones older than a day, so a photo taken for a medication
      * that is still being added survives.
      */
     suspend fun sweep(inUse: Collection<String>) = withContext(Dispatchers.IO) {
@@ -76,22 +78,25 @@ class PhotoStore(private val context: Context) {
         dir.listFiles()?.filter { it.name !in inUse && it.lastModified() < cutoff }?.forEach { it.delete() }
     }
 
-    private fun write(source: Bitmap): String {
+    private fun write(source: Bitmap, maxSide: Int = MAX_SIDE, quality: Int = JPEG_QUALITY): String {
         val longest = maxOf(source.width, source.height)
-        val bitmap = if (longest > MAX_SIDE) {
-            val scale = MAX_SIDE.toFloat() / longest
+        val bitmap = if (longest > maxSide) {
+            val scale = maxSide.toFloat() / longest
             Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), true)
         } else {
             source
         }
         val name = "${UUID.randomUUID()}.jpg"
-        fileOf(name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it) }
+        fileOf(name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, quality, it) }
         return name
     }
 
     private companion object {
         const val MAX_SIDE = 1280
         const val JPEG_QUALITY = 88
+        // About 100 KB a photo, so a year of three a day stays near 100 MB
+        const val SMALL_SIDE = 960
+        const val SMALL_QUALITY = 80
         const val CACHE_BYTES = 16 * 1024 * 1024
         const val DAY_MS = 24 * 60 * 60 * 1000L
     }

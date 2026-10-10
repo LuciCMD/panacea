@@ -3,6 +3,7 @@ package com.clementine.panacea.reminder
 import com.clementine.panacea.ui.today.Fixtures.at
 import com.clementine.panacea.ui.today.Fixtures.ms
 import com.clementine.panacea.ui.today.Fixtures.now
+import com.clementine.panacea.ui.today.TodayText
 import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -96,6 +97,53 @@ class RoutineTest {
         val ask = Routines.nextAsk(routine, now)!!
         assertEquals(doses.last() + (420 + 20) * minute, ask.ask)
         assertEquals(doses.last() + 1, ask.coverFrom)
+    }
+
+    /**
+     * Three a day from waking, which comes about 90 minutes later each day, so the clock walks round:
+     * doses half an hour, five and a half hours and eleven hours after waking, each a little off
+     */
+    private fun drifting(until: Long, wakeAt: Long = ms(9, 25, 8, 0)): List<Long> {
+        val jitter = listOf(-40, 25, 0, 55, -15, 35, -50, 10, 45, -25, 5)
+        val doses = ArrayList<Long>()
+        var wake = wakeAt
+        var n = 0
+        while (wake < until) {
+            listOf(30, 330, 660).forEach { doses += wake + (it + jitter[n++ % jitter.size]) * minute }
+            wake += (24 * 60 + 90) * minute
+        }
+        return doses.filter { it <= until }
+    }
+
+    @Test
+    fun aMovingSleepIsLearnedAsADailyRhythm() {
+        // Woke at 18:30 today, so the second dose is due around midnight
+        val evening = at(10, 2, 21, 0)
+        val doses = drifting(evening.toInstant().toEpochMilli())
+        val routine = Routines.learn(doses, evening) as Routine.Rhythm
+        assertEquals(3, routine.perDay)
+        assertEquals(1, routine.since)
+        assertTrue("gap ${routine.gapMinutes}", routine.gapMinutes in 300..330)
+        // A 25.5 h day less 10.5 h of doses leaves a 15 h break
+        assertTrue("break ${routine.breakMinutes}", routine.breakMinutes in 14 * 60..16 * 60)
+        assertTrue(routine.breakSpread != null)
+
+        val ask = Routines.nextAsk(routine, evening)!!
+        assertEquals(doses.last() + routine.gapMinutes * minute, ask.expected)
+        assertEquals(doses.last() + 1, ask.coverFrom)
+    }
+
+    @Test
+    fun afterADaysLastDoseTheRhythmWaitsOutTheBreak() {
+        // The last dose was around 4:00, the day's third
+        val doses = drifting(now.toInstant().toEpochMilli())
+        val routine = Routines.learn(doses, now) as Routine.Rhythm
+        assertTrue(routine.resting)
+        assertEquals(doses.last() + routine.breakMinutes * minute, Routines.nextAsk(routine, now)!!.expected)
+        // A break that varies too much isn't asked after
+        val unsteady = routine.copy(breakSpread = null)
+        assertNull(Routines.nextAsk(unsteady, now))
+        assertEquals("Today's 3 are taken · next after you sleep", TodayText.unlearned(unsteady))
     }
 
     @Test

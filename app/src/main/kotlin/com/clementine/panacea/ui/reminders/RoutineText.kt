@@ -16,6 +16,7 @@ object RoutineText {
     fun usually(routine: Routine, f: TimeFormats): String? = when (routine) {
         is Routine.TimesOfDay -> "around " + ReminderText.natural(routine.slots.map { clock(it.minute, f) })
         is Routine.SteadyGap -> every(routine.gapMinutes)
+        is Routine.Rhythm -> "${counted(routine.perDay, "time")} a day, about ${hours(routine.gapMinutes)} apart"
         else -> null
     }
 
@@ -48,6 +49,14 @@ object RoutineText {
                 "You usually take it $usually$spread. $ask"
             }
             is Routine.SteadyGap -> "You usually take it $usually, give or take ${minutes(routine.spread)}. $ask"
+            is Routine.Rhythm -> {
+                val rest = if (routine.breakSpread != null) {
+                    "Between days there's a longer break of about ${hours(routine.breakMinutes)}."
+                } else {
+                    "The break between days varies, so it doesn't ask after it."
+                }
+                "You usually take it $usually, give or take ${minutes(routine.spread)}, whenever your day starts. $rest $ask"
+            }
         }
     }
 
@@ -55,6 +64,7 @@ object RoutineText {
     fun basis(routine: Routine): String? = when (routine) {
         is Routine.TimesOfDay -> "Times of day · learned from ${routine.doses} doses"
         is Routine.SteadyGap -> "Steady gap · learned from ${routine.doses} doses"
+        is Routine.Rhythm -> "Daily rhythm · learned from ${routine.doses} doses"
         else -> null
     }
 
@@ -95,6 +105,13 @@ object RoutineText {
                 if (halves == 2) "about every hour" else "about every $text hours"
             }
         }
+    }
+
+    /** "5½ hours", "13 hours", "1 hour" */
+    fun hours(minutes: Int): String {
+        val halves = (minutes / 30.0).roundToInt().coerceAtLeast(1)
+        if (halves >= 20 || halves % 2 == 0) return plural((halves + 1) / 2, "hour")
+        return if (halves == 1) "half an hour" else "${halves / 2}½ hours"
     }
 
     private fun minutes(m: Int) = when {

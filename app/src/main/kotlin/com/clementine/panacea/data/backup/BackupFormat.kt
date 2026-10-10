@@ -33,8 +33,8 @@ data class BackupData(
     /** One plain sentence per thing that could not be read. */
     val problems: List<String> = emptyList(),
 ) {
-    /** Photo file names the medications refer to. */
-    val photos: Set<String> get() = medications.flatMap { listOfNotNull(it.photoFront, it.photoBack) }.toSet()
+    /** Photo file names the medications and doses refer to. */
+    val photos: Set<String> get() = (medications.flatMap { listOfNotNull(it.photoFront, it.photoBack) } + doses.mapNotNull { it.proof }).toSet()
 
     /** Custom sound files the settings refer to. */
     val sounds: Set<String> get() = settings?.sounds?.values?.mapNotNull { it.custom?.file }?.toSet().orEmpty()
@@ -194,6 +194,8 @@ object BackupFormat {
                         } else {
                             TakenIngredient.of(ingredients.filter { it.medicationId == id }, multiplier)
                         },
+                        proof = d.fileName("proof"),
+                        proofAt = d.optLong("proofAt").takeIf { it > 0 && d.fileName("proof") != null },
                     )
                 }
             }
@@ -296,6 +298,8 @@ object BackupFormat {
         .put("weight", d.weight ?: JSONObject.NULL)
         .put("weightUnit", d.weightUnit ?: JSONObject.NULL)
         .put("ingredients", JSONArray(d.ingredients.map { JSONObject().put("name", it.name).put("amount", it.amount).put("unit", it.unit) }))
+        .put("proof", d.proof ?: JSONObject.NULL)
+        .put("proofAt", d.proofAt ?: JSONObject.NULL)
 
     private fun reminder(r: ReminderEntity) = JSONObject()
         .put("id", r.id)

@@ -104,16 +104,30 @@ class TodayViewModel(
     private val _notice = MutableStateFlow<DoseNotice?>(null)
     val notice: StateFlow<DoseNotice?> = _notice.asStateFlow()
 
-    /** Logs a dose; [takenAt] null means now. */
-    fun take(medicationId: Long, multiplier: Double, takenAt: Long? = null) {
+    private val _photoFor = MutableStateFlow<Long?>(null)
+
+    /** The dose the camera is open for, after Take With Photo */
+    val photoFor: StateFlow<Long?> = _photoFor.asStateFlow()
+
+    /** Logs a dose; [takenAt] null means now; [withPhoto] then opens the camera for it */
+    fun take(medicationId: Long, multiplier: Double, takenAt: Long? = null, withPhoto: Boolean = false) {
         viewModelScope.launch {
             val now = ZonedDateTime.now()
             val taken = repository.takeDose(medicationId, multiplier, takenAt ?: now.toInstant().toEpochMilli()) ?: return@launch
+            if (withPhoto) _photoFor.value = taken.dose.id
             // A dose settles a reminder that's showing, and keeps one coming soon quiet.
             val settled = reminders.doseLogged(medicationId, taken.dose.takenAt)
             val at = Instant.ofEpochMilli(taken.dose.takenAt).atZone(now.zone)
             show(LoggedDose(taken, settled, TodayText.logged(taken.medication.name, amountOf(taken), at, now, formats)))
         }
+    }
+
+    fun setPhoto(doseId: Long, name: String, at: Long) {
+        viewModelScope.launch { repository.setDoseProof(doseId, name, at) }
+    }
+
+    fun closeCamera() {
+        _photoFor.value = null
     }
 
     /** Removes the dose just logged, and brings back any reminder it put away. */

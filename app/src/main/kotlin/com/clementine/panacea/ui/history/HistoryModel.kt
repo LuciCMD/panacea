@@ -10,6 +10,8 @@ import com.clementine.panacea.ui.counted
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.time.temporal.ChronoUnit
 
 /** One day of doses; [summary] is "3 doses", or "2 doses · 15 mg" on a medication's own page. */
@@ -31,6 +33,10 @@ data class HistoryItem(
     /** "Ibuprofen 400 mg taken yesterday at 22:10 will be removed from your history." */
     val removeQuestion: String,
     val dose: DoseEntity,
+    /** "10/9/26 14:32": when its photo was taken, for the print; null without one */
+    val stamp: String? = null,
+    /** "Ibuprofen 400 mg", written on the print */
+    val caption: String = name,
 )
 
 /** Groups the dose history by day, newest first. Pure, so it can be tested. */
@@ -95,6 +101,11 @@ object HistoryModel {
                 ?.joinToString(" · ", prefix = "With ") { "${formatAmount(it.amount)} ${it.unit} ${it.name}" },
             removeQuestion = "${row.name} $main taken ${day}at $time will be removed from your history.",
             dose = d,
+            stamp = d.proofAt?.takeIf { d.proof != null }?.let {
+                val at = Instant.ofEpochMilli(it).atZone(now.zone)
+                "${at.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(f.locale))} ${at.format(f.time)}"
+            },
+            caption = if (d.amount > 0) "${row.name} $main" else row.name,
         )
     }
 }

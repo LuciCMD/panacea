@@ -59,6 +59,10 @@ class MedicationViewModel(
         viewModelScope.launch { repository.changeDoseAmount(id, multiplier) }
     }
 
+    fun setDosePhoto(id: Long, name: String?, at: Long?) {
+        viewModelScope.launch { repository.setDoseProof(id, name, at) }
+    }
+
     fun setReminderEnabled(id: Long, enabled: Boolean) {
         viewModelScope.launch { repository.setReminderEnabled(id, enabled) }
     }
