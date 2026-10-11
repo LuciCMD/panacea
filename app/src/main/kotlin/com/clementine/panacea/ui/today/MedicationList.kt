@@ -177,10 +177,7 @@ private fun RoundTake(card: CardState, onTake: () -> Unit, onPhoto: () -> Unit) 
                     role = Role.Button,
                     onClickLabel = "Take",
                     onLongClickLabel = "Take with a photo",
-                    onLongClick = {
-                        justTaken = true
-                        onPhoto()
-                    },
+                    onLongClick = onPhoto,
                     onClick = {
                         justTaken = true
                         onTake()

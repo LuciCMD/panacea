@@ -100,8 +100,8 @@ class MedicationRepository(private val db: PanaceaDatabase, private val photos: 
     fun observePresets(): Flow<List<Double>> =
         db.metaDao().observe(MetaKeys.AMOUNT_PRESETS).map(Amounts::parsePresets)
 
-    /** Logs [multiplier] of the medication at [takenAt] and remembers the amount for next time. */
-    suspend fun takeDose(medicationId: Long, multiplier: Double, takenAt: Long): TakenDose? = db.withTransaction {
+    /** Logs [multiplier] of the medication at [takenAt], with its photo if any, and remembers the amount for next time. */
+    suspend fun takeDose(medicationId: Long, multiplier: Double, takenAt: Long, proof: String? = null, proofAt: Long? = null): TakenDose? = db.withTransaction {
         val med = medications.get(medicationId) ?: return@withTransaction null
         val m = Amounts.round(multiplier)
         val dose = DoseEntity(
@@ -113,6 +113,8 @@ class MedicationRepository(private val db: PanaceaDatabase, private val photos: 
             weight = med.weight?.let { it * m },
             weightUnit = med.weight?.let { med.weightUnit },
             ingredients = TakenIngredient.of(medications.ingredientsOf(med.id), m),
+            proof = proof,
+            proofAt = proof?.let { proofAt },
         )
         val id = doses.insert(dose)
         medications.setLastMultiplier(med.id, m)

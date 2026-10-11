@@ -1,6 +1,10 @@
 package com.clementine.panacea.ui.edit
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.WindowManager
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
@@ -70,7 +74,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -139,6 +145,11 @@ private fun SquareCamera(
     front: Boolean = false,
 ) {
     var lens by rememberSaveable { mutableStateOf(front) }
+    // The torch on a lens with one, the screen itself on one without; off to begin with and after a flip
+    var light by remember { mutableStateOf(false) }
+    var screenLit by remember { mutableStateOf(false) }
+    val ink = if (screenLit) Overlay.LightInk else Overlay.Ink
+    val soft = if (screenLit) Overlay.LightSoft else Overlay.Soft
     val context = LocalContext.current
     val store = LocalPhotoStore.current
     val scope = rememberCoroutineScope()
@@ -206,7 +217,14 @@ private fun SquareCamera(
                 onChoose = choose.takeIf { fromGallery },
                 busy = busy,
                 front = lens,
-                onFlip = { lens = !lens },
+                onFlip = {
+                    lens = !lens
+                    light = false
+                },
+                light = light,
+                onLight = { light = !light },
+                onScreenLit = { screenLit = it },
+                ink = ink,
             )
             else -> NoCamera(asked, onAsk = { askCamera.launch(Manifest.permission.CAMERA) }, onChoose = choose.takeIf { fromGallery })
         }
@@ -217,22 +235,22 @@ private fun SquareCamera(
                 SlateIconButton(onClick = {
                     review?.let(store::delete)
                     onClose()
-                }) { Icon(Glyphs.Close, contentDescription = "Close the camera", tint = Overlay.Ink) }
+                }) { Icon(Glyphs.Close, contentDescription = "Close the camera", tint = ink) }
                 Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                    Text(shot.title, style = MaterialTheme.typography.titleLarge, color = Overlay.Ink)
+                    Text(shot.title, style = MaterialTheme.typography.titleLarge, color = ink)
                     if (shots.size > 1) {
-                        Text("Step ${step + 1} of ${shots.size}", style = MaterialTheme.typography.bodyMedium, color = Overlay.Soft)
+                        Text("Step ${step + 1} of ${shots.size}", style = MaterialTheme.typography.bodyMedium, color = soft)
                     }
                 }
                 if (shot.optional && review == null) {
-                    SlateButton(onClick = onClose, kind = ButtonKind.Text) { Text("Skip", color = Overlay.Ink) }
+                    SlateButton(onClick = onClose, kind = ButtonKind.Text) { Text("Skip", color = ink) }
                 }
             }
             if (review == null && granted) {
                 Text(
                     shot.hint,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Overlay.Soft,
+                    color = soft,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                 )
             }
@@ -261,13 +279,22 @@ private fun SquareCamera(
 }
 
 @Composable
-private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (() -> Unit)?, busy: Boolean, front: Boolean, onFlip: () -> Unit) {
+private fun Viewfinder(
+    onCapture: (ImageCapture, IntSize) -> Unit,
+    onChoose: (() -> Unit)?,
+    busy: Boolean,
+    front: Boolean,
+    onFlip: () -> Unit,
+    light: Boolean,
+    onLight: () -> Unit,
+    onScreenLit: (Boolean) -> Unit,
+    ink: Color,
+) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     var request by remember { mutableStateOf<SurfaceRequest?>(null) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     var camera by remember { mutableStateOf<Camera?>(null) }
-    var torch by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var canFlip by remember { mutableStateOf(false) }
     val preview = remember { Preview.Builder().build().apply { setSurfaceProvider { request = it } } }
@@ -282,7 +309,6 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (()
                 val lenses = if (useFront) listOf(CameraSelector.DEFAULT_FRONT_CAMERA, CameraSelector.DEFAULT_BACK_CAMERA)
                 else listOf(CameraSelector.DEFAULT_BACK_CAMERA, CameraSelector.DEFAULT_FRONT_CAMERA)
                 canFlip = lenses.all { provider.hasCamera(it) }
-                torch = false
                 val selector = lenses.firstOrNull { provider.hasCamera(it) }
                 failed = selector == null
                 if (selector != null) {
@@ -302,7 +328,19 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (()
             provider.unbindAll()
         }
     }
-    DisposableEffect(Unit) { onDispose { camera?.cameraControl?.enableTorch(false) } }
+    // A front lens is lit by the screen even if it claims a flash: close up, the screen lights a label evenly
+    val facingUs = camera?.cameraInfo?.lensFacing == CameraSelector.LENS_FACING_FRONT
+    val torch = camera?.cameraInfo?.hasFlashUnit() == true && !facingUs
+    val screenLit = light && camera != null && !torch
+    LaunchedEffect(camera, light, torch) { if (torch) camera?.cameraControl?.enableTorch(light) }
+    LaunchedEffect(screenLit) { onScreenLit(screenLit) }
+    if (screenLit) FullBrightness()
+    DisposableEffect(Unit) {
+        onDispose {
+            camera?.cameraControl?.enableTorch(false)
+            onScreenLit(false)
+        }
+    }
 
     Box(Modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
         request?.let { CameraXViewfinder(surfaceRequest = it, modifier = Modifier.fillMaxSize()) }
@@ -314,28 +352,28 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (()
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
             )
         }
-        GuideOverlay()
-        Row(
+        GuideOverlay(if (screenLit) Overlay.Light else Overlay.Scrim)
+        // Shutter in the middle whatever sits beside it: the gallery and the flip on the left, the light on the right
+        Box(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 24.dp, vertical = 28.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            contentAlignment = Alignment.Center,
         ) {
-            val flip = @Composable {
-                SlateIconButton(onClick = onFlip, enabled = !busy, modifier = Modifier.size(56.dp)) {
-                    Icon(Glyphs.FlipCamera, contentDescription = if (front) "Use the back camera" else "Use the front camera", tint = Overlay.Ink)
+            Row(Modifier.align(Alignment.CenterStart), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (onChoose != null) {
+                    SlateIconButton(onClick = onChoose, modifier = Modifier.size(56.dp)) {
+                        Icon(Glyphs.Image, contentDescription = "Choose from your photos", tint = ink)
+                    }
+                }
+                if (canFlip) {
+                    SlateIconButton(onClick = onFlip, enabled = !busy, modifier = Modifier.size(56.dp)) {
+                        Icon(Glyphs.FlipCamera, contentDescription = if (front) "Use the back camera" else "Use the front camera", tint = ink)
+                    }
                 }
             }
-            when {
-                onChoose != null -> SlateIconButton(onClick = onChoose, modifier = Modifier.size(56.dp)) {
-                    Icon(Glyphs.Image, contentDescription = "Choose from your photos", tint = Overlay.Ink)
-                }
-                canFlip -> flip()
-                else -> Spacer(Modifier.size(56.dp))
-            }
-            Spacer(Modifier.weight(1f))
             Surface(
                 onClick = { if (!busy && !failed) onCapture(capture, viewSize) },
                 enabled = !busy && !failed,
@@ -346,34 +384,20 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (()
                     .border(4.dp, Overlay.Scrim, CircleShape)
                     .semantics { contentDescription = "Take the photo" },
             ) {}
-            Spacer(Modifier.weight(1f))
-            val hasFlash = camera?.cameraInfo?.hasFlashUnit() == true
-            // The gallery has the left, so a lens without a light gives the right to the flip
-            if (!hasFlash && onChoose != null && canFlip) flip() else SlateIconButton(
-                onClick = {
-                    torch = !torch
-                    camera?.cameraControl?.enableTorch(torch)
-                },
-                enabled = hasFlash,
-                modifier = Modifier.size(56.dp),
-            ) {
+            SlateIconButton(onClick = onLight, enabled = camera != null, modifier = Modifier.align(Alignment.CenterEnd).size(56.dp)) {
                 Icon(
                     Glyphs.Flash,
-                    contentDescription = if (torch) "Turn the light off" else "Turn the light on",
-                    tint = when {
-                        !hasFlash -> Color.Transparent
-                        torch -> Colors.Accent
-                        else -> Overlay.Ink
-                    },
+                    contentDescription = if (light) "Turn the light off" else "Turn the light on",
+                    tint = if (light) Colors.Accent else ink,
                 )
             }
         }
     }
 }
 
-/** Darkens everything but the guide square in the middle. */
+/** Covers everything but the guide square in the middle: dark, or white while the screen is the light */
 @Composable
-private fun GuideOverlay() {
+private fun GuideOverlay(cover: Color) {
     val accent = Colors.Accent
     Canvas(Modifier.fillMaxSize()) {
         val side = PhotoCrop.GUIDE * minOf(size.width, size.height)
@@ -385,7 +409,7 @@ private fun GuideOverlay() {
             addRect(androidx.compose.ui.geometry.Rect(Offset.Zero, size))
             addRoundRect(hole)
         }
-        drawPath(path, Overlay.Scrim)
+        drawPath(path, cover)
         drawRoundRect(
             accent, topLeft, Size(side, side), corner,
             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()),
@@ -448,4 +472,23 @@ private class ImageProxyBitmap(val bitmap: Bitmap, val rotation: Int) {
         val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
+}
+
+/** Turns the screen up full while shown, so a white screen lights what's in front of it */
+@Composable
+private fun FullBrightness() {
+    val view = LocalView.current
+    DisposableEffect(view) {
+        // Inside a dialog the dialog's own window decides the brightness
+        val window = (view.parent as? DialogWindowProvider)?.window ?: view.context.activity()?.window
+        val before = window?.attributes?.screenBrightness ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        window?.attributes = window?.attributes?.apply { screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL }
+        onDispose { window?.attributes = window?.attributes?.apply { screenBrightness = before } }
+    }
+}
+
+private tailrec fun Context.activity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.activity()
+    else -> null
 }

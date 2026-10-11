@@ -40,26 +40,42 @@ import kotlinx.coroutines.delay
 
 internal const val TAKE_LOCK_MS = 3_000L
 
-/** Logs a dose with its sound and a tap of feedback; takenAt null means now; withPhoto opens the camera for it */
+/**
+ * Logs a dose with its sound and a tap of feedback; takenAt null means now. withPhoto only opens the
+ * camera: the dose is logged once a photo is used (see [DosePhotoCamera])
+ */
 @Composable
 fun rememberTake(viewModel: TodayViewModel): (medicationId: Long, multiplier: Double, takenAt: Long?, withPhoto: Boolean) -> Unit {
     val sounds = LocalSoundPlayer.current
     val haptics = LocalHapticFeedback.current
     return remember(viewModel, sounds, haptics) {
         { medicationId, multiplier, takenAt, withPhoto ->
-            viewModel.take(medicationId, multiplier, takenAt, withPhoto)
-            sounds.play(SoundEvent.TAKE)
-            haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+            if (withPhoto) {
+                viewModel.takeWithPhoto(medicationId, multiplier, takenAt)
+            } else {
+                viewModel.take(medicationId, multiplier, takenAt)
+                sounds.play(SoundEvent.TAKE)
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+            }
         }
     }
 }
 
-/** The camera for a dose just taken with Take With Photo; the dose stays logged if it's closed */
+/** The camera for Take With Photo: Use Photo logs the dose, closing it logs nothing */
 @Composable
 fun DosePhotoCamera(viewModel: TodayViewModel) {
-    val doseId by viewModel.photoFor.collectAsStateWithLifecycle()
-    doseId?.let { id ->
-        DoseCamera(onPhoto = { name, at -> viewModel.setPhoto(id, name, at) }, onClose = viewModel::closeCamera)
+    val pending by viewModel.photoTake.collectAsStateWithLifecycle()
+    val sounds = LocalSoundPlayer.current
+    val haptics = LocalHapticFeedback.current
+    if (pending != null) {
+        DoseCamera(
+            onPhoto = { name, at ->
+                viewModel.photoUsed(name, at)
+                sounds.play(SoundEvent.TAKE)
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+            },
+            onClose = viewModel::closeCamera,
+        )
     }
 }
 
@@ -94,7 +110,7 @@ private val NO_BREAK = Char(0xA0)
 /**
  * The amount button and Take, as on every medication card. Take is full accent when a dose is
  * [dueNow], and a quieter tint otherwise: still easy to tap, but not the loudest thing on the card.
- * Holding Take logs it and opens the camera, [onTakeWithPhoto]
+ * Holding Take opens the camera, [onTakeWithPhoto], and the dose is logged with its photo
  */
 @Composable
 fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAmount: () -> Unit, onTakeWithPhoto: () -> Unit) {
@@ -132,10 +148,8 @@ fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAm
             enabled = !justTaken,
             kind = if (dueNow) ButtonKind.Primary else ButtonKind.Tonal,
             onLongClickLabel = "Take with a photo",
-            onLongClick = {
-                justTaken = true
-                onTakeWithPhoto()
-            },
+            // Not logged yet, so no rest: that waits for the photo
+            onLongClick = onTakeWithPhoto,
             modifier = Modifier
                 .weight(1f)
                 .semantics { contentDescription = if (justTaken) "${med.name} logged" else "Take $amount of ${med.name}" },

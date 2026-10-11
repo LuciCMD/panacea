@@ -64,6 +64,10 @@ object Overlay {
     val Scrim = Color(0x99000000)
     /** Dims the screen behind a sheet. */
     val SheetScrim = Color(0x990A0A0E)
+    /** Around the camera's square while the screen lights a front-camera photo, and the ink on it */
+    val Light = Color.White
+    val LightInk = Color(0xFF1C1C1E)
+    val LightSoft = Color(0xCC1C1C1E)
 }
 
 /** The current theme's colours, for use inside composables. */

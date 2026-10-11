@@ -16,8 +16,8 @@ android {
         applicationId = "com.clementine.medtracker"
         minSdk = 33
         targetSdk = 36
-        versionCode = 13
-        versionName = "4.1"
+        versionCode = 14
+        versionName = "4.1.1"
     }
 
     buildTypes {
