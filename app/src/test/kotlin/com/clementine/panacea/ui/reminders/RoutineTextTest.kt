@@ -37,7 +37,7 @@ class RoutineTextTest {
 
     @Test
     fun aDailyRhythmReadsPlainly() {
-        val rhythm = Routine.Rhythm(3, 330, 25, 810, 40, since = 1, ms(10, 2, 9, 0), ms(10, 2, 9, 0), doses = 21)
+        val rhythm = Routine.Rhythm(3, steadyCount = true, 330, 25, 810, 40, since = 1, ms(10, 2, 9, 0), ms(10, 2, 9, 0), doses = 21)
         assertEquals(
             "You usually take it 3 times a day, about 5½ hours apart, give or take 25 minutes, whenever your day starts. " +
                 "Between days there's a longer break of about 14 hours. If nothing is logged by 15:20, Panacea asks whether you took it.",
@@ -48,6 +48,13 @@ class RoutineTextTest {
             RoutineText.card(rhythm.copy(since = 3, breakSpread = null), null, now, formats),
         )
         assertEquals("Daily rhythm · learned from 21 doses", RoutineText.basis(rhythm))
+        val open = rhythm.copy(perDay = 2, steadyCount = false, gapMinutes = 410, since = 2)
+        assertEquals(
+            "You usually take it about every 7 hours while you're awake, give or take 25 minutes, whenever your day starts. " +
+                "Once you've had your usual 2 in a day, it asks without a sound, in case you're asleep. " +
+                "If nothing is logged by 3:20 tomorrow, Panacea asks whether you took it.",
+            RoutineText.summary(open, on = true, nextAsk = at(10, 3, 3, 20), now, formats),
+        )
         assertEquals("half an hour", RoutineText.hours(25))
         assertEquals("1 hour", RoutineText.hours(70))
         assertEquals("12 hours", RoutineText.hours(12 * 60 + 10))

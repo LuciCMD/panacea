@@ -16,7 +16,9 @@ object RoutineText {
     fun usually(routine: Routine, f: TimeFormats): String? = when (routine) {
         is Routine.TimesOfDay -> "around " + ReminderText.natural(routine.slots.map { clock(it.minute, f) })
         is Routine.SteadyGap -> every(routine.gapMinutes)
-        is Routine.Rhythm -> "${counted(routine.perDay, "time")} a day, about ${hours(routine.gapMinutes)} apart"
+        is Routine.Rhythm ->
+            if (routine.steadyCount) "${counted(routine.perDay, "time")} a day, about ${hours(routine.gapMinutes)} apart"
+            else "about every ${hours(routine.gapMinutes)} while you're awake"
         else -> null
     }
 
@@ -50,7 +52,9 @@ object RoutineText {
             }
             is Routine.SteadyGap -> "You usually take it $usually, give or take ${minutes(routine.spread)}. $ask"
             is Routine.Rhythm -> {
-                val rest = if (routine.breakSpread != null) {
+                val rest = if (!routine.steadyCount) {
+                    "Once you've had your usual ${routine.perDay} in a day, it asks without a sound, in case you're asleep."
+                } else if (routine.breakSpread != null) {
                     "Between days there's a longer break of about ${hours(routine.breakMinutes)}."
                 } else {
                     "The break between days varies, so it doesn't ask after it."

@@ -44,11 +44,15 @@ sealed interface Routine {
     ) : Routine
 
     /**
-     * Taken a few times each waking day, a steady time apart, whenever the day starts: for a sleep
-     * that moves, the clock says little but the gaps still hold
+     * Taken a steady time apart while awake, whenever the day starts: for a sleep that moves, the
+     * clock says little but the gaps still hold. With [steadyCount] it's so many a waking day and
+     * then the break; without, another is due a gap after each, until sleep says otherwise
      */
     data class Rhythm(
+        /** The usual doses a waking day */
         val perDay: Int,
+        /** Most waking days have [perDay], so the day's last is known */
+        val steadyCount: Boolean,
         val gapMinutes: Int,
         val spread: Int,
         /** The usual break between waking days */
@@ -61,7 +65,11 @@ sealed interface Routine {
         val lastLogged: Long,
         override val doses: Int,
     ) : Routine {
-        val resting get() = since >= perDay
+        /** The day's doses are all had; the next comes after the break */
+        val resting get() = steadyCount && since >= perDay
+
+        /** The usual doses are had but more are sometimes taken: the next may wait for sleep */
+        val late get() = !steadyCount && since >= perDay
     }
 }
 
@@ -113,6 +121,10 @@ object Routines {
     /** Times of day reads most naturally, then a steady gap; a later model must fit clearly better */
     private const val PREFER_GAP_MIN = 5
     private const val PREFER_RHYTHM_MIN = 10
+
+    /** Share of whole waking days with the usual count for it to be a set count */
+    private const val STEADY_COUNT_SHARE = 0.75
+    private const val MAX_OVER_SHARE = 0.1
 
     /** A break between waking days is at least this many times the usual gap */
     private const val MIN_BREAK_RATIO = 1.25
@@ -272,7 +284,13 @@ object Routines {
         val ends = sittings.indices.filter { it == sittings.lastIndex || place[it + 1] == 1 }
         val whole = ends.drop(1).dropLast(1).ifEmpty { ends }
         val perDay = weightedMedian(whole.map { place[it] to sittings[it].weight })
-        if (perDay < 2) return null
+        // A set count is sometimes missed but seldom gone over; more on longer days means it's by the gap
+        val steadyCount = whole.size >= 3 &&
+            whole.count { place[it] == perDay } >= STEADY_COUNT_SHARE * whole.size &&
+            whole.count { place[it] > perDay } <= MAX_OVER_SHARE * whole.size
+        if (steadyCount && perDay < 2) return null
+        // Otherwise "while awake" would be mostly a single dose between sleeps
+        if (!steadyCount && split * 2 < gaps.size) return null
 
         val gap = weightedMedian(gaps.subList(0, split).map { it.first.roundToInt() to it.second })
         val breakGap = weightedMedian(gaps.subList(split, gaps.size).map { it.first.roundToInt() to it.second })
@@ -284,7 +302,12 @@ object Routines {
         pairs.forEachIndexed { i, (a, b) ->
             if (b.start < fitFrom) return@forEachIndexed
             val actual = ((b.start - a.start) / MINUTE_MS).toInt()
-            if (place[i] < perDay) within += abs(actual - gap) to b.weight else across += abs(actual - breakGap) to b.weight
+            when {
+                steadyCount -> if (place[i] < perDay) within += abs(actual - gap) to b.weight else across += abs(actual - breakGap) to b.weight
+                // Without a set count, a break can't be told from a sleep, so only the gaps are judged
+                actual < threshold -> within += abs(actual - gap) to b.weight
+                else -> across += abs(actual - breakGap) to b.weight
+            }
         }
         if (within.size < 2) return null
         fun error(d: List<Pair<Int, Double>>) = d.sumOf { (e, w) -> w * e.coerceAtMost(ERROR_CAP_MIN) } / d.sumOf { it.second }
@@ -295,6 +318,7 @@ object Routines {
 
         return Routine.Rhythm(
             perDay = perDay,
+            steadyCount = steadyCount,
             gapMinutes = round5(gap),
             spread = round5(weightedMedian(within)).coerceAtLeast(MIN_SPREAD_MIN),
             breakMinutes = round5(breakGap),

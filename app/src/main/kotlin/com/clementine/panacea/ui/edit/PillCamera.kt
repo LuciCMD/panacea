@@ -45,6 +45,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.CancellationException
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,7 +80,6 @@ import com.clementine.panacea.ui.icons.Glyphs
 import com.clementine.panacea.ui.theme.Colors
 import com.clementine.panacea.ui.theme.Overlay
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -115,6 +117,8 @@ fun DoseCamera(onPhoto: (name: String, shotAt: Long) -> Unit, onClose: () -> Uni
             shots = listOf(Shot("Photo of the Dose", "Fill the square with the dose: in your hand, in your mouth, or used up.")),
             fromGallery = false,
             small = true,
+            // A pill in the mouth is a selfie; the back camera is a tap away
+            front = true,
             onPhoto = { _, name, shotAt -> onPhoto(name, shotAt ?: System.currentTimeMillis()) },
             onClose = onClose,
         )
@@ -132,7 +136,9 @@ private fun SquareCamera(
     small: Boolean,
     onPhoto: (index: Int, name: String, shotAt: Long?) -> Unit,
     onClose: () -> Unit,
+    front: Boolean = false,
 ) {
+    var lens by rememberSaveable { mutableStateOf(front) }
     val context = LocalContext.current
     val store = LocalPhotoStore.current
     val scope = rememberCoroutineScope()
@@ -199,6 +205,8 @@ private fun SquareCamera(
                 },
                 onChoose = choose.takeIf { fromGallery },
                 busy = busy,
+                front = lens,
+                onFlip = { lens = !lens },
             )
             else -> NoCamera(asked, onAsk = { askCamera.launch(Manifest.permission.CAMERA) }, onChoose = choose.takeIf { fromGallery })
         }
@@ -253,7 +261,7 @@ private fun SquareCamera(
 }
 
 @Composable
-private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (() -> Unit)?, busy: Boolean) {
+private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (() -> Unit)?, busy: Boolean, front: Boolean, onFlip: () -> Unit) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     var request by remember { mutableStateOf<SurfaceRequest?>(null) }
@@ -261,24 +269,35 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (()
     var camera by remember { mutableStateOf<Camera?>(null) }
     var torch by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+    var canFlip by remember { mutableStateOf(false) }
     val preview = remember { Preview.Builder().build().apply { setSurfaceProvider { request = it } } }
     val capture = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
 
+    val lens by rememberUpdatedState(front)
+    // One coroutine binds and rebinds in turn, so a flip never races the old binding's release
     LaunchedEffect(Unit) {
         val provider = ProcessCameraProvider.awaitInstance(context)
-        val selector = listOf(CameraSelector.DEFAULT_BACK_CAMERA, CameraSelector.DEFAULT_FRONT_CAMERA).firstOrNull { provider.hasCamera(it) }
-        if (selector == null) {
-            failed = true
-            return@LaunchedEffect
-        }
         try {
-            provider.unbindAll()
-            camera = provider.bindToLifecycle(owner, selector, preview, capture)
-            awaitCancellation()
-        } catch (e: IllegalStateException) {
-            failed = true
-        } catch (e: IllegalArgumentException) {
-            failed = true
+            snapshotFlow { lens }.collect { useFront ->
+                val lenses = if (useFront) listOf(CameraSelector.DEFAULT_FRONT_CAMERA, CameraSelector.DEFAULT_BACK_CAMERA)
+                else listOf(CameraSelector.DEFAULT_BACK_CAMERA, CameraSelector.DEFAULT_FRONT_CAMERA)
+                canFlip = lenses.all { provider.hasCamera(it) }
+                torch = false
+                val selector = lenses.firstOrNull { provider.hasCamera(it) }
+                failed = selector == null
+                if (selector != null) {
+                    try {
+                        provider.unbindAll()
+                        camera = provider.bindToLifecycle(owner, selector, preview, capture)
+                    } catch (e: IllegalStateException) {
+                        // Cancelling is one too, and isn't a failure
+                        if (e is CancellationException) throw e
+                        failed = true
+                    } catch (e: IllegalArgumentException) {
+                        failed = true
+                    }
+                }
+            }
         } finally {
             provider.unbindAll()
         }
@@ -304,12 +323,17 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (()
                 .padding(horizontal = 24.dp, vertical = 28.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (onChoose != null) {
-                SlateIconButton(onClick = onChoose, modifier = Modifier.size(56.dp)) {
+            val flip = @Composable {
+                SlateIconButton(onClick = onFlip, enabled = !busy, modifier = Modifier.size(56.dp)) {
+                    Icon(Glyphs.FlipCamera, contentDescription = if (front) "Use the back camera" else "Use the front camera", tint = Overlay.Ink)
+                }
+            }
+            when {
+                onChoose != null -> SlateIconButton(onClick = onChoose, modifier = Modifier.size(56.dp)) {
                     Icon(Glyphs.Image, contentDescription = "Choose from your photos", tint = Overlay.Ink)
                 }
-            } else {
-                Spacer(Modifier.size(56.dp))
+                canFlip -> flip()
+                else -> Spacer(Modifier.size(56.dp))
             }
             Spacer(Modifier.weight(1f))
             Surface(
@@ -324,7 +348,8 @@ private fun Viewfinder(onCapture: (ImageCapture, IntSize) -> Unit, onChoose: (()
             ) {}
             Spacer(Modifier.weight(1f))
             val hasFlash = camera?.cameraInfo?.hasFlashUnit() == true
-            SlateIconButton(
+            // The gallery has the left, so a lens without a light gives the right to the flip
+            if (!hasFlash && onChoose != null && canFlip) flip() else SlateIconButton(
                 onClick = {
                     torch = !torch
                     camera?.cameraControl?.enableTorch(torch)

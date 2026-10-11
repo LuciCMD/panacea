@@ -6,6 +6,7 @@ import com.clementine.panacea.model.MedicationType
 import com.clementine.panacea.model.WeightUnit
 import com.clementine.panacea.model.formatAmount
 import com.clementine.panacea.reminder.Routine
+import com.clementine.panacea.ui.reminders.RoutineText
 import com.clementine.panacea.ui.TimeFormats
 import com.clementine.panacea.ui.counted
 import java.time.Instant
@@ -70,7 +71,8 @@ object TodayText {
     }
 
     /** A learned routine: "Usually around 23:30", or "… · not logged yet" once it has asked. */
-    fun usually(at: ZonedDateTime, missed: Boolean, now: ZonedDateTime, f: TimeFormats): String {
+    /** [ifUp]: the day's usual doses are had, so this one may wait for sleep */
+    fun usually(at: ZonedDateTime, missed: Boolean, now: ZonedDateTime, f: TimeFormats, ifUp: Boolean = false): String {
         val time = at.format(f.time)
         val text = when (daysBetween(now, at)) {
             -1L -> "Usually around $time yesterday"
@@ -78,7 +80,11 @@ object TodayText {
             1L -> "Usually around $time tomorrow"
             else -> "Usually around $time on ${at.format(f.weekday)}"
         }
-        return if (missed) "$text · not logged yet" else text
+        return when {
+            missed -> "$text · not logged yet"
+            ifUp -> "$text, if you're up"
+            else -> text
+        }
     }
 
     fun overdue(at: ZonedDateTime, now: ZonedDateTime, f: TimeFormats): String {
@@ -127,10 +133,11 @@ object TodayText {
     /** The due line of a medication learning its routine before it has one. */
     const val LEARNING = "Learning when you usually take it"
 
-    /** The due line of a learning medication with no next dose to name: still learning, no pattern, or done for the day */
-    fun unlearned(routine: Routine?): String = when {
+    /** The due line of a learning medication with no next dose to name: still learning, no pattern, done for the day, or the rhythm */
+    fun unlearned(routine: Routine?, f: TimeFormats): String = when {
         routine is Routine.Irregular -> "No steady pattern yet"
         routine is Routine.Rhythm && routine.resting -> "Today's ${routine.perDay} are taken · next after you sleep"
+        routine is Routine.Rhythm -> "Usually " + RoutineText.usually(routine, f)
         else -> LEARNING
     }
 

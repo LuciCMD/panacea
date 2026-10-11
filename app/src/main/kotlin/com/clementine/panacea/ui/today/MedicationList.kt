@@ -70,13 +70,14 @@ fun ListLabel(text: String, warn: Boolean = false) {
     )
 }
 
-/** Several medications in one card, split by hairlines; [compact] rows trade the amount button for a long press */
+/** Several medications in one card, split by hairlines; [compact] rows trade the amount button for a long press on the row */
 @Composable
 fun MedicationGroup(
     cards: List<CardState>,
     compact: Boolean,
     onTake: (CardState) -> Unit,
     onAmount: (CardState) -> Unit,
+    onPhoto: (CardState) -> Unit,
     onOpen: (CardState) -> Unit,
 ) {
     SlateCard(Modifier.fillMaxWidth()) {
@@ -84,9 +85,9 @@ fun MedicationGroup(
             cards.forEachIndexed { i, card ->
                 if (i > 0) HorizontalDivider(color = Colors.LineSoft, modifier = Modifier.padding(horizontal = 14.dp))
                 if (compact) {
-                    CompactRow(card, { onTake(card) }, { onAmount(card) }, { onOpen(card) })
+                    CompactRow(card, { onTake(card) }, { onAmount(card) }, { onPhoto(card) }, { onOpen(card) })
                 } else {
-                    MedicationBody(card, { onTake(card) }, { onAmount(card) }, { onOpen(card) })
+                    MedicationBody(card, { onTake(card) }, { onAmount(card) }, { onPhoto(card) }, { onOpen(card) })
                 }
             }
         }
@@ -95,7 +96,7 @@ fun MedicationGroup(
 
 /** Everything a medication's card holds, without the card: its title row, status lines, × and Take */
 @Composable
-fun MedicationBody(card: CardState, onTake: () -> Unit, onAmount: () -> Unit, onOpen: () -> Unit) {
+fun MedicationBody(card: CardState, onTake: () -> Unit, onAmount: () -> Unit, onPhoto: () -> Unit, onOpen: () -> Unit) {
     val med = card.medication
     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -113,19 +114,26 @@ fun MedicationBody(card: CardState, onTake: () -> Unit, onAmount: () -> Unit, on
             Icon(Glyphs.ChevronRight, contentDescription = null, tint = Colors.Faint)
         }
         StatusLines(card)
-        TakeButtons(med, card.dueNow, onTake, onAmount)
+        TakeButtons(med, card.dueNow, onTake, onAmount, onPhoto)
     }
 }
 
-/** One row: the ring, the name, when it was last taken and is next due, and a round Take */
+/** One row: the ring, the name, when it was last taken and is next due, and a round Take; a long press on the row opens the take sheet */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CompactRow(card: CardState, onTake: () -> Unit, onAmount: () -> Unit, onOpen: () -> Unit) {
+private fun CompactRow(card: CardState, onTake: () -> Unit, onAmount: () -> Unit, onPhoto: () -> Unit, onOpen: () -> Unit) {
     val med = card.medication
     val body = MaterialTheme.typography.bodyMedium.merge(Numbers)
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(role = Role.Button, onClickLabel = "Open ${med.name}", onClick = onOpen)
+            .combinedClickable(
+                role = Role.Button,
+                onClickLabel = "Open ${med.name}",
+                onLongClickLabel = "Change amount",
+                onLongClick = onAmount,
+                onClick = onOpen,
+            )
             .padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -139,14 +147,14 @@ private fun CompactRow(card: CardState, onTake: () -> Unit, onAmount: () -> Unit
                 Text(it, style = body, color = if (card.overdue) Colors.Warn else Colors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        RoundTake(card, onTake, onAmount)
+        RoundTake(card, onTake, onPhoto)
     }
 }
 
-/** Take as a 48dp circle; a long press opens the take sheet, and an amount other than one shows on it */
+/** Take as a 48dp circle; holding it takes with a photo, and an amount other than one shows on it */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RoundTake(card: CardState, onTake: () -> Unit, onAmount: () -> Unit) {
+private fun RoundTake(card: CardState, onTake: () -> Unit, onPhoto: () -> Unit) {
     val med = card.medication
     // A second tap right after the first is almost always a slip, as on the full Take button
     var justTaken by remember { mutableStateOf(false) }
@@ -168,8 +176,11 @@ private fun RoundTake(card: CardState, onTake: () -> Unit, onAmount: () -> Unit)
                     enabled = !justTaken,
                     role = Role.Button,
                     onClickLabel = "Take",
-                    onLongClickLabel = "Change amount, now $pieces",
-                    onLongClick = onAmount,
+                    onLongClickLabel = "Take with a photo",
+                    onLongClick = {
+                        justTaken = true
+                        onPhoto()
+                    },
                     onClick = {
                         justTaken = true
                         onTake()

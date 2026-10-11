@@ -76,6 +76,8 @@ class Notifier(private val context: Context) {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            // Past the day's usual doses it may be asking someone asleep, so it waits there without a sound
+            .setSilent(routine is Routine.Rhythm && routine.late)
             .setOngoing(true)
             .setAutoCancel(false)
             .setContentIntent(activity(MainActivity.ACTION_OPEN_MEDICATION, "medication/${med.id}"))

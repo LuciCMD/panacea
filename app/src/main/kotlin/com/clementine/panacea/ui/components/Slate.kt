@@ -4,7 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -85,6 +87,7 @@ fun textIcon(size: Dp): Dp = with(LocalDensity.current) { size.value.sp.toDp() }
  * Slate button: flat, radius 8, no border. Pressed and hovered it takes the white wash, focused from
  * a keyboard an accent ring, and disabled it fades to 40%. Delete is only for the confirm step of a removal.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlateButton(
     onClick: () -> Unit,
@@ -93,6 +96,9 @@ fun SlateButton(
     enabled: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
     shape: Shape? = null,
+    /** A long press, with what it does for TalkBack */
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     val (container, text) = when (kind) {
@@ -111,11 +117,13 @@ fun SlateButton(
                 .alpha(if (enabled) 1f else DISABLED_ALPHA)
                 .clip(s)
                 .background(container)
-                .clickable(
+                .combinedClickable(
                     interactionSource = null,
                     indication = SlateIndication(s),
                     enabled = enabled,
                     role = Role.Button,
+                    onLongClickLabel = onLongClickLabel,
+                    onLongClick = onLongClick,
                     onClick = onClick,
                 )
                 .padding(contentPadding),

@@ -2,6 +2,7 @@ package com.clementine.panacea.reminder
 
 import com.clementine.panacea.ui.today.Fixtures.at
 import com.clementine.panacea.ui.today.Fixtures.ms
+import com.clementine.panacea.ui.today.Fixtures.formats
 import com.clementine.panacea.ui.today.Fixtures.now
 import com.clementine.panacea.ui.today.TodayText
 import java.time.Instant
@@ -143,7 +144,35 @@ class RoutineTest {
         // A break that varies too much isn't asked after
         val unsteady = routine.copy(breakSpread = null)
         assertNull(Routines.nextAsk(unsteady, now))
-        assertEquals("Today's 3 are taken · next after you sleep", TodayText.unlearned(unsteady))
+        assertEquals("Today's 3 are taken · next after you sleep", TodayText.unlearned(unsteady, formats))
+    }
+
+    @Test
+    fun everySevenHoursWhileAwakeWithTwoToFourADay() {
+        // Doses about 7 h apart while up; sleep moves, so some days have 2 and some 4, and a day dose is sometimes skipped
+        val doses = listOf(
+            ms(9, 27, 9, 5), ms(9, 27, 16, 0), ms(9, 27, 23, 5),
+            ms(9, 28, 8, 0), ms(9, 28, 19, 5),
+            ms(9, 29, 1, 30), ms(9, 29, 12, 50), ms(9, 29, 19, 40),
+            ms(9, 30, 2, 35), ms(9, 30, 9, 0), ms(9, 30, 18, 50),
+            ms(10, 1, 1, 15), ms(10, 1, 15, 40), ms(10, 1, 22, 25),
+            ms(10, 2, 14, 5), ms(10, 2, 20, 45),
+            ms(10, 3, 13, 20), ms(10, 3, 20, 10),
+        )
+        val evening = at(10, 3, 20, 15)
+        val routine = Routines.learn(doses, evening) as Routine.Rhythm
+        assertFalse(routine.steadyCount)
+        assertTrue("gap ${routine.gapMinutes}", routine.gapMinutes in 395..420)
+        // Past the usual two, the next may wait for sleep, but it's still expected a gap on
+        assertTrue(routine.late)
+        assertEquals(doses.last() + routine.gapMinutes * minute, Routines.nextAsk(routine, evening)!!.expected)
+
+        // Earlier in the day, the second is a gap after the first
+        val afternoon = at(10, 3, 14, 0)
+        val midday = Routines.learn(doses.dropLast(1), afternoon) as Routine.Rhythm
+        assertFalse(midday.late)
+        val expected = Routines.nextAsk(midday, afternoon)!!.expected
+        assertTrue(kotlin.math.abs(expected - ms(10, 3, 20, 10)) <= 15 * minute)
     }
 
     @Test

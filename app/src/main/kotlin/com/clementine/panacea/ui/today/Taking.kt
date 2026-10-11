@@ -94,9 +94,10 @@ private val NO_BREAK = Char(0xA0)
 /**
  * The amount button and Take, as on every medication card. Take is full accent when a dose is
  * [dueNow], and a quieter tint otherwise: still easy to tap, but not the loudest thing on the card.
+ * Holding Take logs it and opens the camera, [onTakeWithPhoto]
  */
 @Composable
-fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAmount: () -> Unit) {
+fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAmount: () -> Unit, onTakeWithPhoto: () -> Unit) {
     // A second tap right after the first is almost always a slip, so the button rests briefly.
     var justTaken by remember { mutableStateOf(false) }
     LaunchedEffect(justTaken) {
@@ -130,6 +131,11 @@ fun TakeButtons(med: MedicationEntity, dueNow: Boolean, onTake: () -> Unit, onAm
             },
             enabled = !justTaken,
             kind = if (dueNow) ButtonKind.Primary else ButtonKind.Tonal,
+            onLongClickLabel = "Take with a photo",
+            onLongClick = {
+                justTaken = true
+                onTakeWithPhoto()
+            },
             modifier = Modifier
                 .weight(1f)
                 .semantics { contentDescription = if (justTaken) "${med.name} logged" else "Take $amount of ${med.name}" },

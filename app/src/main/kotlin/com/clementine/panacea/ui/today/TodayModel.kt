@@ -140,7 +140,7 @@ object TodayModel {
                     category = Category.fromKey(med.category),
                     doseLine = TodayText.doseLine(med, ingredients),
                     lastTakenLine = lastTaken,
-                    dueLine = TodayText.usually(l.expected, l.missed, now, f),
+                    dueLine = TodayText.usually(l.expected, l.missed, now, f, ifUp = (routine as? Routine.Rhythm)?.late == true),
                     overdue = l.missed,
                     dueNow = l.missed || !now.isBefore(l.expected.minusMinutes(LEARNED_EARLY_MINUTES)),
                     progress = l.progress,
@@ -157,7 +157,7 @@ object TodayModel {
             dueLine = due.overdueAt?.let { TodayText.overdue(it, now, f) }
                 ?: due.next?.let { TodayText.next(it, now, f) }
                 // Learning, but nothing to go by yet: say why, rather than nothing
-                ?: TodayText.unlearned(routine).takeIf { med.learnRoutine && reminders.isEmpty() },
+                ?: TodayText.unlearned(routine, f).takeIf { med.learnRoutine && reminders.isEmpty() },
             overdue = due.overdueAt != null,
             dueNow = due.overdueAt != null || due.soon,
             progress = if (due.overdueAt != null) 1f else due.progress,
@@ -216,7 +216,9 @@ object TodayModel {
         val nowMs = now.toInstant().toEpochMilli()
         fun at(ms: Long) = Instant.ofEpochMilli(ms).atZone(now.zone)
 
+        // One asked past the day's usual doses may have gone to someone asleep: not flagged as missed
         Routines.latestAsk(routine, now)
+            ?.takeIf { (routine as? Routine.Rhythm)?.late != true }
             ?.takeIf { it.ask >= askedFor && Routines.stillWorthAsking(it, now) && !it.coveredBy(doseTimes, nowMs) }
             ?.let { return Learned(at(it.expected), missed = true, progress = 1f) }
 

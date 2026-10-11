@@ -119,16 +119,17 @@ fun TodayScreen(
                 val cards = state.cards.filter { shown == null || it.category == shown }
                 val onTake = { card: CardState -> take(card.medication.id, card.medication.lastMultiplier, null, false) }
                 val onAmount = { card: CardState -> sheetFor = card.medication.id }
+                val onPhoto = { card: CardState -> take(card.medication.id, card.medication.lastMultiplier, null, true) }
                 val onOpenCard = { card: CardState -> onOpen(card.medication.id) }
                 if (layout == ListLayout.CARDS) {
                     items(cards, key = { it.medication.id }) { card ->
-                        SlateCard(Modifier.fillMaxWidth()) { MedicationBody(card, { onTake(card) }, { onAmount(card) }, { onOpenCard(card) }) }
+                        SlateCard(Modifier.fillMaxWidth()) { MedicationBody(card, { onTake(card) }, { onAmount(card) }, { onPhoto(card) }, { onOpenCard(card) }) }
                     }
                 } else {
                     listSections(cards, layout).forEach { section ->
                         section.label?.let { label -> item(key = "label:$label") { ListLabel(label, warn = label == "Missed") } }
                         item(key = "group:${section.label}") {
-                            MedicationGroup(section.cards, compact = layout != ListLayout.GROUPED, onTake, onAmount, onOpenCard)
+                            MedicationGroup(section.cards, compact = layout != ListLayout.GROUPED, onTake, onAmount, onPhoto, onOpenCard)
                         }
                     }
                 }

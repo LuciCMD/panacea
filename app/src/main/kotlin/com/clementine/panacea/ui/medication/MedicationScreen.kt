@@ -149,6 +149,7 @@ fun MedicationScreen(
                                 dueNow = card.dueNow,
                                 onTake = { take(med.id, med.lastMultiplier, null, false) },
                                 onAmount = { sheetOpen = true },
+                                onTakeWithPhoto = { take(med.id, med.lastMultiplier, null, true) },
                             )
                         }
                     }
